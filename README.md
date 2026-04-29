@@ -28,63 +28,61 @@
 - [Getting Started](#-getting-started)
 - [API Reference](#-api-reference)
 - [Role-Based Access Control](#-role-based-access-control)
+- [Attendance & Time Tracking](#-attendance--time-tracking)
 - [Gamification & Badge System](#-gamification--badge-system)
 - [Background Workers](#-background-workers)
-- [Contributing](#-contributing)
+- [Easter Eggs & Personalisation](#-easter-eggs--personalisation)
 
 ---
 
 ## 🌐 Overview
 
-O.S.A.C.E. is a comprehensive volunteer management platform designed for student organisations. It enables coordinators and administrators to create, manage, and track volunteer events while providing volunteers with an engaging, gamified mobile experience.
+O.S.A.C.E. is a comprehensive, modern volunteer management platform designed for student organisations. It solves the logistical nightmare of tracking volunteer hours manually while providing volunteers with an engaging, highly-polished mobile experience that rewards their dedication.
 
 **Production URL:** `https://osace.ro`  
 **API URL:** `https://api.osace.ro`  
 **Android Package:** `com.osace.mobile`
 
-The platform consists of three modules:
+The platform consists of two main modules:
 
 | Module | Description |
 |---|---|
-| **`osace-mobile`** | React Native (Expo) mobile app — the main volunteer-facing frontend |
-| **`osace-api`** | Node.js/Express REST API backend with PostgreSQL |
-| **`osace-map`** | Design assets for the interactive faculty floor plan feature |
+| **`osace-mobile`** | React Native (Expo) mobile app — the main frontend for all users |
+| **`osace-api`** | Node.js/Express REST API backend with PostgreSQL database |
 
 ---
 
 ## ✨ Features
 
 ### 👤 For Volunteers
-- **Event Discovery** — Browse all upcoming activities, meetings, and projects
-- **One-Tap Registration** — Sign up for events quickly
-- **QR Code Attendance** — Scan dynamic QR codes at events to check-in/check-out
-- **Personal Dashboard** — View enrolled events, participation history, and accumulated volunteer hours
-- **News Feed** — Stay updated with organisation announcements, like and comment on posts
-- **Leaderboard** — Compete with fellow volunteers through an hours-based ranking system
-- **Achievement Badges** — Unlock 40+ badges through participation, streaks, and milestones
-- **Profile & Avatar** — Personalise your profile with a photo and view your stats
-- **Public Profiles** — View other volunteers' profiles and achievements
-- **Push Notifications** — Receive alerts for new events, announcements, and updates
-- **Dark Mode** — Full light/dark theme support with system preference detection
-- **Faculty Map** — Interactive SVG-based building floor plan
+- **Event Discovery** — Browse all upcoming activities, meetings, and projects with rich details.
+- **One-Tap Registration** — Sign up for events instantly.
+- **QR Code Attendance** — Scan dynamic, TOTP-secured QR codes at events to check-in and check-out.
+- **Personal Dashboard** — Track enrolled events, participation history, and total accumulated volunteer hours.
+- **News Feed** — Stay updated with organisation announcements, like posts, and engage in comment sections.
+- **Leaderboard** — Compete with fellow volunteers in an hours-based ranking system.
+- **Achievement Badges** — Unlock 50+ badges through participation milestones, perfect streaks, and social engagement.
+- **Public Profiles** — Personalise your avatar and view other volunteers' achievements.
+- **Push Notifications** — Receive instant alerts for new events, announcements, and hour approvals.
+- **Dynamic Theming** — Full Light/Dark mode support that respects system preferences with seamless UI transitions.
+- **Contextual Greetings** — The app greets you differently based on the time of day and specific holidays.
 
 ### 🔧 For Coordinators
-- **Event Management** — Create, edit, and delete events with rich detail (location, description, category, duration)
-- **Dynamic QR Codes** — Generate TOTP-based rotating QR codes for secure attendance verification
-- **Participant Management** — View and manage event participants
-- **Team Management** — Assign team members to events with specific permissions
-- **Hour Approval** — Review and approve volunteer hour requests (including auto-checkout cases)
-- **Manual Hour Assignment** — Manually assign hours to volunteers when needed
+- **Event Management** — Complete CRUD control over events (location, description, category, max participants).
+- **Dynamic QR Generation** — Generate TOTP-based rotating QR codes on-screen for secure attendance verification.
+- **Participant Management** — Monitor live check-ins and manually manage event participants.
+- **Team Management** — Assign specific team members to events with elevated permissions.
+- **Hour Approval Queue** — Review and approve volunteer hour requests (e.g., overtime, forgotten check-outs).
+- **Manual Hour Assignment** — Award custom hours to volunteers for off-app tasks.
 
 ### 🛡️ For Administrators
-- **Full Coordinator Access** — Everything coordinators can do, plus:
-- **User Management** — View all users, change roles, manage permissions
-- **Permission System** — Granular permission control per coordinator
-- **Badge Management** — Create, edit, and delete achievement badges
-- **Send Notifications** — Push notifications to all users or specific groups
-- **Create Posts** — Publish rich-content news posts with images
-- **Organisation Statistics** — Dashboard with charts and activity metrics
-- **Onboarding Flow** — First-launch onboarding screens for new users
+- **Unrestricted Access** — Full coordinator rights globally.
+- **User Management** — View all registered users, change roles, and assign permissions.
+- **Granular Permissions** — Assign specific powers (create events, scan QR anywhere) to individual coordinators.
+- **Send Notifications** — Broadcast push notifications to all users or specific roles.
+- **Post Management** — Publish rich-content news posts with image attachments.
+- **Organisation Statistics** — Dashboard with interactive charts showing attendance rates, total hours, and activity metrics.
+- **Badge Management** — Create, edit, and delete achievement badges dynamically.
 
 ---
 
@@ -96,25 +94,25 @@ The platform consists of three modules:
 │              React Native / Expo SDK 54                     │
 │                                                             │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐          │
-│  │ ThemeCtx  │  │ AuthCtx  │  │ PermissionCtx    │          │
+│  │ ThemeCtx │  │ AuthCtx  │  │ PermissionCtx    │          │
 │  └────┬─────┘  └────┬─────┘  └────────┬─────────┘          │
 │       └──────────────┼────────────────┘                     │
 │                      ▼                                      │
 │  ┌──────────────────────────────────────┐                   │
 │  │       Navigation Layer               │                   │
-│  │  Stack → Drawer → Tabs → Stacks     │                   │
+│  │  Stack → Drawer → Tabs → Stacks      │                   │
 │  └──────────────┬───────────────────────┘                   │
-│                 ▼                                            │
+│                 ▼                                           │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │                   Feature Modules                      │ │
-│  │  Auth │ Home │ Events │ Feed │ Profile │ Leaderboard  │ │
-│  │  History │ BadgeCatalog │ Map │ Notifications │ Admin  │ │
+│  │  Auth │ Home │ Events │ Feed │ Profile │ Leaderboard   │ │
+│  │  History │ BadgeCatalog │ Notifications │ Admin        │ │
 │  └────────────────────────┬───────────────────────────────┘ │
 │                           ▼                                 │
-│                  ┌────────────────┐                          │
-│                  │  Axios Client  │                          │
-│                  │  (api.js)      │                          │
-│                  └────────┬───────┘                          │
+│                  ┌────────────────┐                         │
+│                  │  Axios Client  │                         │
+│                  │  (api.js)      │                         │
+│                  └────────┬───────┘                         │
 └───────────────────────────┼─────────────────────────────────┘
                             │ HTTPS
                             ▼
@@ -129,8 +127,8 @@ The platform consists of three modules:
 │        ▼                                                    │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │                    Route Modules                       │ │
-│  │  /auth │ /profile │ /events │ /admin │ /notifications │ │
-│  │  /posts │ /badges │ /leaderboard                      │ │
+│  │  /auth │ /profile │ /events │ /admin │ /notifications  │ │
+│  │  /posts │ /badges │ /leaderboard                       │ │
 │  └────────────────────────┬───────────────────────────────┘ │
 │                           │                                 │
 │  ┌────────────────┐  ┌────┴───────┐  ┌──────────────────┐  │
@@ -138,8 +136,8 @@ The platform consists of three modules:
 │  │ (every 30 min) │  │  Database  │  │   (Emails)       │  │
 │  └────────────────┘  └────────────┘  └──────────────────┘  │
 │  ┌────────────────┐  ┌─────────────────────────────┐       │
-│  │ badgeWorker    │  │  Expo Push Notification      │       │
-│  │ (scheduled)    │  │  Service                     │       │
+│  │ badgeWorker    │  │  Expo Push Notification     │       │
+│  │ (scheduled)    │  │  Service                    │       │
 │  └────────────────┘  └─────────────────────────────┘       │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -151,11 +149,10 @@ App.js (Root Stack)
 ├── [Unauthenticated]
 │   ├── LoginScreen
 │   ├── RegisterScreen
-│   ├── ForgotPasswordScreen
-│   └── ResetPasswordScreen
+│   └── ResetPassword Flow
 │
 └── [Authenticated]
-    ├── OnboardingScreen (first launch only)
+    ├── OnboardingScreen
     └── MainDrawer
         ├── CoreAppNavigator (hidden from drawer)
         │   ├── AppTabs (Bottom Tab Navigator)
@@ -163,21 +160,9 @@ App.js (Root Stack)
         │   │   ├── Activități (All Events)
         │   │   ├── Activitățile Mele (My Events)
         │   │   ├── Istoric (History)
-        │   │   └── Admin/Coordonare (role-conditional)
+        │   │   └── Admin/Coordonare
         │   │       └── ManagementNavigator (Stack)
-        │   │           ├── AdminMenuScreen
-        │   │           ├── ManageEventsScreen
-        │   │           ├── EventFormScreen
-        │   │           ├── EventParticipantsScreen
-        │   │           ├── HourRequestsScreen
-        │   │           ├── AssignHoursScreen
-        │   │           ├── UserListScreen
-        │   │           ├── UserDetailsScreen
-        │   │           ├── SendNotificationScreen
-        │   │           ├── PostFormScreen
-        │   │           ├── ManageBadgesScreen
-        │   │           ├── BadgeFormScreen
-        │   │           └── StatisticsScreen
+        │   │           ├── AdminMenuScreen, ManageEvents, etc.
         │   │
         │   ├── EventDetailScreen (overlay)
         │   ├── CommentsScreen (overlay)
@@ -185,12 +170,9 @@ App.js (Root Stack)
         │   └── NotificationHistoryScreen (overlay)
         │
         ├── Profile
-        ├── EditProfile (hidden from drawer)
         ├── Leaderboard
         ├── Badge Catalog
-        ├── Faculty Map
-        ├── Statistics (hidden from drawer)
-        └── Management (hidden from drawer)
+        └── Footer Actions (Theme Toggle, Logout, App Version)
 ```
 
 ---
@@ -198,40 +180,24 @@ App.js (Root Stack)
 ## 🧰 Tech Stack
 
 ### Frontend (`osace-mobile`)
-
-| Technology | Version | Purpose |
-|---|---|---|
-| React Native | 0.81.5 | Cross-platform mobile framework |
-| Expo | SDK 54 | Development platform & build service |
-| React Navigation | 7.x | Drawer, Tabs, Stack navigation |
-| Axios | 1.13 | HTTP client with JWT interceptors |
-| Expo SecureStore | — | Secure token storage |
-| Expo Notifications | — | Push notification handling |
-| Expo Camera | — | QR code scanning |
-| Expo Image Picker | — | Avatar & image uploads |
-| React Native Calendars | — | Calendar views |
-| React Native Chart Kit | — | Statistics charts |
-| React Native QRCode SVG | — | QR code generation |
-| React Native Reanimated | 4.1 | Animations |
-| React Native Gesture Handler | 2.28 | Gestures & drawer swipe |
-| Gorhom Bottom Sheet | 5.2 | Modal bottom sheets |
-| React Native Toast Message | — | In-app toast notifications |
-| date-fns | 4.1 | Date formatting & manipulation |
-| jwt-decode | 4.0 | Client-side JWT decoding |
+- **React Native (0.81.5)** — Cross-platform mobile framework
+- **Expo (SDK 54)** — Development platform & EAS build service
+- **React Navigation (7.x)** — Advanced routing (Drawer, Tabs, Stack)
+- **Axios** — HTTP client with JWT interceptors
+- **Expo SecureStore** — Secure, encrypted token storage
+- **Expo Notifications** — Remote push notification handling
+- **Expo Camera / QR Code** — Hardware scanning & dynamic SVG generation
+- **Reanimated & Gesture Handler** — Fluid 60fps animations and modal sheets
+- **React Native Chart Kit** — Data visualisation
 
 ### Backend (`osace-api`)
-
-| Technology | Purpose |
-|---|---|
-| Node.js + Express | REST API server |
-| PostgreSQL (pg) | Relational database |
-| JSON Web Tokens (jsonwebtoken) | Authentication & authorization |
-| Argon2 | Password hashing |
-| Nodemailer + Brevo SMTP | Transactional emails (welcome, password reset) |
-| Multer | File upload handling (avatars, post images) |
-| OTPLib | TOTP-based dynamic QR codes |
-| CORS | Cross-origin request handling |
-| dotenv | Environment configuration |
+- **Node.js + Express** — High-performance REST API
+- **PostgreSQL (`pg`)** — Relational database for transactional integrity
+- **JSON Web Tokens (JWT)** — Stateless authentication
+- **Argon2** — State-of-the-art password hashing
+- **Nodemailer + Brevo SMTP** — Transactional emails (OTP, password reset)
+- **OTPLib** — TOTP algorithm for rotating, un-spoofable QR codes
+- **Multer** — Multipart file upload handling
 
 ---
 
@@ -241,93 +207,41 @@ App.js (Root Stack)
 osace-project/
 ├── osace-mobile/                    # React Native mobile app
 │   ├── App.js                       # Entry point & provider hierarchy
-│   ├── index.js                     # Expo/RN registration
 │   ├── app.json                     # Expo configuration
 │   ├── package.json                 # Dependencies
 │   └── src/
-│       ├── assets/                  # Images & icons
-│       │   └── osace.png            # App icon/logo
-│       ├── components/              # Shared/reusable components
-│       │   ├── FilterModal.js       # Event filter modal
-│       │   ├── FullScreenLoading.js # Loading overlay
-│       │   ├── SkeletonItem.js      # Skeleton loading placeholder
-│       │   ├── ThemeToggleSwitch.js  # Dark mode toggle
-│       │   ├── forms/               # Form components
-│       │   └── layout/              # Layout components (ScreenContainer)
-│       ├── constants/
-│       │   ├── theme.js             # Light & dark color palettes
-│       │   ├── useThemeColor.js     # Theme context & provider
-│       │   └── permissions.js       # Permission key constants
-│       ├── features/                # Feature-based modules
-│       │   ├── Auth/                # Authentication
-│       │   │   ├── AuthContext.js    # Auth state & JWT management
-│       │   │   ├── PermissionContext.js  # Permission checking
-│       │   │   └── screens/         # Login, Register, Onboarding, etc.
-│       │   ├── Home/                # Main events listing
-│       │   ├── Event/               # Event detail, my events, QR scan
-│       │   ├── Feed/                # News feed with likes & comments
-│       │   │   ├── components/      # PostCard, FeedSkeleton
-│       │   │   └── screens/         # NewsFeedScreen, CommentsScreen
-│       │   ├── History/             # Participation history
-│       │   ├── Profile/             # User profile
-│       │   │   ├── components/      # ProfileHeader, ProfileStats, BadgeList
-│       │   │   └── screens/         # ProfileScreen, EditProfile, PublicProfile
-│       │   ├── Leaderboard/         # Volunteer rankings
-│       │   ├── BadgeCatalog/        # Achievement browser
-│       │   ├── Map/                 # Interactive faculty map
-│       │   ├── Notifications/       # Notification history
-│       │   └── Admin/               # Admin & coordinator panel
-│       │       ├── components/      # QrModal, ManageTeamModal, etc.
-│       │       └── screens/         # 13 management screens
-│       ├── navigation/
-│       │   ├── AppTabs.js           # Bottom tab navigator
-│       │   ├── CoreAppNavigator.js  # Core stack with overlay screens
-│       │   ├── MainDrawer.js        # Side drawer navigator
-│       │   ├── ManagementNavigator.js  # Admin/coordinator stack
-│       │   └── components/          # CustomDrawerContent
-│       └── services/
-│           └── api.js               # Axios instance & interceptors
+│       ├── assets/                  # Local images, icons, easter egg assets
+│       ├── components/              # Shared/reusable UI components
+│       ├── constants/               # Theming, colors, permission keys
+│       ├── features/                # Domain-driven feature modules
+│       │   ├── Auth/                # Login, registration, AuthContext
+│       │   ├── Home/                # Main dashboard
+│       │   ├── Event/               # Event details, QR scanner, My Events
+│       │   ├── Feed/                # Posts, comments, likes
+│       │   ├── History/             # User's attendance log
+│       │   ├── Profile/             # Profile management & public views
+│       │   ├── Leaderboard/         # Ranking system
+│       │   ├── BadgeCatalog/        # Gamification browser
+│       │   ├── Notifications/       # Push notification inbox
+│       │   └── Admin/               # 13+ Management & stats screens
+│       ├── navigation/              # Navigators (Tabs, Drawers, Stacks)
+│       └── services/                # Axios API configuration
 │
-├── osace-api/
-│   └── osace-api/                   # API server root
-│       ├── index.js                 # Express entry point & middleware
-│       ├── .env                     # Environment variables
-│       └── src/
-│           ├── config/
-│           │   ├── db.js            # PostgreSQL connection pool
-│           │   ├── mailer.js        # Nodemailer transport config
-│           │   └── multer.js        # File upload configuration
-│           ├── features/            # Feature-based route modules
-│           │   ├── Auth/
-│           │   │   └── auth.routes.js       # Register, login, password reset
-│           │   ├── Profile/
-│           │   │   └── profile.routes.js    # Profile CRUD, avatar, push tokens
-│           │   ├── Event/
-│           │   │   ├── event.routes.js      # Event CRUD, attendance, QR, teams
-│           │   │   └── event.queries.js     # Reusable SQL queries
-│           │   ├── Admin/
-│           │   │   ├── admin.routes.js      # User mgmt, hours, stats, notifications
-│           │   │   └── admin.queries.js     # Admin SQL queries
-│           │   ├── Posts/
-│           │   │   ├── posts.routes.js      # Feed posts, likes, comments
-│           │   │   └── components/          # Post-related components
-│           │   ├── Badge/
-│           │   │   ├── badge.routes.js      # Badge API endpoints
-│           │   │   └── badge.service.js     # Badge awarding logic (40+ badges)
-│           │   ├── Leaderboard/
-│           │   │   └── leaderboard.routes.js  # Rankings endpoint
-│           │   └── Notifications/
-│           │       └── notifications.routes.js  # Notification endpoints
-│           ├── middleware/           # (Reserved for custom middleware)
-│           └── scripts/
-│               ├── checkoutWorker.js   # Auto-checkout background job
-│               └── badgeWorker.js      # Scheduled badge awarding
-│
-└── osace-map/                       # Faculty map design assets
-    └── osace-map/
-        ├── plans/                   # Floor plan files
-        ├── *.ai                     # Adobe Illustrator source files
-        └── harta_test.svg           # SVG test export
+└── osace-api/
+    └── osace-api/                   # Express backend
+        ├── index.js                 # Server entry point
+        └── src/
+            ├── config/              # DB pool, Mailer, Multer
+            ├── features/            # API Route controllers & queries
+            │   ├── Auth/
+            │   ├── Profile/
+            │   ├── Event/           # Event logic, Attendance, QR validation
+            │   ├── Admin/           # Hour approvals, role mgmt, stats
+            │   ├── Posts/
+            │   ├── Badge/           # Badge evaluation engine
+            │   ├── Leaderboard/
+            │   └── Notifications/
+            └── scripts/             # Cron jobs and background workers
 ```
 
 ---
@@ -335,268 +249,104 @@ osace-project/
 ## 🚀 Getting Started
 
 ### Prerequisites
-
 - **Node.js** (v18+)
 - **PostgreSQL** (v15+)
-- **Expo CLI** — `npm install -g expo-cli`
-- **EAS CLI** (for builds) — `npm install -g eas-cli`
-- **Android Studio** or **Xcode** (for native development builds)
+- **Expo CLI** (`npm install -g expo-cli`)
 
 ### Backend Setup
-
 ```bash
-# 1. Navigate to the API directory
 cd osace-api/osace-api
-
-# 2. Install dependencies
 npm install
-
-# 3. Configure environment variables
-#    Edit the .env file with your PostgreSQL credentials, JWT secret,
-#    and SMTP configuration (Brevo/Sendinblue)
-
-# 4. Ensure PostgreSQL is running with the required database
-#    Database: osace_dev_db (or as configured in .env)
-
-# 5. Start the server
+# Configure your local database and secrets (DB credentials, JWT Secret, SMTP)
 node index.js
-# Server starts at http://localhost:3000
+# Server runs on http://localhost:3000
 ```
 
 ### Frontend Setup
-
 ```bash
-# 1. Navigate to the mobile app directory
 cd osace-mobile
-
-# 2. Install dependencies
 npm install
-
-# 3. Update the API URL in src/services/api.js if needed
-#    Default: https://api.osace.ro
-
-# 4. Start the Expo development server
+# Ensure the API URL in src/services/api.js points to your backend
 npx expo start
-
-# 5. Run on device/emulator
-npx expo run:android    # For Android
-npx expo run:ios        # For iOS
+# Scan the QR code with Expo Go or run on emulator
 ```
-
-### Environment Variables (`.env`)
-
-| Variable | Description |
-|---|---|
-| `DB_USER` | PostgreSQL username |
-| `DB_HOST` | PostgreSQL host |
-| `DB_DATABASE` | Database name |
-| `DB_PASSWORD` | Database password |
-| `DB_PORT` | PostgreSQL port (default: 5432) |
-| `JWT_SECRET` | Secret key for JWT signing |
-| `EXPO_ACCESS_TOKEN` | Expo push notification token |
-| `SMTP_HOST` | SMTP server host (Brevo) |
-| `SMTP_PORT` | SMTP port (587) |
-| `SMTP_USER` | SMTP username |
-| `SMTP_PASS` | SMTP password |
 
 ---
 
 ## 📡 API Reference
 
-Base URL: `https://api.osace.ro`
+Base URL: `https://api.osace.ro` (Production)
 
-### Authentication
+*A brief overview of key endpoints. All protected routes require a valid `Bearer <Token>`.*
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/api/auth/register` | — | Register a new volunteer |
-| POST | `/api/auth/login` | — | Login & receive JWT |
-| POST | `/api/auth/request-reset` | — | Request password reset (sends 6-digit code via email) |
-| POST | `/api/auth/perform-reset` | — | Reset password with verification code |
-
-### Profile
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/api/profile/me` | 🔒 Token | Get current user profile |
-| PUT | `/api/profile/me` | 🔒 Token | Update profile details |
-| POST | `/api/profile/avatar` | 🔒 Token | Upload profile avatar |
-| POST | `/api/profile/push-token` | 🔒 Token | Register Expo push token |
-
-### Events
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/api/events` | 🔒 Token | List all events |
-| GET | `/api/events/:id` | 🔒 Token | Get event details |
-| POST | `/api/events` | 🔒 Manager | Create a new event |
-| PUT | `/api/events/:id` | 🔒 Manager | Update an event |
-| DELETE | `/api/events/:id` | 🔒 Manager | Delete an event |
-| POST | `/api/events/:id/register` | 🔒 Token | Register for an event |
-| POST | `/api/events/:id/check-in` | 🔒 Token | Check in via QR scan |
-| POST | `/api/events/:id/check-out` | 🔒 Token | Check out via QR scan |
-| GET | `/api/events/my-access` | 🔒 Token | Get user's permissions & team events |
-
-### Admin
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/api/admin/users` | 🔒 Admin | List all users |
-| PUT | `/api/admin/users/:id/role` | 🔒 Admin | Change user role |
-| GET | `/api/admin/hour-requests` | 🔒 Manager | Get pending hour requests |
-| PUT | `/api/admin/hour-requests/:id` | 🔒 Manager | Approve/reject hour request |
-| POST | `/api/admin/notifications` | 🔒 Admin | Send push notification |
-| GET | `/api/admin/statistics` | 🔒 Manager | Get organisation statistics |
-
-### Posts (Feed)
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/api/posts` | 🔒 Token | Get news feed posts |
-| POST | `/api/posts` | 🔒 Manager | Create a new post |
-| POST | `/api/posts/:id/like` | 🔒 Token | Like/unlike a post |
-| POST | `/api/posts/:id/comments` | 🔒 Token | Add a comment |
-
-### Badges & Leaderboard
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/api/badges` | 🔒 Token | Get badge catalog |
-| GET | `/api/leaderboard` | 🔒 Token | Get volunteer rankings |
-
-### Notifications
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/api/notifications` | 🔒 Token | Get notification history |
-
-> **Auth Legend:**  
-> — = Public (no auth required)  
-> 🔒 Token = Requires valid JWT  
-> 🔒 Manager = Requires `admin` or `coordonator` role  
-> 🔒 Admin = Requires `admin` role only
+- **Auth:** `/api/auth/register`, `/api/auth/login`, `/api/auth/request-reset`
+- **Profile:** `/api/profile/me`, `/api/profile/avatar`, `/api/profile/push-token`
+- **Events:** `/api/events`, `/api/events/:id/check-in`, `/api/events/:id/check-out`
+- **Admin:** `/api/admin/users`, `/api/admin/hour-requests`, `/api/admin/statistics`
+- **Social:** `/api/posts`, `/api/posts/:id/like`, `/api/posts/:id/comments`
+- **Gamification:** `/api/badges`, `/api/leaderboard`
 
 ---
 
 ## 🔐 Role-Based Access Control
 
-The platform implements a three-tier role system with a hybrid permission model:
+The platform implements a hybrid permission model combining hierarchical roles with granular capabilities.
 
-### Role Hierarchy
+1. **ADMIN** — Absolute access to all endpoints, statistics, and user management.
+2. **COORDONATOR** — Access depends on granular permissions assigned by an Admin (e.g., `CAN_CREATE_EVENTS`, `CAN_SCAN_QR_ANYWHERE`) or Event-Level assignment (e.g., being added to an event's organising team).
+3. **USER** — Standard volunteer access. Can view events, register, check-in, and use social features.
 
-```
-┌──────────────────────────────────────────────┐
-│                   ADMIN                       │
-│  Full unrestricted access to everything       │
-├──────────────────────────────────────────────┤
-│               COORDONATOR                     │
-│  Access based on:                             │
-│  • Global permissions (set by admin)          │
-│  • Event-level permissions (creator/team)     │
-├──────────────────────────────────────────────┤
-│                   USER                        │
-│  Standard volunteer access                    │
-│  View events, register, check-in, view feed   │
-└──────────────────────────────────────────────┘
-```
+---
 
-### Global Permissions (Assigned to Coordinators)
+## ⏱️ Attendance & Time Tracking
 
-| Key | Description |
-|---|---|
-| `CAN_CREATE_EVENTS` | Create new events |
-| `CAN_EDIT_EVENTS` | Edit any event |
-| `CAN_DELETE_EVENTS` | Delete any event |
-| `CAN_SCAN_QR_ANYWHERE` | Scan QR codes for any event |
-| `CAN_MANAGE_PARTICIPANTS` | Manage participants on any event |
-| `CAN_MANAGE_EVENT_TEAMS` | Manage event teams |
+O.S.A.C.E. employs a highly accurate, cheat-proof attendance system:
 
-### Event-Level Permissions
-
-- **Event Creator** — Full control over their own event (edit, delete, scan, manage participants)
-- **Team Members** — Can scan QR, edit event, and manage participants for events they're assigned to
+- **TOTP QR Codes:** Event QR codes regenerate every 10 seconds. Scanning an expired photo of a QR code will fail.
+- **30-Minute Tolerance Rule:** 
+  - If a volunteer arrives up to 30 minutes early or leaves up to 30 minutes late, the system caps their hours to the event's official bounds.
+  - If a volunteer arrives *more* than 30 minutes early or stays *more* than 30 minutes late, the system automatically triggers an **Overtime Request** which must be manually approved by a coordinator.
+- **Auto-Absent Protection:** If a volunteer checks in but forgets to check out, a background worker flags them after a 24-hour grace period, setting their awarded hours to 0 and notifying coordinators via the Hour Approvals queue.
 
 ---
 
 ## 🏆 Gamification & Badge System
 
-The platform features an extensive badge/achievement system with **40+ badges** to keep volunteers engaged:
+The platform features an extensive, fully automated achievement engine with **50+ badges** to keep volunteers motivated.
 
-### Badge Categories
+**Badge Categories:**
+- **Milestones:** First Event, 5/10/25/100 Events, 10/100/500 Hours.
+- **Category Specific:** "Omul Ședințelor" (Meetings), "Sufletul Petrecerii" (Social).
+- **Streaks:** Perfect Attendance (3, 5, 10 events in a row without missing a registered event).
+- **Time-Based:** "Night Owl" (Late night events), "Early Bird" (Morning events).
+- **Social & Engagement:** "Influencer" (Likes received), "Top Comentator".
+- **Easter Eggs:** Hidden badges unlocked through specific undocumented actions.
 
-| Category | Examples | Trigger |
-|---|---|---|
-| **Event Milestones** | First Event, 25/50/100 Events | On attendance confirmation |
-| **Hour Milestones** | 1 Hour, 10/25/50/100/250/500 Hours | On attendance confirmation |
-| **Category-Specific** | 5/20 Meetings, Social Events, Projects | On attendance confirmation |
-| **Category Hours** | 25 Hours in Meetings/Social/Projects | On attendance confirmation |
-| **Streaks** | Perfect Streak 3, Perfect Streak 10 | On attendance confirmation |
-| **Time-Based** | Night Owl (events ending 00:00-05:00), Early Bird (before 09:00) | On attendance confirmation |
-| **Weekly/Monthly** | 5 Events in a Month, 10/20 Hours in a Week | On attendance confirmation |
-| **Speed** | Quick Register (within 1 hour of event creation) | On event registration |
-| **Social** | First Like, 25 Likes, First Comment, 25 Comments | On like/comment |
-| **Profile** | Avatar Uploaded, Profile Edited, Viewed Profile | On profile actions |
-| **Membership** | 1 Year Member, 3 Year Member | Badge worker (scheduled) |
-| **Achievement** | Leaderboard Top 1 (weekly winner) | Badge worker (Sunday) |
-| **Diversity** | Diversified (participated in all categories) | On attendance confirmation |
-| **Special** | First QR Scan (TOTP), Promoted to Coordinator | On specific actions |
+Badges are evaluated and awarded instantly upon checkout confirmation by the `badge.service.js` engine.
 
 ---
 
 ## ⚙ Background Workers
 
-### Checkout Worker (`checkoutWorker.js`)
-- **Schedule:** Runs every 30 minutes (started with the server)
-- **Purpose:** Auto-checks out volunteers who forgot to scan out after an event ended more than 48 hours ago
-- **Behaviour:**
-  1. Finds all `checked_in` attendances where the event ended 48+ hours ago
-  2. Closes the attendance with `awarded_hours = 0` and `checkout_method = 'auto'`
-  3. Creates an `hour_request` (type: `forgot_checkout`) so coordinators can review and manually award the correct hours
-
-### Badge Worker (`badgeWorker.js`)
-- **Schedule:** Standalone script (designed for cron job execution)
-- **Purpose:** Awards time-based badges that can't be triggered by user actions
-- **Checks:**
-  1. **Anniversary badges** — Awards `1_YEAR_MEMBER` and `3_YEAR_MEMBER` based on account age
-  2. **Leaderboard winner** — Awards `LEADERBOARD_TOP_1` to the #1 ranked volunteer (runs only on Sundays)
+1. **Checkout Worker (`checkoutWorker.js`)**
+   - Runs every 30 minutes.
+   - Scans for "stale" check-ins (events ended > 24 hours ago with no check-out).
+   - Automatically closes the attendance with 0 hours and files a manual review request.
+2. **Badge Worker (`badgeWorker.js`)**
+   - Scheduled cron job script.
+   - Awards time-sensitive badges that don't rely on immediate user actions (e.g., 1-Year Anniversary, Weekly Leaderboard Winner).
 
 ---
 
-## 🗄 Database Schema (Inferred)
+## 👾 Easter Eggs & Personalisation
 
-Key tables used throughout the application:
-
-| Table | Description |
-|---|---|
-| `users` | User accounts with roles, credentials, and profile data |
-| `events` | Volunteer events/activities with scheduling and metadata |
-| `event_attendance` | Tracks registrations, check-ins, check-outs, and awarded hours |
-| `hour_requests` | Requests for manual hour review (auto-checkout, manual requests) |
-| `badges` | Badge definitions (key, name, description, icon) |
-| `user_badges` | Junction table for awarded badges |
-| `posts` | News feed posts with content and images |
-| `post_likes` | Post like tracking |
-| `post_comments` | Post comments |
-| `notifications` | Push notification history |
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the **0BSD License** — see the [package.json](osace-mobile/package.json) for details.
+To make the app feel alive and personal, several hidden features are built-in:
+- **Dynamic Greetings:** The top header greeting changes based on the time of day ("Spor la cafeluță", "Pauză de masă?"). It also features special overrides for holidays (Jan 1st, March 8th, Dec 25th, etc.).
+- **Dev Credits Meme:** Tapping the App Version number in the sidebar 7 times rapidly triggers a secret modal displaying the "Nerd Emoji" meme and a custom developer message.
+- **Cached States:** UI elements are cached heavily to prevent "flickering" during navigation, ensuring a premium feel.
 
 ---
 
 <p align="center">
-  Built with ❤️ by the <strong>O.S.A.C.E.</strong> team
+  Built with ❤️ by the <strong>O.S.A.C.E.</strong> team.
 </p>
