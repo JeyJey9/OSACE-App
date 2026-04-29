@@ -1,6 +1,6 @@
-import 'react-native-get-random-values'; 
+import 'react-native-get-random-values';
 import { decode } from 'base-64';
-if(typeof global.atob === 'undefined') {
+if (typeof global.atob === 'undefined') {
   global.atob = decode;
 }
 
@@ -11,7 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, Alert } from 'react-native';
-import { AuthProvider, useAuth } from './src/features/Auth/AuthContext'; 
+import { AuthProvider, useAuth } from './src/features/Auth/AuthContext';
 import MainDrawer from './src/navigation/MainDrawer';
 import LoginScreen from './src/features/Auth/screens/LoginScreen';
 import RegisterScreen from './src/features/Auth/screens/RegisterScreen';
@@ -38,19 +38,19 @@ const Stack = createNativeStackNavigator();
 
 const toastConfig = {
   success: ({ text1, text2 }) => (
-    <View style={{ 
-      width: '90%', 
-      backgroundColor: 'white', 
-      borderRadius: 10, 
-      borderLeftWidth: 6, 
+    <View style={{
+      width: '90%',
+      backgroundColor: 'white',
+      borderRadius: 10,
+      borderLeftWidth: 6,
       borderLeftColor: '#27ae60',
-      padding: 18, 
+      padding: 18,
       marginTop: 15,
       elevation: 5,
       shadowColor: '#000',
-      shadowOpacity: 0.15, 
-      shadowRadius: 8, 
-      shadowOffset: { width: 0, height: 3 } 
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 3 }
     }}>
       <Text style={{ fontSize: 17, fontWeight: 'bold', color: '#2c3e50', marginBottom: 6 }}>
         {text1}
@@ -60,21 +60,21 @@ const toastConfig = {
       </Text>
     </View>
   ),
-  
+
   info: ({ text1, text2 }) => (
-    <View style={{ 
-      width: '90%', 
-      backgroundColor: 'white', 
-      borderRadius: 10, 
-      borderLeftWidth: 6, 
+    <View style={{
+      width: '90%',
+      backgroundColor: 'white',
+      borderRadius: 10,
+      borderLeftWidth: 6,
       borderLeftColor: '#3498db',
-      padding: 18, 
+      padding: 18,
       marginTop: 15,
-      elevation: 5, 
-      shadowColor: '#000', 
-      shadowOpacity: 0.15, 
-      shadowRadius: 8, 
-      shadowOffset: { width: 0, height: 3 } 
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 3 }
     }}>
       <Text style={{ fontSize: 17, fontWeight: 'bold', color: '#2c3e50', marginBottom: 6 }}>
         {text1}
@@ -86,19 +86,19 @@ const toastConfig = {
   ),
 
   error: ({ text1, text2 }) => (
-    <View style={{ 
-      width: '90%', 
-      backgroundColor: 'white', 
-      borderRadius: 10, 
-      borderLeftWidth: 6, 
+    <View style={{
+      width: '90%',
+      backgroundColor: 'white',
+      borderRadius: 10,
+      borderLeftWidth: 6,
       borderLeftColor: '#e74c3c',
-      padding: 18, 
+      padding: 18,
       marginTop: 15,
-      elevation: 5, 
-      shadowColor: '#000', 
-      shadowOpacity: 0.15, 
-      shadowRadius: 8, 
-      shadowOffset: { width: 0, height: 3 } 
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 3 }
     }}>
       <Text style={{ fontSize: 17, fontWeight: 'bold', color: '#2c3e50', marginBottom: 6 }}>
         {text1}
@@ -143,19 +143,19 @@ function AppNavigator() {
       {user ? (
         <>
           {isFirstLaunch ? (
-            <Stack.Screen 
-              name="Onboarding" 
-              component={OnboardingScreen} 
-              options={{ headerShown: false }} 
+            <Stack.Screen
+              name="Onboarding"
+              component={OnboardingScreen}
+              options={{ headerShown: false }}
             />
           ) : null}
 
           <Stack.Screen name="Main" component={MainDrawer} options={{ headerShown: false }} />
-          
-          <Stack.Screen 
-            name="NotificationHistory" 
+
+          <Stack.Screen
+            name="NotificationHistory"
             component={NotificationHistoryScreen}
-            options={{ title: 'Istoric Notificări', headerShown: true }} 
+            options={{ title: 'Istoric Notificări', headerShown: true }}
           />
           <Stack.Screen
             name="ScanScreen"
@@ -167,14 +167,14 @@ function AppNavigator() {
         <>
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
-          <Stack.Screen 
-            name="ForgotPassword" 
-            component={ForgotPasswordScreen} 
-            options={{ headerShown: false }} 
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+            options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="ResetPassword" 
-            component={ResetPasswordScreen} 
+          <Stack.Screen
+            name="ResetPassword"
+            component={ResetPasswordScreen}
             options={{ headerShown: false }}
           />
         </>
@@ -184,7 +184,7 @@ function AppNavigator() {
 }
 
 function ThemeWrapper() {
-  const { colors, isDark } = useThemeColor(); 
+  const { colors, isDark } = useThemeColor();
 
   const MyTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),

@@ -3,8 +3,9 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Alert } from 'react-native';
 
-const API_URL = 'https://api.osace.ro';
-// Cheia trebuie să fie IDENTICĂ cu cea din AuthContext
+const API_URL = __DEV__ 
+  ? 'http://100.124.204.20:3000' // Asigură-te că e 3000 aici!
+  : 'https://api.osace.ro';
 const TOKEN_KEY = 'userToken'; 
 
 const api = axios.create({

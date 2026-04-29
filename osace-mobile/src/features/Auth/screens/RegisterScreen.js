@@ -10,13 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import axios from 'axios';
+import api from '../../../services/api';
 import Toast from 'react-native-toast-message';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColor } from '../../../constants/useThemeColor';
 
-const API_URL = 'https://api.osace.ro';
 
 export default function RegisterScreen({ navigation }) {
   const [displayName, setDisplayName] = useState('');
@@ -48,7 +47,7 @@ export default function RegisterScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/api/auth/register`, {
+      const response = await api.post(`/api/auth/register`, {
         display_name: displayName.trim(),
         last_name: lastName.trim(),
         first_name: firstName.trim(),
