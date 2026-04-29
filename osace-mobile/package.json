@@ -1,6 +1,6 @@
 {
   "name": "osace-mobile",
-  "license": "0BSD",
+  "license": "UNLICENSED",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {

@@ -593,7 +593,8 @@ Key tables used throughout the application:
 
 ## 📄 License
 
-This project is licensed under the **0BSD License** — see the [package.json](osace-mobile/package.json) for details.
+License & Copyright
+© 2026 [Rece George Catalin]. All rights reserved. The code is publicly available for viewing, but it is not open-source. Please read the LICENSE file for details.
 
 ---
 
