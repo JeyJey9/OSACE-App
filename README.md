@@ -593,8 +593,12 @@ Key tables used throughout the application:
 
 ## 📄 License
 
-License & Copyright
-© 2026 [Rece George Catalin]. All rights reserved. The code is publicly available for viewing, but it is not open-source. Please read the LICENSE file for details.
+Copyright (c) 2026 O.S.A.C.E. - Organizaţia Studenţilor din Facultatea de Automatică, Calculatoare şi Electronică
+Developed and authored by Rece George Cătălin.
+All Rights Reserved.
+
+This source code is public strictly for educational and portfolio purposes.
+Copying, modifying, distributing, or using this code or any part of it commercially (including publishing on app stores) is not permitted without the explicit, written consent of the author.
 
 ---
 
