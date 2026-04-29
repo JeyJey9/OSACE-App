@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "OSACE",
+    "slug": "osace-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/osace.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./src/assets/osace.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/osace.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.osace.mobile",
+      "googleServicesFile": "./google-services.json"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "abd7ab63-afc2-4280-9e8f-fe551af8581d"
+      }
+    },
+    "plugins": [
+      "expo-font",
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-image-picker",
+      "expo-camera"
+    ]
+  }
+}

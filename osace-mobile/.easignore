@@ -1,0 +1,35 @@
+# ─── Re-include critical files excluded by gitignore ──────────────────────────
+!google-services.json
+
+# ─── Android local build artifacts (biggest offenders, ~500-600 MB) ───────────
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/app/.cxx/
+
+# ─── Expo / Metro caches ──────────────────────────────────────────────────────
+.expo/
+.expo-shared/
+
+# ─── Node modules (EAS installs these fresh on their servers) ─────────────────
+# Note: EAS already excludes node_modules by default, but being explicit helps
+node_modules/
+
+# ─── OS & editor junk ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# ─── Local env files (never upload secrets) ───────────────────────────────────
+.env
+.env.local
+.env.development
+.env.production
+
+# ─── Dev / debug artifacts ────────────────────────────────────────────────────
+package-lock-backup.txt
+structura.txt
+*.orig

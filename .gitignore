@@ -1,0 +1,80 @@
+# Acest fișier .gitignore este pentru RĂDĂCINA monorepo-ului.
+
+## 1. Reguli Globale (se aplică ambelor proiecte)
+#######################################################
+
+
+.VSCodeCounter/
+# Ignoră TOATE folderele node_modules, oriunde s-ar afla
+**/node_modules/
+
+# Fișiere de log pentru debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Fișiere de sistem macOS
+.DS_Store
+
+# Fișiere de configurare ale editorului de cod (VSCode, IntelliJ)
+**/.idea/
+.vscode/
+*.code-workspace
+
+## 2. Reguli pentru Fișiere de Mediu (ENV)
+#######################################################
+# Ignoră TOATE fișierele .env, .env.local etc.
+.env
+.env.*
+# DAR NU ignora fișierele exemplu (dacă le ai)
+!.env.example
+
+## 3. Reguli Specifice Backend (osace-api)
+#######################################################
+# Adaugă aici fișiere specifice de backend, de ex:
+# /osace-api/build/
+# /osace-api/dist/
+
+## 4. Reguli Specifice Frontend (osace-mobile)
+#######################################################
+# Am adaptat fișierul tău vechi, adăugând prefixul 'osace-mobile/'
+
+# Expo
+/osace-mobile/.expo/
+/osace-mobile/dist/
+/osace-mobile/web-build/
+/osace-mobile/expo-env.d.ts
+
+# Folderele native generate de Expo Prebuild
+/osace-mobile/ios/
+/osace-mobile/android/
+
+# Metro
+/osace-mobile/.metro-health-check*
+
+# TypeScript
+/osace-mobile/*.tsbuildinfo
+
+# Fișiere de build/signare native
+/osace-mobile/.kotlin/
+/osace-mobile/*.orig.*
+/osace-mobile/*.jks
+/osace-mobile/*.p8
+/osace-mobile/*.p12
+/osace-mobile/*.key
+/osace-mobile/*.mobileprovision
+/osace-mobile/*.apk
+/osace-mobile/build
+
+# Fișiere Google Services
+# Notă: De obicei, google-services.json NU este ignorat dacă nu este privat.
+# L-am păstrat pe baza fișierului tău vechi.
+osace-mobile/android/app/google-services.json
+/osace-mobile/google-services.json
+
+# Chei private
+/osace-mobile/*.pem
+
+#Map
+osace-map/
+/osace-map/
