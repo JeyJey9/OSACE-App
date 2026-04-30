@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  TextInput, 
-  StyleSheet, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  FlatList,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
   ActivityIndicator,
   Alert,
   Image,
@@ -18,7 +18,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { formatDistanceToNow } from 'date-fns';
 import { ro } from 'date-fns/locale';
 
-// ▼▼▼ NOU: Importuri pentru Temă și Layout ▼▼▼
 import { useThemeColor } from '../../../constants/useThemeColor';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 
@@ -26,8 +25,7 @@ export default function CommentsScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { postId, onCommentAdded } = route.params;
-  
-  // ▼▼▼ NOU: Preluăm culorile ▼▼▼
+
   const { colors, isDark } = useThemeColor();
 
   const [comments, setComments] = useState([]);
@@ -41,7 +39,6 @@ export default function CommentsScreen() {
       const response = await api.get(`/api/posts/${postId}/comments`);
       setComments(response.data);
     } catch (error) {
-      console.error("Eroare la preluarea comentariilor:", error);
       Alert.alert("Eroare", "Nu s-au putut încărca comentariile.");
       navigation.goBack();
     } finally {
@@ -49,11 +46,7 @@ export default function CommentsScreen() {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchComments();
-    }, [postId])
-  );
+  useFocusEffect(useCallback(() => { fetchComments(); }, [postId]));
 
   const handleSendComment = async () => {
     if (newComment.trim() === '' || sending) return;
@@ -65,7 +58,7 @@ export default function CommentsScreen() {
       setComments(prevComments => [...prevComments, response.data]);
       setNewComment('');
       if (onCommentAdded) onCommentAdded();
-      setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 200);
     } catch (error) {
       Alert.alert("Eroare", "Comentariul tău nu a putut fi trimis.");
     } finally {
@@ -75,7 +68,6 @@ export default function CommentsScreen() {
 
   const styles = createStyles(colors, isDark);
 
-  // ▼▼▼ MUTAT ÎN INTERIOR: Pentru acces la styles/colors ▼▼▼
   const CommentItem = ({ item }) => {
     const goToProfile = () => navigation.navigate('PublicProfile', { userId: item.user_id });
 
@@ -83,9 +75,9 @@ export default function CommentsScreen() {
       <View style={styles.commentContainer}>
         <TouchableOpacity onPress={goToProfile}>
           {item.avatar_url ? (
-            <Image 
-              source={{ uri: `${api.defaults.baseURL}${item.avatar_url}` }} 
-              style={styles.commentAvatar} 
+            <Image
+              source={{ uri: `${api.defaults.baseURL}${item.avatar_url}` }}
+              style={styles.commentAvatar}
             />
           ) : (
             <View style={styles.commentAvatarPlaceholder}>
@@ -94,13 +86,13 @@ export default function CommentsScreen() {
           )}
         </TouchableOpacity>
 
-        <View style={styles.commentBubble}>
+        <View style={styles.commentContentWrapper}>
           <View style={styles.commentHeader}>
-            <TouchableOpacity style={styles.commentNameWrapper} onPress={goToProfile}>
+            <TouchableOpacity onPress={goToProfile}>
               <Text style={styles.commentName} numberOfLines={1}>{item.full_name}</Text>
             </TouchableOpacity>
-            <Text style={styles.commentTime} numberOfLines={1}> 
-              {formatDistanceToNow(new Date(item.created_at), { addSuffix: true, locale: ro })}
+            <Text style={styles.commentTime}>
+              • {formatDistanceToNow(new Date(item.created_at), { addSuffix: false, locale: ro })}
             </Text>
           </View>
           <Text style={styles.commentContent}>{item.content}</Text>
@@ -113,7 +105,7 @@ export default function CommentsScreen() {
 
   return (
     <View style={styles.mainContainer}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
@@ -121,38 +113,46 @@ export default function CommentsScreen() {
         <FlatList
           ref={flatListRef}
           data={comments}
+          showsVerticalScrollIndicator={false}
           renderItem={({ item }) => <CommentItem item={item} />}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
+              <Ionicons name="chatbubbles-outline" size={48} color={colors.border} style={{ marginBottom: 10 }} />
               <Text style={styles.emptyText}>Fii primul care comentează!</Text>
             </View>
           }
         />
 
-        {/* Bara de Input Adaptivă */}
         <View style={styles.inputBar}>
-          <TextInput
-            style={styles.textInput}
-            value={newComment}
-            onChangeText={setNewComment}
-            placeholder="Scrie un comentariu..."
-            placeholderTextColor={colors.textSecondary}
-            multiline
-            keyboardAppearance={isDark ? 'dark' : 'light'}
-          />
-          <TouchableOpacity 
-            style={[styles.sendButton, { backgroundColor: colors.primary }]} 
-            onPress={handleSendComment}
-            disabled={sending || !newComment.trim()}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Ionicons name="send" size={20} color="white" />
-            )}
-          </TouchableOpacity>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.textInput}
+              value={newComment}
+              onChangeText={setNewComment}
+              placeholder="Adaugă un comentariu..."
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              maxLength={500}
+              keyboardAppearance={isDark ? 'dark' : 'light'}
+            />
+            <TouchableOpacity
+              style={styles.sendButton}
+              onPress={handleSendComment}
+              disabled={sending || !newComment.trim()}
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons
+                  name="paper-plane"
+                  size={24}
+                  color={newComment.trim() ? colors.primary : colors.textSecondary}
+                />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -161,49 +161,49 @@ export default function CommentsScreen() {
 
 const createStyles = (colors, isDark) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: colors.background },
-  listContainer: { padding: 15, paddingBottom: 30, flexGrow: 1 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 50 },
-  emptyText: { fontSize: 16, color: colors.textSecondary, textAlign: 'center' },
-  
-  commentContainer: { flexDirection: 'row', marginBottom: 15, alignItems: 'flex-start' },
-  commentAvatar: { width: 36, height: 36, borderRadius: 18, marginRight: 10, backgroundColor: colors.border },
-  commentAvatarPlaceholder: { width: 36, height: 36, borderRadius: 18, marginRight: 10, backgroundColor: isDark ? colors.border : '#eee', justifyContent: 'center', alignItems: 'center' },
-  
-  commentBubble: { 
-    flex: 1, 
-    backgroundColor: colors.card, 
-    borderRadius: 18, 
-    padding: 12,
-    borderWidth: isDark ? 1 : 0,
-    borderColor: colors.border
-  },
-  commentHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },
-  commentNameWrapper: { flex: 1, marginRight: 8 },
-  commentName: { fontWeight: 'bold', fontSize: 14, color: colors.textPrimary },
-  commentTime: { fontSize: 11, color: colors.textSecondary },
-  commentContent: { fontSize: 14, color: colors.textPrimary, lineHeight: 20 },
+  listContainer: { paddingHorizontal: 20, paddingTop: 15, paddingBottom: 30, flexGrow: 1 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 80 },
+  emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', fontWeight: '500' },
 
-  inputBar: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    padding: 10, 
-    paddingBottom: Platform.OS === 'ios' ? 25 : 10, // Padding extra pentru home indicator
-    borderTopWidth: 1, 
-    borderTopColor: colors.border, 
-    backgroundColor: colors.card 
+  commentContainer: { flexDirection: 'row', marginBottom: 20, alignItems: 'flex-start' },
+  commentAvatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12, backgroundColor: colors.border },
+  commentAvatarPlaceholder: { width: 40, height: 40, borderRadius: 20, marginRight: 12, backgroundColor: isDark ? colors.card : '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
+
+  commentContentWrapper: { flex: 1, justifyContent: 'center' },
+  commentHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  commentName: { fontWeight: '700', fontSize: 14, color: colors.textPrimary },
+  commentTime: { fontSize: 12, color: colors.textSecondary, marginLeft: 4 },
+  commentContent: { fontSize: 15, color: colors.textPrimary, lineHeight: 22 },
+
+  inputBar: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    paddingBottom: Platform.OS === 'ios' ? 25 : 10,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border
   },
-  textInput: { 
-    flex: 1, 
-    backgroundColor: colors.background, 
-    borderRadius: 20, 
-    paddingHorizontal: 15, 
-    paddingVertical: 8, 
-    fontSize: 16, 
-    color: colors.textPrimary,
-    maxHeight: 100, 
-    marginRight: 10,
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    backgroundColor: isDark ? colors.card : '#f0f2f5', // Culoare standard tip Facebook pentru input
+    borderRadius: 20,
     borderWidth: isDark ? 1 : 0,
-    borderColor: colors.border
+    borderColor: colors.border,
+    paddingHorizontal: 15,
+    paddingVertical: 5,
   },
-  sendButton: { borderRadius: 22, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.textPrimary,
+    maxHeight: 120,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  sendButton: {
+    padding: 8,
+    marginLeft: 5,
+    marginBottom: 2 // Aliniere frumoasă jos
+  },
 });

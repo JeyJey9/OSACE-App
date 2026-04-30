@@ -319,9 +319,8 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
         SELECT
           u.id, u.display_name, u.first_name, u.last_name, u.avatar_url, u.created_at,
           (
-            SELECT COALESCE(SUM(ea.awarded_hours), 0)
-            FROM event_attendance ea
-            WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended'
+            (SELECT COALESCE(SUM(ea.awarded_hours), 0) FROM event_attendance ea WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended') +
+            (SELECT COALESCE(SUM(sc.awarded_hours), 0) FROM special_contributions sc WHERE sc.user_id = u.id AND sc.status = 'approved')
           ) AS total_hours
         FROM users u
         WHERE u.id = $1;
@@ -338,6 +337,26 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
 
     } catch (error) {
       console.error(`Eroare preluare profil public:`, error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
+  router.get('/:id/contributions', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(id)) return res.status(400).json({ error: 'ID invalid' });
+
+    try {
+      const result = await pool.query(`
+        SELECT c.*, 
+               coord.display_name as coord_name, coord.first_name as coord_first, coord.last_name as coord_last
+        FROM special_contributions c
+        LEFT JOIN users coord ON c.coordinator_id = coord.id
+        WHERE c.user_id = $1 AND c.status = 'approved'
+        ORDER BY c.created_at DESC
+      `, [id]);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Eroare la preluarea contribuțiilor:', error);
       res.status(500).json({ error: 'Eroare server.' });
     }
   });

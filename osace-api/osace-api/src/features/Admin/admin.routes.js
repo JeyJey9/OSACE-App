@@ -117,7 +117,96 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
     }
   });
   // ==========================================
-  // ▲▲▲ SFÂRȘIT RUTE APROBĂRI ORE ▲▲▲
+  // ▼▼▼ RUTE CONTRIBUȚII SPECIALE ▼▼▼
+  // ==========================================
+  
+  router.post('/contributions', [verifyToken, verifyManager], async (req, res) => {
+    const { user_id, title, description, awarded_hours } = req.body;
+    const { userId } = req.user;
+
+    if (!user_id || !title || !description || awarded_hours == null) {
+      return res.status(400).json({ error: 'Toate câmpurile sunt obligatorii.' });
+    }
+
+    try {
+      await pool.query(
+        `INSERT INTO special_contributions (user_id, coordinator_id, title, description, awarded_hours, status)
+         VALUES ($1, $2, $3, $4, $5, 'pending')`,
+        [user_id, userId, title, description, awarded_hours]
+      );
+      res.status(201).json({ message: 'Contribuția specială a fost înregistrată și așteaptă aprobarea unui Admin.' });
+    } catch (error) {
+      console.error('Eroare la crearea contribuției:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
+  router.get('/contributions/pending', [verifyToken, verifyAdmin], async (req, res) => {
+    try {
+      const result = await pool.query(`
+        SELECT c.*, 
+               u.display_name as target_name, u.first_name as target_first, u.last_name as target_last,
+               coord.display_name as coord_name, coord.first_name as coord_first, coord.last_name as coord_last
+        FROM special_contributions c
+        JOIN users u ON c.user_id = u.id
+        LEFT JOIN users coord ON c.coordinator_id = coord.id
+        WHERE c.status = 'pending'
+        ORDER BY c.created_at DESC
+      `);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Eroare la preluarea contribuțiilor pending:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
+  router.post('/contributions/:id/approve', [verifyToken, verifyAdmin], async (req, res) => {
+    const { id } = req.params;
+    const { userId } = req.user;
+
+    try {
+      await pool.query('BEGIN');
+      
+      const check = await pool.query('SELECT status FROM special_contributions WHERE id = $1', [id]);
+      if (check.rowCount === 0) throw new Error('Not found');
+      if (check.rows[0].status !== 'pending') throw new Error('Not pending');
+
+      await pool.query(
+        `UPDATE special_contributions 
+         SET status = 'approved', admin_id = $1, updated_at = NOW() 
+         WHERE id = $2`,
+        [userId, id]
+      );
+      
+      await pool.query('COMMIT');
+      res.json({ message: 'Contribuție aprobată cu succes!' });
+    } catch (error) {
+      await pool.query('ROLLBACK');
+      console.error('Eroare la aprobarea contribuției:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
+  router.post('/contributions/:id/reject', [verifyToken, verifyAdmin], async (req, res) => {
+    const { id } = req.params;
+    const { userId } = req.user;
+
+    try {
+      await pool.query(
+        `UPDATE special_contributions 
+         SET status = 'rejected', admin_id = $1, updated_at = NOW() 
+         WHERE id = $2`,
+        [userId, id]
+      );
+      res.json({ message: 'Contribuție respinsă.' });
+    } catch (error) {
+      console.error('Eroare la respingerea contribuției:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
+  // ==========================================
+  // ▲▲▲ SFÂRȘIT RUTE CONTRIBUȚII SPECIALE ▲▲▲
   // ==========================================
 
 

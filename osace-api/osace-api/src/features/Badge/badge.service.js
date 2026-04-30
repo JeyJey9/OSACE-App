@@ -56,7 +56,7 @@ const checkAttendanceStatsBadges = async (userId, pool) => {
     const statsQuery = `
       SELECT
         COUNT(ea.event_id) AS total_events,
-        COALESCE(SUM(e.duration_hours), 0) AS total_hours,
+        (COALESCE(SUM(e.duration_hours), 0) + COALESCE((SELECT SUM(awarded_hours) FROM special_contributions WHERE user_id = $1 AND status = 'approved'), 0)) AS total_hours,
         COUNT(CASE WHEN e.category = 'sedinta' THEN 1 END) AS total_sedinte,
       	COUNT(CASE WHEN e.category = 'social' THEN 1 END) AS total_social,
     	  COUNT(CASE WHEN e.category = 'proiect' THEN 1 END) AS total_proiect,

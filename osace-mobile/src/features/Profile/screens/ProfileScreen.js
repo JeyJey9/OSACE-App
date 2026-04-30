@@ -9,6 +9,7 @@ import api from '../../../services/api';
 import ProfileHeader from '../components/ProfileHeader';
 import ProfileStats from '../components/ProfileStats';
 import BadgeList from '../components/BadgeList';
+import ContributionList from '../components/ContributionList';
 import ProfileActions from '../components/ProfileActions';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import Toast from 'react-native-toast-message';
@@ -26,6 +27,7 @@ export default function ProfileScreen() {
   const [pastEvents, setPastEvents] = useState([]);
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [badges, setBadges] = useState([]);
+  const [contributions, setContributions] = useState([]);
 
   // --- Logica de preluare a datelor ---
   const fetchHistory = async () => {
@@ -48,6 +50,16 @@ export default function ProfileScreen() {
     }
   };
 
+  const fetchContributions = async () => {
+    try {
+      const response = await api.get(`/api/profile/${user.userId || user.id}/contributions`);
+      setContributions(response.data);
+    } catch (error) {
+      console.error("Eroare la preluarea contribuțiilor:", error);
+      throw error;
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       const loadProfileData = async () => {
@@ -55,7 +67,8 @@ export default function ProfileScreen() {
         try {
           await Promise.all([
             fetchHistory(),
-            fetchBadges()
+            fetchBadges(),
+            fetchContributions()
           ]);
         } catch (error) {
           Alert.alert("Eroare", "Nu am putut încărca profilul complet.");
@@ -69,14 +82,19 @@ export default function ProfileScreen() {
 
   // --- Calcule și Formatare ---
   const totalHours = useMemo(() => {
-    return pastEvents.reduce((sum, event) => {
+    const eventHours = pastEvents.reduce((sum, event) => {
       if (event.confirmation_status === 'attended') {
-        // Use awarded_hours (actual approved hours) not duration_hours (planned event length)
         return sum + (parseFloat(event.awarded_hours) || 0);
       }
       return sum;
     }, 0);
-  }, [pastEvents]);
+    
+    const contribHours = contributions.reduce((sum, contrib) => {
+      return sum + (parseFloat(contrib.awarded_hours) || 0);
+    }, 0);
+    
+    return eventHours + contribHours;
+  }, [pastEvents, contributions]);
 
   const displayRole = (role) => {
     switch (role) {
@@ -191,6 +209,8 @@ export default function ProfileScreen() {
       <BadgeList 
         badges={badges}
       />
+      
+      <ContributionList contributions={contributions} />
       
       <ProfileActions 
         onEdit={() => navigation.navigate('EditProfile')}

@@ -43,10 +43,12 @@ export default function AdminMenuScreen({ navigation }) {
         {/* --- VIZIBIL PENTRU TOȚI (Admin + Coordonator) --- */}
         {renderMenuItem("Activități", "calendar-outline", "AdminManageEvents")}
         {renderMenuItem("Aprobări Ore", "time-outline", "HourRequests")}
+        {renderMenuItem("Cerere Contribuție", "star-outline", "AssignContribution")}
         
         {/* --- VIZIBIL DOAR PENTRU ADMIN --- */}
         {isAdmin && (
           <>
+            {renderMenuItem("Aprobări Contribuții", "shield-checkmark-outline", "ContributionRequests")}
             {renderMenuItem("Utilizatori", "people-circle-outline", "AdminUserList")}
             {renderMenuItem("Notificare", "notifications-outline", "SendNotification")}
             {renderMenuItem("Badge-uri", "ribbon-outline", "ManageBadges")}

@@ -8,7 +8,9 @@ const LEADERBOARD_QUERY = `
     u.id,
     u.display_name,
     u.avatar_url,
-    COALESCE(SUM(ea.awarded_hours), 0) AS total_hours,
+    (COALESCE(SUM(ea.awarded_hours), 0) + 
+     COALESCE((SELECT SUM(awarded_hours) FROM special_contributions sc WHERE sc.user_id = u.id AND sc.status = 'approved'), 0)
+    ) AS total_hours,
     COALESCE(SUM(CASE WHEN e.category = 'social' THEN ea.awarded_hours ELSE 0 END), 0) AS social_hours,
     COALESCE(SUM(CASE WHEN e.category = 'proiect' THEN ea.awarded_hours ELSE 0 END), 0) AS proiect_hours,
     COALESCE(SUM(CASE WHEN e.category = 'sedinta' THEN ea.awarded_hours ELSE 0 END), 0) AS sedinta_hours

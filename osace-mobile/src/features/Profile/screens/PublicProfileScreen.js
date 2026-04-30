@@ -10,6 +10,7 @@ import { ro } from 'date-fns/locale';
 import ProfileHeader from '../components/ProfileHeader';
 import ProfileStats from '../components/ProfileStats';
 import BadgeList from '../components/BadgeList'; 
+import ContributionList from '../components/ContributionList';
 import ProfileSkeleton from '../components/ProfileSkeleton';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 
@@ -23,6 +24,7 @@ export default function PublicProfileScreen() {
 
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
+  const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchProfileData = async () => {
@@ -30,13 +32,15 @@ export default function PublicProfileScreen() {
       setLoading(true);
       
       // Apeluri paralele pentru datele profilului și badge-uri
-      const [profileResponse, badgesResponse] = await Promise.all([
+      const [profileResponse, badgesResponse, contributionsResponse] = await Promise.all([
         api.get(`/api/profile/${userId}`),
-        api.get(`/api/profile/${userId}/badges`)
+        api.get(`/api/profile/${userId}/badges`),
+        api.get(`/api/profile/${userId}/contributions`)
       ]);
       
       setProfile(profileResponse.data);
       setBadges(badgesResponse.data);
+      setContributions(contributionsResponse.data);
     } catch (error) {
       console.error("Eroare la preluarea profilului public:", error);
       Alert.alert("Eroare", "Nu s-au putut încărca datele acestui voluntar.");
@@ -63,7 +67,6 @@ export default function PublicProfileScreen() {
       <ProfileHeader 
         user={profile}
         roleText="Membru Voluntar" 
-        // Notă: Nu pasăm onAvatarPress aici, deci profilul public rămâne non-editabil
       />
       
       <ProfileStats 
@@ -75,6 +78,8 @@ export default function PublicProfileScreen() {
       <BadgeList 
         badges={badges}
       />
+      
+      <ContributionList contributions={contributions} />
     </ScreenContainer>
   );
 }

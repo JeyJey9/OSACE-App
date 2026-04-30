@@ -13,6 +13,18 @@ const STATS_QUERY = `
     FROM event_attendance ea
     JOIN events e ON ea.event_id = e.id
     WHERE ea.confirmation_status = 'attended' AND e.end_time <= NOW()
+    
+    UNION ALL
+    
+    SELECT
+      sc.user_id,
+      NULL AS event_id,
+      sc.title AS event_title,
+      'contributie' AS category,
+      sc.awarded_hours AS hours,
+      sc.created_at AS start_time
+    FROM special_contributions sc
+    WHERE sc.status = 'approved'
   ),
 
   stats_aggregated AS (
@@ -38,7 +50,7 @@ const STATS_QUERY = `
       COALESCE(u.display_name, u.first_name || ' ' || u.last_name) AS name,
       u.avatar_url,
       SUM(ca.hours) AS total_hours,
-      COUNT(*) AS events_attended
+      COUNT(ca.event_id) AS events_attended
     FROM completed_attendances ca
     JOIN users u ON ca.user_id = u.id
     GROUP BY u.id, u.display_name, u.first_name, u.last_name, u.avatar_url

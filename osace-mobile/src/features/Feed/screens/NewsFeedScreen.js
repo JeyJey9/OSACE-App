@@ -1,18 +1,18 @@
 import React, { useState, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  StyleSheet,
   FlatList,
   Alert,
   TouchableOpacity,
   RefreshControl // <-- NOU: Import RefreshControl
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useAuth } from '../../../features/Auth/AuthContext'; 
+import { useAuth } from '../../../features/Auth/AuthContext';
 import api from '../../../services/api';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import PostCard from '../components/PostCard'; 
+import PostCard from '../components/PostCard';
 import FeedSkeleton from '../components/FeedSkeleton';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../constants/useThemeColor';
@@ -54,19 +54,19 @@ export default function NewsFeedScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true); 
+      setLoading(true);
       fetchPosts();
     }, [])
   );
 
   const onPostUpdate = (updatedPost) => {
-    setPosts(currentPosts => 
+    setPosts(currentPosts =>
       currentPosts.map(p => p.id === updatedPost.id ? updatedPost : p)
     );
   };
-  
+
   const onPostDelete = (deletedPostId) => {
-    setPosts(currentPosts => 
+    setPosts(currentPosts =>
       currentPosts.filter(p => p.id !== deletedPostId)
     );
   };
@@ -80,39 +80,39 @@ export default function NewsFeedScreen() {
         <FeedSkeleton />
       ) : (
         <FlatList
-        data={posts}
-        renderItem={({ item }) => (
-          <PostCard 
-            item={item} 
-            onPostUpdate={onPostUpdate} 
-            onPostDelete={onPostDelete}
-            currentUserRole={user?.role} 
-          />
-        )}
-        keyExtractor={(item) => item.id.toString()}
-        // ▼▼▼ NOU: Adăugat refreshControl ▼▼▼
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        ListEmptyComponent={() => (
-          <EmptyState
-            illustration="no_feed"
-            title="Nicio noutate încă"
-            subtitle="Nu există postaje în momentul de faţă. Revino mai târziu!"
-          />
-        )}
-        contentContainerStyle={styles.listContent}
-      />
+          data={posts}
+          renderItem={({ item }) => (
+            <PostCard
+              item={item}
+              onPostUpdate={onPostUpdate}
+              onPostDelete={onPostDelete}
+              currentUserRole={user?.role}
+            />
+          )}
+          keyExtractor={(item) => item.id.toString()}
+          // ▼▼▼ NOU: Adăugat refreshControl ▼▼▼
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+          ListEmptyComponent={() => (
+            <EmptyState
+              illustration="no_feed"
+              title="Nicio noutate încă"
+              subtitle="Nu există postaje în momentul de faţă. Revino mai târziu!"
+            />
+          )}
+          contentContainerStyle={styles.listContent}
+        />
       )}
 
       {(user?.role === 'admin' || user?.role === 'coordonator') && (
-        <TouchableOpacity 
-          style={styles.fab} 
+        <TouchableOpacity
+          style={styles.fab}
           onPress={() => navigation.navigate(managementTabName, { screen: 'PostForm' })}
         >
           <Ionicons name="add" size={30} color="white" />

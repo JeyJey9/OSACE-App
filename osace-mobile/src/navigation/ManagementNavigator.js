@@ -24,6 +24,10 @@ import PostFormScreen from '../features/Admin/posts/screens/PostFormScreen';
 import ManageBadgesScreen from '../features/Admin/badges/screens/ManageBadgesScreen';
 import BadgeFormScreen from '../features/Admin/badges/screens/BadgeFormScreen';
 
+// Sub-domeniu: Contribuții Speciale
+import AssignContributionScreen from '../features/Admin/screens/AssignContributionScreen';
+import ContributionRequestsScreen from '../features/Admin/screens/ContributionRequestsScreen';
+
 const Stack = createNativeStackNavigator();
 
 export default function ManagementNavigator() {
@@ -41,6 +45,11 @@ export default function ManagementNavigator() {
       {/* ▼▼▼ NOU: Adăugăm ecranul pentru Cereri Ore ▼▼▼ */}
       <Stack.Screen name="HourRequests" component={HourRequestsScreen} options={{ title: 'Aprobări Ore' }} />
       <Stack.Screen name="AssignHours" component={AssignHoursScreen} options={{ title: 'Acordare Ore Manuală' }} />
+      
+      {/* NOU: Ecrane Contribuții Speciale */}
+      <Stack.Screen name="AssignContribution" component={AssignContributionScreen} options={{ title: 'Acordare Contribuție' }} />
+      <Stack.Screen name="ContributionRequests" component={ContributionRequestsScreen} options={{ title: 'Aprobări Contribuții' }} />
+
       {/* --- ECRANE DOAR PENTRU ADMIN (Definite întotdeauna) --- */}
       <Stack.Screen name="AdminUserList" component={UserListScreen} options={{ title: 'Utilizatori' }} />
       <Stack.Screen name="SendNotification" component={SendNotificationScreen} options={{ title: 'Trimite Notificare' }} />
