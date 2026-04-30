@@ -1,14 +1,14 @@
 import React, { useState, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  ActivityIndicator, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
   TouchableOpacity,
   TextInput,
   Alert,
-  RefreshControl 
+  RefreshControl
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import api from '../../../../services/api';
@@ -25,9 +25,9 @@ import EmptyState from '../../../../components/EmptyState';
 export default function HourRequestsScreen() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false); 
-  const [actionLoading, setActionLoading] = useState(null); 
-  const [inputValues, setInputValues] = useState({}); 
+  const [refreshing, setRefreshing] = useState(false);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [inputValues, setInputValues] = useState({});
 
   const navigation = useNavigation();
   const { colors, isDark } = useThemeColor();
@@ -36,7 +36,7 @@ export default function HourRequestsScreen() {
     try {
       const response = await api.get('/api/admin/hour-requests');
       setRequests(response.data);
-      
+
       const initialInputs = {};
       response.data.forEach(req => {
         initialInputs[req.id] = req.requested_hours.toString();
@@ -80,7 +80,7 @@ export default function HourRequestsScreen() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Toast.show({ type: 'success', text1: 'Cerere Aprobată! ✅', text2: response.data.message });
-      fetchRequests(); 
+      fetchRequests();
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Eroare', text2: error.response?.data?.error || 'Nu s-a putut aproba.' });
     } finally {
@@ -94,8 +94,8 @@ export default function HourRequestsScreen() {
       "Ești sigur că vrei să respingi aceste ore? Voluntarul nu va primi nimic din această cerere.",
       [
         { text: "Anulează", style: "cancel" },
-        { 
-          text: "Respinge", 
+        {
+          text: "Respinge",
           style: "destructive",
           onPress: async () => {
             try {
@@ -124,7 +124,7 @@ export default function HourRequestsScreen() {
   const renderRequestItem = ({ item }) => {
     const isOvertime = item.request_type === 'overtime';
     const isManual = item.request_type === 'manual';
-    
+
     let tagColor = '#e67e22';
     let tagLabel = 'Check-out Ratat';
     if (isOvertime) { tagColor = '#9b59b6'; tagLabel = 'Cerere Overtime'; }
@@ -141,9 +141,9 @@ export default function HourRequestsScreen() {
 
     const eventStart = formatTimeOnly(item.start_time);
     const eventEnd = formatTimeOnly(item.end_time);
-    const eventDate = formatSafe(item.start_time).split(',')[0]; 
+    const eventDate = formatSafe(item.start_time).split(',')[0];
 
-    const checkIn = formatTimeOnly(item.check_in_time);
+    const checkIn = item.check_in_time ? formatSafe(item.check_in_time) : '--:--';
     const checkOutFull = item.check_out_time ? formatSafe(item.check_out_time) : 'N/A';
 
     let isAnomaly = false;
@@ -184,7 +184,7 @@ export default function HourRequestsScreen() {
 
         <View style={styles.timelineBox}>
           <View style={styles.timelineSection}>
-            <Ionicons name="calendar" size={18} color={colors.textSecondary} style={{marginTop: 2}}/>
+            <Ionicons name="calendar" size={18} color={colors.textSecondary} style={{ marginTop: 2 }} />
             <View style={styles.timelineDetails}>
               <Text style={styles.timelineLabel}>Program Oficial:</Text>
               <Text style={styles.timelineValue}>{eventStart} - {eventEnd}</Text>
@@ -193,11 +193,11 @@ export default function HourRequestsScreen() {
 
           {!isManual && (
             <View style={[styles.timelineSection, { marginTop: 12 }]}>
-              <Ionicons name="scan" size={18} color={isAnomaly ? '#e74c3c' : colors.primary} style={{marginTop: 2}}/>
+              <Ionicons name="scan" size={18} color={isAnomaly ? '#e74c3c' : colors.primary} style={{ marginTop: 2 }} />
               <View style={styles.timelineDetails}>
-                <Text style={[styles.timelineLabel, isAnomaly && {color: '#e74c3c'}]}>Pontaj Real (Scanat):</Text>
-                <Text style={[styles.timelineValue, isAnomaly && {color: '#e74c3c'}]}>Check-in: {checkIn}</Text>
-                <Text style={[styles.timelineValue, isAnomaly && {color: '#e74c3c'}]}>Check-out: {checkOutFull}</Text>
+                <Text style={[styles.timelineLabel, isAnomaly && { color: '#e74c3c' }]}>Pontaj Real (Scanat):</Text>
+                <Text style={[styles.timelineValue, isAnomaly && { color: '#e74c3c' }]}>Check-in: {checkIn}</Text>
+                <Text style={[styles.timelineValue, isAnomaly && { color: '#e74c3c' }]}>Check-out: {checkOutFull}</Text>
               </View>
             </View>
           )}
@@ -224,16 +224,16 @@ export default function HourRequestsScreen() {
           </View>
 
           <View style={styles.buttonsContainer}>
-            <TouchableOpacity 
-              style={[styles.btn, styles.rejectBtn]} 
+            <TouchableOpacity
+              style={[styles.btn, styles.rejectBtn]}
               onPress={() => handleReject(item.id)}
               disabled={actionLoading !== null}
             >
               <Ionicons name="close" size={20} color="#e74c3c" />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.btn, styles.approveBtn]} 
+
+            <TouchableOpacity
+              style={[styles.btn, styles.approveBtn]}
               onPress={() => handleApprove(item.id)}
               disabled={actionLoading !== null}
             >
@@ -261,7 +261,7 @@ export default function HourRequestsScreen() {
             Aprobă cererile automate sau adaugă manual.
           </Text>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.addManualBtn}
           onPress={() => navigation.navigate('AssignHours')}
         >
