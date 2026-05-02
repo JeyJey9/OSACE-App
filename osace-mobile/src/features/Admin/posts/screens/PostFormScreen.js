@@ -48,11 +48,7 @@ export default function PostFormScreen() {
 
   useEffect(() => {
     const handleGoBack = () => {
-      if (isEditMode) {
-        navigation.navigate('Noutăți');
-      } else {
-        navigation.navigate('Admin', { screen: 'AdminMenu' });
-      }
+      navigation.navigate('Noutăți');
     };
 
     const renderBackButton = () => (
@@ -184,9 +180,10 @@ export default function PostFormScreen() {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
         >
-          <Text style={styles.header}>{isEditMode ? 'Editează Postare' : 'Postare Nouă'}</Text>
+          <View style={styles.card}>
+            <Text style={styles.header}>{isEditMode ? 'Editează Postare' : 'Postare Nouă'}</Text>
 
-          <View style={styles.imagePickerContainer}>
+            <View style={styles.imagePickerContainer}>
             <DraggableFlatList
                 horizontal
                 data={images}
@@ -194,7 +191,9 @@ export default function PostFormScreen() {
                 onDragEnd={({ data }) => setImages(data)} 
                 ListEmptyComponent={() => (
                     (isEditMode && existingImageUrls) ? (
-                        <Image source={{ uri: existingImageUrls }} style={styles.imagePreview} />
+                        <View style={styles.imagePreviewContainer}>
+                          <Image source={{ uri: existingImageUrls }} style={styles.imagePreview} resizeMode="contain" />
+                        </View>
                     ) : (
                         <TouchableOpacity style={styles.imagePicker} onPress={pickImages} disabled={isEditMode}>
                             <Ionicons name="camera" size={40} color={colors.textSecondary} />
@@ -207,7 +206,7 @@ export default function PostFormScreen() {
                     style={[ styles.imagePreviewContainer, { opacity: isActive ? 0.5 : 1 }]}
                     onLongPress={drag}
                   >
-                    <Image source={{ uri: item.uri }} style={styles.imagePreview} />
+                    <Image source={{ uri: item.uri }} style={styles.imagePreview} resizeMode="contain" />
                     {!isEditMode && (
                       <TouchableOpacity style={styles.removeImageButton} onPress={() => removeImage(item.uri)}>
                         <Ionicons name="close-circle" size={24} color="#C0392B" />
@@ -222,29 +221,37 @@ export default function PostFormScreen() {
                 </TouchableOpacity>
             )}
           </View>
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.dateCol}>
+              <Text style={styles.label}>Data Postării</Text>
+              <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateButton}>
+                <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} style={styles.dateIcon} />
+                <Text style={styles.dateText}>
+                  {postDate.toLocaleString('ro-RO', { dateStyle: 'full', timeStyle: 'short' })}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            <FormInput
+              label="Descriere"
+              placeholder="Adaugă o descriere..."
+              value={description}
+              onChangeText={setDescription}
+              multiline={true}
+            />
+          </View>
           
-          <Text style={styles.label}>Data Postării</Text>
-          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateButton}>
-            <Text style={styles.dateText}>
-              {postDate.toLocaleString('ro-RO', { dateStyle: 'full', timeStyle: 'short' })}
-            </Text>
-          </TouchableOpacity>
-          
-          <FormInput
-            label="Descriere"
-            placeholder="Adaugă o descriere..."
-            value={description}
-            onChangeText={setDescription}
-            multiline={true}
-          />
-          
-          <FormButton
-            title={isEditMode ? "Salvează Modificările" : "Publică Postarea"}
-            iconName={isEditMode ? "save-outline" : "send-outline"}
-            onPress={handleSubmit} 
-            loading={loading}
-            variant={isEditMode ? "primary" : "danger"}
-          />
+          <View style={styles.buttonWrapper}>
+            <FormButton
+              title={isEditMode ? "Salvează Modificările" : "Publică Postarea"}
+              iconName={isEditMode ? "save-outline" : "send-outline"}
+              onPress={handleSubmit} 
+              loading={loading}
+              variant={isEditMode ? "primary" : "danger"}
+            />
+          </View>
         </KeyboardAvoidingView>
 
         <DateTimePickerModal
@@ -261,15 +268,31 @@ export default function PostFormScreen() {
 }
 
 const createStyles = (colors, isDark) => StyleSheet.create({
-  header: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, color: colors.textPrimary },
-  label: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary, marginTop: 15, marginBottom: 5 },
-  dateButton: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingVertical: 15, paddingHorizontal: 15, minHeight: 50, justifyContent: 'center', marginBottom: 10 },
-  dateText: { fontSize: 16, color: colors.textPrimary },
-  imagePickerContainer: { height: 250, marginBottom: 15 },
-  imagePicker: { width: 250, height: 250, backgroundColor: isDark ? colors.border : '#eee', borderRadius: 8, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.border, borderStyle: 'dashed' },
-  imagePlaceholderText: { color: colors.textSecondary, marginTop: 10 },
-  imagePreviewContainer: { width: 250, height: 250, marginRight: 10 },
-  imagePreview: { width: '100%', height: '100%', borderRadius: 8 },
-  removeImageButton: { position: 'absolute', top: 5, right: 5, backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)', borderRadius: 12 },
-  addMoreButton: { position: 'absolute', bottom: 10, right: 10, backgroundColor: colors.card, borderRadius: 20, padding: 2 },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: isDark ? 1 : 0,
+    borderColor: colors.border,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
+  header: { fontSize: 22, fontWeight: 'bold', marginBottom: 15, color: colors.textPrimary },
+  label: { fontSize: 14, fontWeight: 'bold', color: colors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  dateCol: { marginBottom: 15 },
+  dateButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingVertical: 12, paddingHorizontal: 12 },
+  dateIcon: { marginRight: 8 },
+  dateText: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  imagePickerContainer: { height: 250, marginBottom: 5 },
+  imagePicker: { width: 250, height: 250, backgroundColor: isDark ? colors.border : '#f8f9fa', borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.primary + '80', borderStyle: 'dashed' },
+  imagePlaceholderText: { color: colors.textSecondary, marginTop: 10, fontWeight: '600' },
+  imagePreviewContainer: { width: 250, height: 250, marginRight: 10, backgroundColor: '#000', borderRadius: 12, overflow: 'hidden' },
+  imagePreview: { width: '100%', height: '100%' },
+  removeImageButton: { position: 'absolute', top: 8, right: 8, backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)', borderRadius: 12 },
+  addMoreButton: { position: 'absolute', bottom: 10, right: 10, backgroundColor: colors.card, borderRadius: 20, padding: 2, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3 },
+  buttonWrapper: { marginTop: 10, marginBottom: 40 },
 });

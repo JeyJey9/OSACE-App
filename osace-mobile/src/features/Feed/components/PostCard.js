@@ -240,8 +240,8 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
                 <Image
                   key={index}
                   source={{ uri: url }}
-                  style={{ width, height: width }}
-                  resizeMode="cover"
+                  style={{ width, height: width, backgroundColor: '#000' }}
+                  resizeMode="contain"
                 />
               ))}
             </ScrollView>
