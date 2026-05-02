@@ -48,7 +48,10 @@ export default function PostFormScreen() {
 
   useEffect(() => {
     const handleGoBack = () => {
-      navigation.navigate('Noutăți');
+      navigation.goBack();
+      setTimeout(() => {
+        navigation.navigate('Noutăți');
+      }, 10);
     };
 
     const renderBackButton = () => (
