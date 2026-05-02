@@ -56,19 +56,18 @@ export default function FeedSkeleton() {
 const createStyles = (colors, isDark) => StyleSheet.create({
   postContainer: {
     backgroundColor: colors.card,
-    marginBottom: 20,
+    marginBottom: 16,
     padding: 15,
-    marginHorizontal: 15, // Adăugăm padding lateral pentru a nu atinge marginile ecranului
-    borderRadius: 16,
-    // Umbre discrete
-    elevation: 3,
+    marginHorizontal: 12,
+    borderRadius: 20,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOpacity: isDark ? 0.3 : 0.1,
-    shadowRadius: 5,
-    // Bordură fină pentru Dark Mode
+    shadowOpacity: isDark ? 0.35 : 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
     borderWidth: isDark ? 1 : 0,
     borderColor: colors.border,
-    marginTop: 10,
+    marginTop: 8,
   },
   header: {
     flexDirection: 'row',

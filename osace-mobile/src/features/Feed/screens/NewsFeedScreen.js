@@ -123,7 +123,7 @@ export default function NewsFeedScreen() {
 }
 
 const createStyles = (colors) => StyleSheet.create({
-  listContent: { paddingBottom: 130 }, // Floating tab bar clearance + FAB
+  listContent: { paddingBottom: 130, paddingTop: 8 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
   emptyText: { fontSize: 16, color: colors.textSecondary },
   fab: { position: 'absolute', right: 20, bottom: 100, backgroundColor: colors.primary, width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
