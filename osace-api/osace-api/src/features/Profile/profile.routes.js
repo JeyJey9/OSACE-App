@@ -70,6 +70,26 @@ module.exports = (pool, verifyToken) => {
     }
   });
 
+  // Traseul: /all-past-events (Toate evenimentele trecute din asociație)
+  router.get('/all-past-events', verifyToken, async (req, res) => {
+    const userId = req.user.userId;
+    try {
+      const result = await pool.query(
+        `SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 
+                ea.confirmation_status, ea.awarded_hours 
+         FROM events e
+         LEFT JOIN event_attendance ea ON e.id = ea.event_id AND ea.user_id = $1
+         WHERE e.end_time <= NOW()
+         ORDER BY e.start_time DESC`,
+        [userId]
+      );
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Eroare la preluarea tuturor evenimentelor trecute:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
   {/* ▼▼▼ NOU: Ruta pentru a prelua badge-urile câștigate ▼▼▼ */}
   router.get('/my-badges', verifyToken, async (req, res) => {
     const userId = req.user.userId;

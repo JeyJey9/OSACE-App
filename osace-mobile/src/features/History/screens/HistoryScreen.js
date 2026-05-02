@@ -26,6 +26,7 @@ export default function HistoryScreen() {
   const [pastEvents, setPastEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false); 
+  const [viewMode, setViewMode] = useState('mine'); // 'mine' | 'all'
   const { colors, isDark } = useThemeColor();
 
   const CATEGORY_TAGS = {
@@ -45,9 +46,10 @@ export default function HistoryScreen() {
     });
   };
 
-  const fetchPastEvents = async () => {
+  const fetchPastEvents = async (mode = viewMode) => {
     try {
-      const response = await api.get('/api/profile/my-past-events');
+      const endpoint = mode === 'mine' ? '/api/profile/my-past-events' : '/api/profile/all-past-events';
+      const response = await api.get(endpoint);
       setPastEvents(response.data);
     } catch (error) {
       console.error("Eroare la preluarea istoricului:", error);
@@ -60,17 +62,17 @@ export default function HistoryScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
-      fetchPastEvents(),
+      fetchPastEvents(viewMode),
       reloadUser()
     ]);
     setRefreshing(false);
-  }, [reloadUser]);
+  }, [reloadUser, viewMode]);
 
   useFocusEffect(
     useCallback(() => {
       setLoading(true); 
-      fetchPastEvents();
-    }, [])
+      fetchPastEvents(viewMode);
+    }, [viewMode])
   );
 
   const stats = useMemo(() => {
@@ -182,39 +184,61 @@ export default function HistoryScreen() {
 
   const ListHeader = () => (
     <View>
-      <View style={styles.totalHoursCard}>
-        <Ionicons name="time-outline" size={140} color="rgba(255,255,255,0.15)" style={styles.bgIcon} />
-        <Text style={styles.totalHoursLabel}>Total Ore Voluntariat</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-          <Text style={styles.totalHoursValue}>{stats.total.toFixed(1)}</Text>
-          <Text style={styles.totalHoursUnit}> ore</Text>
-        </View>
-      </View>
+      {viewMode === 'mine' && (
+        <>
+          <View style={styles.totalHoursCard}>
+            <Ionicons name="time-outline" size={140} color="rgba(255,255,255,0.15)" style={styles.bgIcon} />
+            <Text style={styles.totalHoursLabel}>Total Ore Voluntariat</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              <Text style={styles.totalHoursValue}>{stats.total.toFixed(1)}</Text>
+              <Text style={styles.totalHoursUnit}> ore</Text>
+            </View>
+          </View>
 
-      <View style={styles.miniCardRow}>
-        <View style={[styles.miniCard, { backgroundColor: 'rgba(39, 174, 96, 0.12)' }]}>
-          <Text style={[styles.miniCardValue, { color: '#27ae60' }]}>{stats.social.toFixed(1)}</Text>
-          <Text style={styles.miniCardLabel}>SOCIAL</Text>
-        </View>
+          <View style={styles.miniCardRow}>
+            <View style={[styles.miniCard, { backgroundColor: 'rgba(39, 174, 96, 0.12)' }]}>
+              <Text style={[styles.miniCardValue, { color: '#27ae60' }]}>{stats.social.toFixed(1)}</Text>
+              <Text style={styles.miniCardLabel}>SOCIAL</Text>
+            </View>
 
-        <View style={[styles.miniCard, { backgroundColor: 'rgba(243, 156, 18, 0.12)' }]}>
-          <Text style={[styles.miniCardValue, { color: '#f39c12' }]}>{stats.proiect.toFixed(1)}</Text>
-          <Text style={styles.miniCardLabel}>PROIECT</Text>
-        </View>
+            <View style={[styles.miniCard, { backgroundColor: 'rgba(243, 156, 18, 0.12)' }]}>
+              <Text style={[styles.miniCardValue, { color: '#f39c12' }]}>{stats.proiect.toFixed(1)}</Text>
+              <Text style={styles.miniCardLabel}>PROIECT</Text>
+            </View>
 
-        <View style={[styles.miniCard, { backgroundColor: 'rgba(52, 152, 219, 0.12)' }]}>
-          <Text style={[styles.miniCardValue, { color: '#3498db' }]}>{stats.sedinta.toFixed(1)}</Text>
-          <Text style={styles.miniCardLabel}>ȘEDINȚE</Text>
-        </View>
-      </View>
+            <View style={[styles.miniCard, { backgroundColor: 'rgba(52, 152, 219, 0.12)' }]}>
+              <Text style={[styles.miniCardValue, { color: '#3498db' }]}>{stats.sedinta.toFixed(1)}</Text>
+              <Text style={styles.miniCardLabel}>ȘEDINȚE</Text>
+            </View>
+          </View>
+        </>
+      )}
 
-      <Text style={styles.listHeader}>Istoric Activități</Text>
+      <Text style={styles.listHeader}>
+        {viewMode === 'mine' ? 'Istoric Activități' : 'Toate Evenimentele Trecute'}
+      </Text>
     </View>
   );
 
   return (
     <ScreenContainer scrollable={false}>
       <CustomHeader />
+      
+      <View style={styles.toggleContainer}>
+        <TouchableOpacity 
+          style={[styles.toggleBtn, viewMode === 'mine' && styles.toggleBtnActive]}
+          onPress={() => { setViewMode('mine'); setLoading(true); }}
+        >
+          <Text style={[styles.toggleText, viewMode === 'mine' && styles.toggleTextActive]}>Evenimentele mele</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.toggleBtn, viewMode === 'all' && styles.toggleBtnActive]}
+          onPress={() => { setViewMode('all'); setLoading(true); }}
+        >
+          <Text style={[styles.toggleText, viewMode === 'all' && styles.toggleTextActive]}>Toate din OSACE</Text>
+        </TouchableOpacity>
+      </View>
+
       {loading ? (
         <HistorySkeleton />
       ) : (
@@ -249,11 +273,42 @@ export default function HistoryScreen() {
 }
 
 const createStyles = (colors, isDark) => StyleSheet.create({
+  toggleContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginTop: 15,
+    marginBottom: 5,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f0f0f0',
+    borderRadius: 12,
+    padding: 4,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  toggleBtnActive: {
+    backgroundColor: colors.card,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toggleText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  toggleTextActive: {
+    color: colors.primary,
+  },
   listHeader: {
     fontSize: 20,
     fontWeight: '800',
     paddingHorizontal: 20,
-    marginTop: 10,
+    marginTop: 15,
     marginBottom: 15,
     color: colors.textPrimary,
   },
