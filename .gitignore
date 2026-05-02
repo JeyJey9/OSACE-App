@@ -79,3 +79,8 @@ osace-mobile/android/app/google-services.json
 osace-map/
 /osace-map/
 productiondevelopmentprocess.txt
+
+## 5. Reguli Specifice Web (osace-web)
+#######################################################
+/osace-web/dist/
+/osace-web/node_modules/

@@ -59,6 +59,7 @@
   const allowedOrigins = [
     'https://osace.ro',
     'http://localhost:8081',
+    'http://localhost:5173', // Vite default port
     'https://api.osace.ro',
     'https://app.osace.ro',
     'http://100.79.43.92:8081'

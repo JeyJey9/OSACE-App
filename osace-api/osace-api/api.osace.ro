@@ -1,0 +1,68 @@
+# BLOCUL 1: Configurația HTTPS (Port 443)
+server {
+    server_name api.osace.ro;
+
+    listen 443 ssl;
+    listen [::]:443 ssl;
+
+    # Mărimea maximă permisă pentru upload-uri (ex: 20MB)
+    client_max_body_size 20M;
+
+    # ==================================================
+    # Servește TOATE fișierele statice încărcate (avatare, postări, etc.)
+    # ==================================================
+    # Acest singur bloc va gestiona:
+    # /uploads/avatars/poza.jpg -> /var/www/osace-uploads/avatars/poza.jpg
+    # /uploads/posts/alta.jpg   -> /var/www/osace-uploads/posts/alta.jpg
+    # etc.
+    location /uploads/ {
+        # 'alias' mapează URL-ul la calea de pe disc
+        alias /var/www/osace-uploads/;
+
+        # Setări de cache pentru browsere
+        expires 1M;
+        access_log off; # Oprim log-urile pentru fișiere statice (opțional)
+        add_header Cache-Control "public";
+    }
+    # ==================================================
+    # ▼▼▼ AM ȘTERS BLOCUL '/uploads/avatars/' DE AICI ▼▼▼
+    # Era redundant.
+    # ==================================================
+
+    # ----------------------------------------------------
+    # LOGICA DE REVERSE PROXY (Trimite la Node.js)
+    # ----------------------------------------------------
+    location / {
+        # Trimitem totul direct la Node.js
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Am șters proxy_set_header Origin și Referer
+        # E mai bine să lași pachetul 'cors' din Node.js să gestioneze Origin.
+    }
+
+    # SETĂRILE CERTBOT (PĂSTRATE PENTRU SSL)
+    ssl_certificate /etc/letsencrypt/live/api.osace.ro/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/api.osace.ro/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+}
+
+# BLOCUL 2: Redirecționarea HTTP (Port 80)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.osace.ro;
+
+    if ($host = api.osace.ro) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    return 404; # managed by Certbot
+}
