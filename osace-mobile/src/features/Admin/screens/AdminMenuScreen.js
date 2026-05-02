@@ -52,6 +52,7 @@ export default function AdminMenuScreen({ navigation }) {
             {renderMenuItem("Utilizatori", "people-circle-outline", "AdminUserList")}
             {renderMenuItem("Notificare", "notifications-outline", "SendNotification")}
             {renderMenuItem("Badge-uri", "ribbon-outline", "ManageBadges")}
+            {renderMenuItem("Jurnale", "document-text-outline", "AuditLog")}
           </>
         )}
       </View>

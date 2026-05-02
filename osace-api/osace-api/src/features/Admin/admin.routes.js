@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { STATS_QUERY, USER_DETAILS_QUERY } = require('./admin.queries');
+const { logAction } = require('../../utils/auditLog');
 
 // Primește 'pool', 'axios' și middleware-urile
 module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
@@ -63,6 +64,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
            WHERE id = $3`,
           [approved_hours, userId, id]
         );
+        await logAction(pool, userId, 'HOUR_REQUEST_COORDINATOR_APPROVE', 'hour_request', parseInt(id), { approved_hours, target_user_id: request.user_id, event_id: request.event_id });
         return res.json({ message: 'Aprobat! Trimis către Admin pentru validarea finală.' });
       }
 
@@ -85,6 +87,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
         );
 
         await pool.query('COMMIT'); // Salvăm tranzacția
+        await logAction(pool, userId, 'HOUR_REQUEST_ADMIN_APPROVE', 'hour_request', parseInt(id), { approved_hours, target_user_id: request.user_id, event_id: request.event_id });
         return res.json({ message: 'Aprobare finală realizată! Orele au fost adăugate voluntarului.' });
       }
 
@@ -110,6 +113,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
          WHERE id = $3`,
         [role, userId, id]
       );
+      await logAction(pool, userId, 'HOUR_REQUEST_REJECT', 'hour_request', parseInt(id), {});
       res.json({ message: 'Cererea a fost respinsă.' });
     } catch (error) {
       console.error('Eroare la respingere:', error);
@@ -171,6 +175,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
       if (check.rowCount === 0) throw new Error('Not found');
       if (check.rows[0].status !== 'pending') throw new Error('Not pending');
 
+      const contribData = await pool.query('SELECT user_id, title, awarded_hours FROM special_contributions WHERE id = $1', [id]);
       await pool.query(
         `UPDATE special_contributions 
          SET status = 'approved', admin_id = $1, updated_at = NOW() 
@@ -179,6 +184,10 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
       );
       
       await pool.query('COMMIT');
+      if (contribData.rowCount > 0) {
+        const c = contribData.rows[0];
+        await logAction(pool, userId, 'CONTRIBUTION_APPROVE', 'special_contribution', parseInt(id), { target_user_id: c.user_id, title: c.title, awarded_hours: c.awarded_hours });
+      }
       res.json({ message: 'Contribuție aprobată cu succes!' });
     } catch (error) {
       await pool.query('ROLLBACK');
@@ -198,6 +207,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
          WHERE id = $2`,
         [userId, id]
       );
+      await logAction(pool, userId, 'CONTRIBUTION_REJECT', 'special_contribution', parseInt(id), {});
       res.json({ message: 'Contribuție respinsă.' });
     } catch (error) {
       console.error('Eroare la respingerea contribuției:', error);
@@ -262,6 +272,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
       }
     }
     await client.query('COMMIT');
+    await logAction(pool, req.user.userId, 'NOTIFICATION_SEND', 'notification', newNotificationId, { title, roles, recipient_count: pushTokens.length });
     res.status(200).json({ message: `Notificare salvată și trimisă către ${pushTokens.length} dispozitive.` });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -326,6 +337,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
       if (updateResult.rows.length === 0) {
         return res.status(404).json({ error: 'Utilizatorul nu a fost găsit.' });
       }
+      await logAction(pool, adminId, 'USER_ROLE_CHANGE', 'user', parseInt(id), { new_role: newRole, target_name: updateResult.rows[0].display_name });
       res.status(200).json({ message: 'Rolul a fost actualizat cu succes.', user: updateResult.rows[0] });
     } catch (error) {
       console.error('Eroare la schimbarea rolului:', error);
@@ -345,6 +357,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
       if (deleteResult.rows.length === 0) {
         return res.status(404).json({ error: 'Utilizatorul nu a fost găsit.' });
       }
+      await logAction(pool, adminId, 'USER_DELETE', 'user', parseInt(id), { deleted_email: deleteResult.rows[0].email, deleted_name: deleteResult.rows[0].display_name });
       res.status(200).json({ message: 'Utilizatorul a fost șters cu succes.' });
     } catch (error) {
       console.error('Eroare la ștergere utilizator:', error);
@@ -568,6 +581,67 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
       res.status(500).json({ error: 'Eroare la crearea cererilor în așteptare.' });
     } finally {
       client.release();
+    }
+  });
+
+  // ==========================================
+  // GET /api/admin/audit-logs (Admin only)
+  // ==========================================
+  router.get('/audit-logs', [verifyToken, verifyAdmin], async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 50;
+    const offset = (page - 1) * limit;
+    const { action, actor_id } = req.query;
+
+    let whereClauses = [];
+    const params = [];
+
+    if (action) {
+      params.push(action);
+      whereClauses.push(`al.action = $${params.length}`);
+    }
+    if (actor_id) {
+      params.push(parseInt(actor_id));
+      whereClauses.push(`al.actor_id = $${params.length}`);
+    }
+
+    const whereSQL = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
+    params.push(limit, offset);
+
+    try {
+      const result = await pool.query(
+        `SELECT
+           al.id,
+           al.action,
+           al.target_type,
+           al.target_id,
+           al.details,
+           al.created_at,
+           u.id        AS actor_id,
+           u.display_name AS actor_name,
+           u.role      AS actor_role
+         FROM audit_logs al
+         LEFT JOIN users u ON al.actor_id = u.id
+         ${whereSQL}
+         ORDER BY al.created_at DESC
+         LIMIT $${params.length - 1} OFFSET $${params.length}`,
+        params
+      );
+
+      const countResult = await pool.query(
+        `SELECT COUNT(*) FROM audit_logs al ${whereSQL}`,
+        params.slice(0, params.length - 2)
+      );
+
+      res.json({
+        logs: result.rows,
+        total: parseInt(countResult.rows[0].count),
+        page,
+        totalPages: Math.ceil(parseInt(countResult.rows[0].count) / limit),
+      });
+    } catch (error) {
+      console.error('Eroare la preluarea jurnalelor de audit:', error);
+      res.status(500).json({ error: 'Eroare server.' });
     }
   });
 

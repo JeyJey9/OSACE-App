@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AdminMenuScreen from '../features/Admin/screens/AdminMenuScreen';
 import StatisticsScreen from '../features/Admin/screens/StatisticsScreen';
 import SendNotificationScreen from '../features/Admin/screens/SendNotificationScreen';
+import AuditLogScreen from '../features/Admin/screens/AuditLogScreen';
 
 // Sub-domeniu: Events
 import ManageEventsScreen from '../features/Admin/events/screens/ManageEventsScreen';
@@ -54,6 +55,7 @@ export default function ManagementNavigator() {
       <Stack.Screen name="AdminUserList" component={UserListScreen} options={{ title: 'Utilizatori' }} />
       <Stack.Screen name="SendNotification" component={SendNotificationScreen} options={{ title: 'Trimite Notificare' }} />
       <Stack.Screen name="PostForm" component={PostFormScreen} options={{ title: 'Postare Nouă' }} />
+      <Stack.Screen name="AuditLog" component={AuditLogScreen} options={{ title: 'Jurnal de Audit' }} />
       <Stack.Screen 
         name="ManageBadges" 
         component={ManageBadgesScreen} 

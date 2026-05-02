@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticator } = require('otplib'); 
+const { logAction } = require('../../utils/auditLog');
 const { 
   checkBadgesOnConfirmation, 
   checkBadgesOnEventCreate, 
@@ -157,6 +158,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
         [title, description, start_time, end_time, location, userId, duration_hours, category, secret, isOvertimeAllowed]
       );
       checkBadgesOnEventCreate(userId, pool);
+      await logAction(pool, userId, 'EVENT_CREATE', 'event', newEvent.rows[0].id, { title, category });
       res.status(201).json(newEvent.rows[0]);
     } catch (error) {
       console.error('Eroare la crearea evenimentului:', error);
@@ -562,6 +564,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
         `UPDATE events SET title = $1, description = $2, start_time = $3, end_time = $4, location = $5, duration_hours = $6, category = $7, allow_overtime = $8 WHERE id = $9 RETURNING *`,
         [title, description, start_time, end_time, location, duration_hours, category, isOvertimeAllowed, id]
       );
+      await logAction(pool, userId, 'EVENT_UPDATE', 'event', parseInt(id), { title, category });
       res.json(updatedEvent.rows[0]);
     } catch (error) {
       res.status(500).json({ error: 'Eroare server la editare.' });
@@ -578,6 +581,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       if (!hasAccess) return res.status(403).json({ error: 'Nu ai permisiunea de a șterge acest eveniment.' });
 
       await pool.query('DELETE FROM events WHERE id = $1', [id]);
+      await logAction(pool, userId, 'EVENT_DELETE', 'event', parseInt(id), {});
       return res.status(200).json({ message: 'Eveniment șters cu succes.' });
     } catch (error) {
       res.status(500).json({ error: 'Eroare server la ștergere.' });

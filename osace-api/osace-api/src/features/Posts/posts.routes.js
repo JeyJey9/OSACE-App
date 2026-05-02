@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const { logAction } = require('../../utils/auditLog');
 
 const path = require('path');
 const API_DOMAIN = 'https://api.osace.ro'; // URL-ul API-ului
@@ -71,6 +72,7 @@ module.exports = (pool, verifyToken, verifyManager) => {
 
         await client.query('COMMIT');
         checkBadgesOnPostCreate(creatorId, pool);
+        await logAction(pool, creatorId, 'POST_CREATE', 'post', postId, { image_count: req.files.length });
         res.status(201).json({ 
             id: postId,
             description,
@@ -319,6 +321,7 @@ module.exports = (pool, verifyToken, verifyManager) => {
 
         await Promise.all(deleteFilePromises);
         
+        await logAction(pool, req.user.userId, 'POST_DELETE', 'post', parseInt(postId), {});
         res.status(200).json({ message: 'Postarea și imaginile asociate au fost șterse.' });
     } catch (error) {
         console.error('Eroare la ștergerea postării:', error);

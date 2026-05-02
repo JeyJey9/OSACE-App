@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplicația OSACE - Portal Voluntari</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger: #ef4444;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        .osace-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Nav & Hero */
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        /* Buttons */
+        .store-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+        .btn-outline {
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+        .btn-outline:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        /* Features */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 4rem 0;
+        }
+        .feature-card {
+            background: var(--bg-card);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .feature-card h3 {
+            color: var(--primary);
+            margin-top: 0;
+        }
+        /* Legal Sections CSS */
+        .legal-section {
+            background: var(--bg-card);
+            padding: 3rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .legal-section h2 {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-top: 0;
+            border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+            padding-bottom: 1rem;
+        }
+        .legal-section h3 {
+            color: #f8fafc;
+            margin-top: 2rem;
+        }
+        .legal-section ul {
+            padding-left: 1.5rem;
+            color: var(--text-muted);
+        }
+        .legal-section li {
+            margin-bottom: 0.5rem;
+        }
+        .legal-section p {
+            color: var(--text-muted);
+        }
+        /* App Screenshots Gallery */
+        .section-title {
+            text-align: center;
+            font-size: 2.2rem;
+            margin-bottom: 2rem;
+            margin-top: 4rem;
+            color: var(--text-main);
+        }
+        .app-gallery {
+            display: flex;
+            gap: 1.5rem;
+            overflow-x: auto;
+            padding-bottom: 2rem;
+            margin-bottom: 2rem;
+            /* Scrollbar styling */
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--bg-dark);
+            -webkit-overflow-scrolling: touch;
+        }
+        .app-gallery::-webkit-scrollbar {
+            height: 8px;
+        }
+        .app-gallery::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+        .app-gallery::-webkit-scrollbar-thumb {
+            background-color: var(--primary);
+            border-radius: 4px;
+        }
+        .screenshot-wrapper {
+            flex: 0 0 auto;
+            width: 240px; /* Mobile screen ratio roughly */
+            border-radius: 20px;
+            overflow: hidden;
+            border: 4px solid var(--bg-card);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            transition: transform 0.3s ease;
+            background-color: #000;
+        }
+        .screenshot-wrapper:hover {
+            transform: translateY(-10px);
+        }
+        .screenshot-wrapper img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="osace-container">
+        <!-- HERO SECTION -->
+        <header class="hero">
+            <h1>Aplicația OSACE</h1>
+            <p>Conectează-te la inima asociației. Fii la curent cu noutățile, gestionează-ți orele de voluntariat și scanează prezența la evenimente direct de pe telefon.</p>
+            
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+                <div class="store-buttons">
+                    <a href="#android" class="btn btn-primary" onclick="event.preventDefault()">
+                        <svg width="24" height="24" viewBox="0 0 512 512" fill="currentColor"><path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6l-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/></svg>
+                        Google Play
+                    </a>
+                    <a href="#ios" class="btn btn-outline" onclick="event.preventDefault()">
+                        <svg width="24" height="24" viewBox="0 0 384 512" fill="currentColor"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+                        App Store
+                    </a>
+                </div>
+                <span style="font-size: 0.95rem; color: var(--text-muted); font-weight: 500; letter-spacing: 0.5px;">⏳ Disponibil în curând pe ambele platforme.</span>
+            </div>
+        </header>
+
+        <!-- APP SCREENSHOTS GALLERY -->
+        <h2 class="section-title">Așa arată experiența OSACE</h2>
+        <div class="app-gallery">
+            <div class="screenshot-wrapper">
+                <img src="https://osace.ro/wp-content/uploads/2026/05/Screenshot_20260502_151101_OSACE-scaled.jpg" alt="Login Screen" loading="lazy">
+            </div>
+            <div class="screenshot-wrapper">
+                <img src="https://osace.ro/wp-content/uploads/2026/05/Screenshot_20260502_151204_OSACE-scaled.jpg" alt="News Feed" loading="lazy">
+            </div>
+            <div class="screenshot-wrapper">
+                <img src="https://osace.ro/wp-content/uploads/2026/05/Screenshot_20260502_151502_OSACE-scaled.jpg" alt="Activitati Disponibile" loading="lazy">
+            </div>
+            <div class="screenshot-wrapper">
+                <img src="https://osace.ro/wp-content/uploads/2026/05/Screenshot_20260502_151506_OSACE-scaled.jpg" alt="Detalii Eveniment si QR" loading="lazy">
+            </div>
+            <div class="screenshot-wrapper">
+                <img src="https://osace.ro/wp-content/uploads/2026/05/Screenshot_20260502_151247_OSACE-scaled.jpg" alt="Catalog Insigne" loading="lazy">
+            </div>
+            <div class="screenshot-wrapper">
+                <img src="https://osace.ro/wp-content/uploads/2026/05/Screenshot_20260502_151517_OSACE-scaled.jpg" alt="Istoric Activitati" loading="lazy">
+            </div>
+        </div>
+
+        <!-- CORE FEATURES -->
+        <section class="features">
+            <div class="feature-card">
+                <h3>Prezență Rapidă</h3>
+                <p>Scanează codul QR la evenimente și ședințe pentru a-ți înregistra instantaneu prezența și orele alocate.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Newsfeed & Noutăți</h3>
+                <p>Află primul despre noile proiecte, comentează la postări și interacționează cu restul voluntarilor.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Clasament & Gamification</h3>
+                <p>Urcă în topul voluntarilor pe baza orelor acumulate și deblochează insigne speciale (badges) pentru realizările tale.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Management Contribuții</h3>
+                <p>Vizualizează istoricul orelor și primește ore suplimentare manual (Overtime) de la coordonatori.</p>
+            </div>
+        </section>
+
+        <!-- PRIVACY POLICY -->
+        <section class="legal-section" id="privacy-policy">
+            <h2>Politica de Confidențialitate (Privacy Policy)</h2>
+            <p>Ultima actualizare: Mai 2026</p>
+            <p>Această politică descrie modul în care Organizația Studenților din Automatică și Calculatoare (OSACE) colectează, folosește și protejează datele dumneavoastră prin intermediul aplicației mobile OSACE.</p>
+            
+            <h3>1. Ce date colectăm</h3>
+            <ul>
+                <li><strong>Date de profil:</strong> Nume, prenume, adresa de email instituțională/personală.</li>
+                <li><strong>Autentificare:</strong> Parola (stocată exclusiv în format criptat).</li>
+                <li><strong>Media:</strong> Poze de profil (avatare) încărcate de utilizator.</li>
+                <li><strong>Date de activitate:</strong> Istoricul participărilor la evenimente/ședințe, orele de voluntariat scanate, comentariile și like-urile la postări.</li>
+            </ul>
+
+            <h3>2. Permisiunile dispozitivului</h3>
+            <p>Pentru a funcționa corect, aplicația solicită următoarele permisiuni pe dispozitivul dumneavoastră:</p>
+            <ul>
+                <li><strong>Camera foto:</strong> Strict pentru scanarea codurilor QR la evenimente în vederea înregistrării prezenței. Nu se fac înregistrări video sau fotografii fără acțiunea explicită a utilizatorului.</li>
+                <li><strong>Galeria foto (Storage):</strong> Pentru a permite utilizatorului să își încarce sau să își actualizeze poza de profil.</li>
+                <li><strong>Notificări Push:</strong> Pentru a trimite alerte importante legate de ședințe, noutăți sau evenimente organizate de asociație.</li>
+            </ul>
+
+            <h3>3. Cum sunt folosite datele</h3>
+            <p>Datele colectate sunt utilizate <strong>strict în scop intern</strong> pentru:</p>
+            <ul>
+                <li>Managementul și evidența membrilor și voluntarilor asociației OSACE.</li>
+                <li>Generarea clasamentului (leaderboard) bazat pe implicarea și orele acumulate.</li>
+                <li>Facilitarea comunicării interne prin sistemul de postări (Newsfeed).</li>
+            </ul>
+
+            <h3>4. Partajarea datelor</h3>
+            <p><strong>NU vindem, nu închiriem și nu partajăm</strong> datele dumneavoastră personale către terți, agenții de publicitate sau alte companii. Datele sunt accesibile doar de către dumneavoastră și de către conducerea asociației (administratori/coordonatori) în scop de management.</p>
+
+            <h3>5. Retenția și securitatea datelor</h3>
+            <p>Păstrăm datele dumneavoastră atâta timp cât contul dumneavoastră este activ în cadrul asociației. Toate comunicațiile dintre aplicație și server sunt securizate și criptate (HTTPS), iar datele sunt stocate pe servere protejate. Parola contului este stocată exclusiv într-un format criptat (hash) ireversibil.</p>
+
+            <h3>6. Limita de vârstă (Children's Privacy)</h3>
+            <p>Aplicația este destinată exclusiv studenților și membrilor asociației (persoane cu vârsta de peste 18 ani). Nu colectăm cu bună știință date personale de la copii sub 13 ani. Dacă descoperim că am colectat astfel de date, le vom șterge imediat.</p>
+        </section>
+
+        <!-- TERMS AND CONDITIONS -->
+        <section class="legal-section" id="terms">
+            <h2>Termeni și Condiții (Terms & Conditions)</h2>
+            <p>Prin utilizarea aplicației OSACE, sunteți de acord cu următoarele condiții:</p>
+            <ul>
+                <li><strong>Scopul aplicației:</strong> Aplicația este destinată exclusiv membrilor și voluntarilor asociației OSACE pentru facilitarea activităților interne.</li>
+                <li><strong>Conduita:</strong> Utilizatorii sunt obligați să păstreze un limbaj adecvat și o conduită profesională în secțiunea de comentarii a aplicației.</li>
+                <li><strong>Validitatea Orelor:</strong> Scanarea frauduloasă a codurilor QR de prezență poate duce la anularea orelor sau suspendarea contului de către administratori.</li>
+                <li><strong>Responsabilitate:</strong> OSACE depune toate eforturile pentru funcționarea optimă a aplicației, dar nu este responsabilă pentru eventualele pierderi de date cauzate de defecțiuni tehnice ale serverelor.</li>
+            </ul>
+        </section>
+
+        <!-- ACCOUNT DELETION & CONTACT -->
+        <section class="legal-section" id="account-deletion">
+            <h2>Ștergerea Contului (Account Deletion)</h2>
+            <p>Conform directivelor Apple App Store și Google Play Store, aveți dreptul de a solicita ștergerea completă a contului dumneavoastră și a tuturor datelor asociate.</p>
+            
+            <h3>Cum îți poți șterge contul:</h3>
+            <ul>
+                <li><strong>Din interiorul aplicației:</strong> Accesați meniul "Profil" (Profile), apoi derulați până la secțiunea de setări și apăsați butonul roșu "Șterge Contul".</li>
+                <li><strong>Prin email:</strong> Trimiteți o solicitare cu subiectul "Solicitare Ștergere Cont" la adresa de email menționată în secțiunea de contact de mai jos, folosind adresa de email asociată contului dumneavoastră.</li>
+            </ul>
+            <p><strong>Atenție:</strong> Ștergerea contului este o acțiune ireversibilă. Toate orele de voluntariat acumulate, istoricul participărilor și insignele (badges) obținute vor fi șterse definitiv din baza noastră de date.</p>
+        </section>
+
+        <!-- CONTACT / SUPPORT -->
+        <section class="legal-section" id="contact">
+            <h2>Contact & Suport</h2>
+            <p>Dacă aveți întrebări legate de politica de confidențialitate, probleme cu aplicația sau doriți să exercitați dreptul de ștergere a datelor, ne puteți contacta prin următoarele metode:</p>
+            <ul>
+                <li><strong>Email:</strong> <a href="mailto:contact@osace.ro" style="color: var(--primary); text-decoration: none;">contact@osace.ro</a></li>
+                <li><strong>Adresă fizică:</strong> Facultatea de Automatică și Calculatoare, Craiova (Sediul OSACE)</li>
+            </ul>
+        </section>
+
+        <!-- FOOTER -->
+        <footer style="text-align: center; padding: 2rem 0; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.1); margin-top: 2rem;">
+            <p>&copy; 2026 Organizația Studenților din Automatică și Calculatoare (OSACE). Toate drepturile rezervate.</p>
+        </footer>
+
+    </div>
+</body>
+</html>

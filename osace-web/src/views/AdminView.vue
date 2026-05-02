@@ -30,6 +30,12 @@
       >
         Trimite Notificări
       </button>
+      <button 
+        :class="['tab-btn', { active: activeTab === 'logs' }]" 
+        @click="activeTab = 'logs'; fetchAuditLogs()"
+      >
+        🗒 Jurnale
+      </button>
     </div>
 
     <div v-if="activeTab === 'requests'" class="tab-content">
@@ -128,6 +134,47 @@
         </form>
       </div>
     </div>
+
+    <!-- JURNALE TAB -->
+    <div v-if="activeTab === 'logs'" class="tab-content">
+      <div class="logs-header">
+        <h3>Jurnal de Audit</h3>
+        <p class="desc">Toate acțiunile administrative, în ordine cronologică inversă.</p>
+      </div>
+
+      <div v-if="loadingLogs" class="loading-state">Se încarcă jurnalele...</div>
+      <div v-else-if="auditLogs.length === 0" class="empty-state">Nu există înregistrări în jurnal.</div>
+      <div v-else class="logs-list">
+        <div v-for="log in auditLogs" :key="log.id" class="log-entry glass-panel">
+          <div class="log-bar" :style="{ backgroundColor: getActionColor(log.action) }"></div>
+          <div class="log-body">
+            <div class="log-top">
+              <span class="log-badge" :style="{ backgroundColor: getActionColor(log.action) + '22', color: getActionColor(log.action) }">
+                {{ getActionLabel(log.action) }}
+              </span>
+              <span class="log-time">{{ formatLogDate(log.created_at) }}</span>
+            </div>
+            <div class="log-actor">
+              <strong>{{ log.actor_name }}</strong>
+              <span class="log-role"> ({{ log.actor_role }})</span>
+            </div>
+            <div v-if="log.target_type" class="log-target">
+              Target: <span>{{ log.target_type }} #{{ log.target_id }}</span>
+            </div>
+            <div v-if="log.details && Object.keys(log.details).length" class="log-details">
+              {{ formatDetails(log.details) }}
+            </div>
+          </div>
+        </div>
+
+        <div class="logs-pagination">
+          <button @click="fetchAuditLogs(logsPage - 1)" :disabled="logsPage <= 1" class="btn-secondary">← Anterior</button>
+          <span>Pagina {{ logsPage }} / {{ logsTotalPages }}</span>
+          <button @click="fetchAuditLogs(logsPage + 1)" :disabled="logsPage >= logsTotalPages" class="btn-secondary">Următor →</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -142,6 +189,58 @@ const users = ref([]);
 const loadingRequests = ref(false);
 const submitting = ref(false);
 const submittingNotify = ref(false);
+
+// --- Audit Logs state ---
+const auditLogs = ref([]);
+const loadingLogs = ref(false);
+const logsPage = ref(1);
+const logsTotalPages = ref(1);
+
+const ACTION_META = {
+  EVENT_CREATE:                    { label: 'Creare Eveniment',      color: '#27ae60' },
+  EVENT_UPDATE:                    { label: 'Editare Eveniment',     color: '#f39c12' },
+  EVENT_DELETE:                    { label: 'Ștergere Eveniment',    color: '#e74c3c' },
+  POST_CREATE:                     { label: 'Postare Nouă',          color: '#27ae60' },
+  POST_DELETE:                     { label: 'Ștergere Postare',      color: '#e74c3c' },
+  HOUR_REQUEST_COORDINATOR_APPROVE:{ label: 'Aprobare Ore (Coord)',  color: '#f39c12' },
+  HOUR_REQUEST_ADMIN_APPROVE:      { label: 'Aprobare Ore (Admin)',  color: '#27ae60' },
+  HOUR_REQUEST_REJECT:             { label: 'Respingere Ore',        color: '#e74c3c' },
+  CONTRIBUTION_APPROVE:            { label: 'Aprobare Contribuție',  color: '#27ae60' },
+  CONTRIBUTION_REJECT:             { label: 'Respingere Contribuție',color: '#e74c3c' },
+  NOTIFICATION_SEND:               { label: 'Notificare Trimisă',    color: '#3498db' },
+  USER_ROLE_CHANGE:                { label: 'Schimbare Rol',         color: '#9b59b6' },
+  USER_DELETE:                     { label: 'Ștergere Utilizator',   color: '#e74c3c' },
+};
+
+const getActionColor = (action) => ACTION_META[action]?.color ?? '#95a5a6';
+const getActionLabel = (action) => ACTION_META[action]?.label ?? action;
+
+const formatLogDate = (dateStr) => {
+  const d = new Date(dateStr);
+  return d.toLocaleString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+const formatDetails = (details) => {
+  if (!details) return '';
+  return Object.entries(details)
+    .filter(([, v]) => v !== null && v !== undefined)
+    .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
+    .join(' · ');
+};
+
+const fetchAuditLogs = async (page = 1) => {
+  loadingLogs.value = true;
+  try {
+    const res = await api.get(`/admin/audit-logs?page=${page}`);
+    auditLogs.value = res.data.logs;
+    logsPage.value = res.data.page;
+    logsTotalPages.value = res.data.totalPages;
+  } catch (err) {
+    console.error('Eroare la preluarea jurnalelor:', err);
+  } finally {
+    loadingLogs.value = false;
+  }
+};
 
 const form = ref({
   user_id: '',
@@ -403,5 +502,108 @@ button[type="submit"] {
   height: 1.2rem;
   accent-color: var(--color-primary);
   cursor: pointer;
+}
+
+/* Logs tab */
+.logs-header {
+  margin-bottom: 1.5rem;
+}
+
+.logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.log-entry {
+  display: flex;
+  overflow: hidden;
+  padding: 0 !important;
+  border-radius: 12px;
+}
+
+.log-bar {
+  width: 5px;
+  flex-shrink: 0;
+}
+
+.log-body {
+  padding: 0.85rem 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.log-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.log-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 20px;
+}
+
+.log-time {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.log-actor {
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+}
+
+.log-role {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.log-target {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.log-target span {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.log-details {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.logs-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  color: var(--color-text-secondary);
+}
+
+.btn-secondary {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border-color);
+  color: var(--color-text-primary);
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255,255,255,0.12);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 </style>
