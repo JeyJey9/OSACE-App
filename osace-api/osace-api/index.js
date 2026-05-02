@@ -80,6 +80,11 @@
   
   app.use(cors(corsOptions));
 
+  // --- Rate Limiting Global ---
+  app.set('trust proxy', 1); // Trust first proxy (Nginx) for correct IP
+  const { globalLimiter } = require('./src/middleware/rateLimiter');
+  app.use(globalLimiter);
+
   // Folderul 'uploads' (Neschimbat)
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

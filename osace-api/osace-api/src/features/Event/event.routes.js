@@ -1,7 +1,7 @@
-// src/features/Event/event.routes.js
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const { eventActionLimiter } = require('../../middleware/rateLimiter');
 const { authenticator } = require('otplib'); 
 const { logAction } = require('../../utils/auditLog');
 const { 
@@ -325,7 +325,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
   // --- ACȚIUNI PE EVENIMENT ---
 
   // POST /:id/attend (Înscriere)
-  router.post('/:id/attend', verifyToken, async (req, res) => {
+  router.post('/:id/attend', verifyToken, eventActionLimiter, async (req, res) => {
     try {
       const eventId = req.params.id;
       const userId = req.user.userId;
@@ -375,7 +375,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
   });
   
   // POST /:id/unattend (Retragere)
-  router.post('/:id/unattend', verifyToken, async (req, res) => {
+  router.post('/:id/unattend', verifyToken, eventActionLimiter, async (req, res) => {
     const eventId = req.params.id;
     const userId = req.user.userId;
     try {

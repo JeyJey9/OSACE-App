@@ -4,11 +4,12 @@ const argon2 = require('argon2');
 const jwt = require('jsonwebtoken');
 // ▼▼▼ NOU: Importăm 'crypto' pentru a genera token-uri sigure ▼▼▼
 const crypto = require('crypto');
+const { authLimiter } = require('../../middleware/rateLimiter');
 
 module.exports = (pool, mailTransporter) => {
 
   // --- Ruta de Înregistrare (neschimbată) ---
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
     // Extragem noile câmpuri
     const { display_name, first_name, last_name, email, password } = req.body;
     if (!display_name || !first_name || !last_name || !email || !password) {
@@ -57,7 +58,7 @@ router.post('/register', async (req, res) => {
   });
 
   // --- Ruta de Autentificare (neschimbată) ---
-  router.post('/login', async (req, res) => {
+  router.post('/login', authLimiter, async (req, res) => {
     // ... (codul tău existent pentru autentificare)
     const { email, password } = req.body;
     if (!email || !password) {
