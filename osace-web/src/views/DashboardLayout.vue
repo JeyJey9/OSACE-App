@@ -24,8 +24,9 @@ import Navbar from '../components/Navbar.vue';
 
 .main-content {
   flex: 1;
-  padding: 2rem 1rem;
-  max-width: 1200px;
+  min-height: 0;
+  padding: 2rem 1rem 6rem; /* 6rem bottom on mobile for navbar */
+  max-width: 1400px;
   width: 100%;
   margin: 0 auto;
 }
@@ -34,9 +35,12 @@ import Navbar from '../components/Navbar.vue';
 @media (min-width: 768px) {
   .dashboard-layout {
     flex-direction: row;
+    height: 100vh;
+    overflow: hidden;
   }
   .main-content {
     padding: 2rem;
+    overflow-y: auto;
   }
 }
 </style>

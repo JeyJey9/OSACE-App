@@ -18,8 +18,7 @@
       >
         <div class="rank-number">#{{ index + 1 }}</div>
         <div class="user-info">
-          <h3>{{ user.first_name }} {{ user.last_name }}</h3>
-          <span class="role">{{ displayRole(user.role) }}</span>
+          <h3>{{ user.display_name }}</h3>
         </div>
         <div class="hours-badge">
           {{ user.total_hours }}h

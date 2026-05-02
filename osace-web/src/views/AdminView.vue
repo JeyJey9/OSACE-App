@@ -57,16 +57,41 @@
     </div>
 
     <div v-if="activeTab === 'events'" class="tab-content">
-      <div class="empty-state glass-panel" style="padding: 3rem;">
-        <h3>Gestiune Evenimente</h3>
-        <p>Interfața pentru crearea și editarea evenimentelor va fi adăugată aici.</p>
-      </div>
+      <EventManagement />
     </div>
 
     <div v-if="activeTab === 'notifications'" class="tab-content">
-      <div class="empty-state glass-panel" style="padding: 3rem;">
-        <h3>Trimite Notificări Push</h3>
-        <p>Interfața pentru selectarea voluntarilor și trimiterea notificărilor va fi adăugată aici.</p>
+      <div class="assign-form glass-panel">
+        <h3>Trimite Notificare Push</h3>
+        <p class="desc">Trimite o notificare direct pe telefonul voluntarilor.</p>
+
+        <form @submit.prevent="submitNotification">
+          <div class="form-group">
+            <label>Titlu Notificare</label>
+            <input v-model="notifyForm.title" type="text" class="input-field" required />
+          </div>
+          <div class="form-group">
+            <label>Mesaj</label>
+            <textarea v-model="notifyForm.message" class="input-field" rows="3" required></textarea>
+          </div>
+          <div class="form-group">
+            <label>Trimite către (Roluri):</label>
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="notifyForm.roles" value="voluntar" /> Voluntari
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="notifyForm.roles" value="coordonator" /> Coordonatori
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="notifyForm.roles" value="admin" /> Administratori
+              </label>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" :disabled="submittingNotify">
+            {{ submittingNotify ? 'Se trimite...' : 'Trimite Notificare' }}
+          </button>
+        </form>
       </div>
     </div>
 
@@ -77,8 +102,13 @@
         
         <form @submit.prevent="submitContribution">
           <div class="form-group">
-            <label>ID Voluntar (Momentan manual)</label>
-            <input v-model="form.user_id" type="number" class="input-field" required />
+            <label>Alege Voluntar</label>
+            <select v-model="form.user_id" class="input-field" required>
+              <option value="" disabled>-- Selectează un voluntar --</option>
+              <option v-for="u in users" :key="u.id" :value="u.id">
+                {{ u.first_name }} {{ u.last_name }} ({{ u.email }})
+              </option>
+            </select>
           </div>
           <div class="form-group">
             <label>Titlu Contribuție</label>
@@ -104,17 +134,27 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import api from '../services/api';
+import EventManagement from '../components/EventManagement.vue';
 
 const activeTab = ref('requests');
 const requests = ref([]);
+const users = ref([]);
 const loadingRequests = ref(false);
 const submitting = ref(false);
+const submittingNotify = ref(false);
 
 const form = ref({
   user_id: '',
   title: '',
   description: '',
   awarded_hours: ''
+});
+
+
+const notifyForm = ref({
+  title: '',
+  message: '',
+  roles: ['voluntar']
 });
 
 const fetchRequests = async () => {
@@ -126,6 +166,15 @@ const fetchRequests = async () => {
     console.error(error);
   } finally {
     loadingRequests.value = false;
+  }
+};
+
+const fetchUsers = async () => {
+  try {
+    const res = await api.get('/admin/users');
+    users.value = res.data;
+  } catch (error) {
+    console.error('Eroare preluare voluntari', error);
   }
 };
 
@@ -152,8 +201,27 @@ const submitContribution = async () => {
   }
 };
 
+
+const submitNotification = async () => {
+  if (notifyForm.value.roles.length === 0) {
+    alert('Vă rugăm să selectați cel puțin un rol!');
+    return;
+  }
+  submittingNotify.value = true;
+  try {
+    const response = await api.post('/admin/notifications/send-all', notifyForm.value);
+    alert(response.data.message || 'Notificare trimisă cu succes!');
+    notifyForm.value = { title: '', message: '', roles: ['voluntar'] };
+  } catch (error) {
+    alert(error.response?.data?.error || 'Eroare la trimiterea notificării.');
+  } finally {
+    submittingNotify.value = false;
+  }
+};
+
 onMounted(() => {
   fetchRequests();
+  fetchUsers();
 });
 </script>
 
@@ -300,5 +368,40 @@ textarea.input-field {
 button[type="submit"] {
   width: 100%;
   margin-top: 1rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.checkbox-group {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  padding: 1rem;
+  background-color: var(--color-bg-surface);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: var(--color-primary);
+  cursor: pointer;
 }
 </style>
