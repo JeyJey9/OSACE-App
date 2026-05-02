@@ -44,7 +44,7 @@
         <!-- Edit Mode -->
         <div v-else-if="mode === 'edit' && selectedEvent">
           <h3>Editează: {{ selectedEvent.title }}</h3>
-          <EventForm :form="eventForm" :submitting="submitting" @submit="submitEdit" @cancel="mode = 'view'" />
+          <EventForm :form="eventForm" :submitting="submitting" :isEditMode="true" @submit="submitEdit" @cancel="mode = 'view'" />
         </div>
 
         <!-- View Mode -->
@@ -145,7 +145,7 @@ let countdownInterval = null;
 const eventForm = ref(emptyForm());
 
 function emptyForm() {
-  return { title: '', description: '', start_time: '', end_time: '', location: '', duration_hours: '', category: 'social' };
+  return { title: '', description: '', start_time: '', end_time: '', location: '', duration_hours: '', category: 'social', send_notification: false };
 }
 
 // ─── Fetch Events ────────────────────────────────────────────────────────────

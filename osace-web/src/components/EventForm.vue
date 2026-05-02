@@ -34,6 +34,12 @@
         <input v-model="form.end_time" type="datetime-local" class="input-field" required />
       </div>
     </div>
+    <div v-if="!isEditMode" class="form-group checkbox-group">
+      <label class="checkbox-label">
+        <input v-model="form.send_notification" type="checkbox" />
+        Anunță voluntarii printr-o notificare push
+      </label>
+    </div>
     <div class="form-actions">
       <button type="button" class="btn-cancel" @click="$emit('cancel')">Anulează</button>
       <button type="submit" class="btn-primary" :disabled="submitting">
@@ -46,7 +52,8 @@
 <script setup>
 defineProps({
   form: { type: Object, required: true },
-  submitting: { type: Boolean, default: false }
+  submitting: { type: Boolean, default: false },
+  isEditMode: { type: Boolean, default: false }
 });
 defineEmits(['submit', 'cancel']);
 </script>
@@ -99,5 +106,25 @@ defineEmits(['submit', 'cancel']);
 
 textarea.input-field {
   resize: vertical;
+}
+
+.checkbox-group {
+  margin-top: 1rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  cursor: pointer;
+  accent-color: var(--color-primary);
 }
 </style>

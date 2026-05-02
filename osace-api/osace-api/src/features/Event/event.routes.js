@@ -1,6 +1,7 @@
 // src/features/Event/event.routes.js
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
 const { authenticator } = require('otplib'); 
 const { logAction } = require('../../utils/auditLog');
 const { 
@@ -138,8 +139,8 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
   // POST / (Creare eveniment)
   router.post('/', verifyToken, async (req, res) => {
     const { userId, role } = req.user;
-    // NOU: Am adăugat allow_overtime
-    const { title, description, start_time, end_time, location, duration_hours, category, allow_overtime } = req.body;
+    // NOU: Am adăugat allow_overtime și send_notification
+    const { title, description, start_time, end_time, location, duration_hours, category, allow_overtime, send_notification } = req.body;
     
     const canCreate = role === 'admin' || role === 'coordonator' || await checkGlobalPermission(userId, role, 'CAN_CREATE_EVENTS');
     if (!canCreate) return res.status(403).json({ error: 'Nu ai permisiunea de a crea evenimente.' });
@@ -159,6 +160,63 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       );
       checkBadgesOnEventCreate(userId, pool);
       await logAction(pool, userId, 'EVENT_CREATE', 'event', newEvent.rows[0].id, { title, category });
+
+      // LOGICĂ TRIMITERE NOTIFICĂRI
+      if (send_notification) {
+        try {
+          const notificationTitle = 'Un nou eveniment disponibil!';
+          const notificationBody = `Evenimentul "${title}" a fost publicat. Intră în aplicație pentru a te înscrie.`;
+          
+          // 1. Salvăm notificarea în baza de date
+          const notificationResult = await pool.query(
+            'INSERT INTO notifications (title, body) VALUES ($1, $2) RETURNING id', 
+            [notificationTitle, notificationBody]
+          );
+          const newNotificationId = notificationResult.rows[0].id;
+          
+          // 2. Căutăm voluntarii și coordonatorii (excluzând adminii)
+          const usersQuery = `
+            SELECT u.id, pt.token 
+            FROM users u
+            LEFT JOIN push_tokens pt ON u.id = pt.user_id 
+            WHERE u.role IN ('voluntar', 'coordonator')
+          `;
+          const usersResult = await pool.query(usersQuery); 
+          
+          if (usersResult.rows.length > 0) {
+            // 3. Asociem notificarea cu utilizatorii (pentru istoricul lor in-app)
+            const userIds = [...new Set(usersResult.rows.map(user => user.id))];
+            const userNotificationValues = userIds.map(id => `(${id}, ${newNotificationId})`).join(',');
+            await pool.query(`INSERT INTO user_notifications (user_id, notification_id) VALUES ${userNotificationValues} ON CONFLICT DO NOTHING`);
+            
+            // 4. Trimitere via Expo Push API
+            const pushTokens = usersResult.rows.filter(user => user.token).map(user => user.token);
+            if (pushTokens.length > 0) {
+              const expoMessage = { 
+                to: pushTokens, 
+                sound: 'default', 
+                title: notificationTitle, 
+                body: notificationBody, 
+                data: { _displayInForeground: true, eventId: newEvent.rows[0].id } 
+              };
+              
+              await axios.post('https://api.expo.dev/v2/push/send', expoMessage, {
+                headers: { 
+                  'Accept': 'application/json', 
+                  'Accept-encoding': 'gzip, deflate', 
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${process.env.EXPO_ACCESS_TOKEN}`
+                }
+              });
+              console.log(`[Push Notify] Notificare event nou trimisă către ${pushTokens.length} tokenuri.`);
+            }
+          }
+        } catch (notifyError) {
+          console.error('[Eroare Notificare Event Nou]', notifyError.message);
+          // Nu dăm fail la request dacă doar notificarea pică
+        }
+      }
+
       res.status(201).json(newEvent.rows[0]);
     } catch (error) {
       console.error('Eroare la crearea evenimentului:', error);

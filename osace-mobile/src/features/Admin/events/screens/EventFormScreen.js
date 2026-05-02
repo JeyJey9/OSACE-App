@@ -31,6 +31,7 @@ export default function EventFormScreen() {
   const [duration, setDuration] = useState('1'); 
   const [category, setCategory] = useState('social'); 
   const [allowOvertime, setAllowOvertime] = useState(true);
+  const [sendNotification, setSendNotification] = useState(false);
   
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date(Date.now() + 3600 * 1000));
@@ -70,6 +71,7 @@ export default function EventFormScreen() {
       duration_hours: parseFloat(duration),
       category,
       allow_overtime: allowOvertime,
+      send_notification: sendNotification,
     };
 
     try {
@@ -166,6 +168,23 @@ export default function EventFormScreen() {
             value={allowOvertime}
           />
         </View>
+        
+        {!isEditMode && (
+          <View style={[styles.switchRow, { marginTop: 15, paddingTop: 15, borderTopWidth: 1, borderTopColor: colors.border }]}>
+            <View style={styles.switchTextContainer}>
+              <Text style={styles.switchTitle}>Notifică Voluntarii</Text>
+              <Text style={styles.switchDescription}>
+                Trimite o notificare push tuturor voluntarilor pentru a-i anunța că activitatea a fost adăugată.
+              </Text>
+            </View>
+            <Switch
+              trackColor={{ false: isDark ? "#555" : "#ddd", true: colors.primary + '80' }}
+              thumbColor={sendNotification ? colors.primary : "#f4f3f4"}
+              onValueChange={setSendNotification}
+              value={sendNotification}
+            />
+          </View>
+        )}
       </View>
 
       <View style={styles.buttonWrapper}>
