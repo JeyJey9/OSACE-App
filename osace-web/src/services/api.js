@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.PROD ? 'https://app.osace.ro/api' : 'http://localhost:3000/api',
+  baseURL: import.meta.env.PROD ? 'https://api.osace.ro/api' : 'http://localhost:3000/api',
 });
 
 api.interceptors.request.use(
