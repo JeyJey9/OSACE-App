@@ -25,6 +25,12 @@
         Gestiune Evenimente
       </button>
       <button 
+        :class="['tab-btn', { active: activeTab === 'users' }]" 
+        @click="activeTab = 'users'"
+      >
+        Utilizatori
+      </button>
+      <button 
         :class="['tab-btn', { active: activeTab === 'notifications' }]" 
         @click="activeTab = 'notifications'"
       >
@@ -64,6 +70,10 @@
 
     <div v-if="activeTab === 'events'" class="tab-content">
       <EventManagement />
+    </div>
+
+    <div v-if="activeTab === 'users'" class="tab-content">
+      <UserManagement />
     </div>
 
     <div v-if="activeTab === 'notifications'" class="tab-content">
@@ -182,6 +192,7 @@
 import { ref, onMounted } from 'vue';
 import api from '../services/api';
 import EventManagement from '../components/EventManagement.vue';
+import UserManagement from '../components/UserManagement.vue';
 
 const activeTab = ref('requests');
 const requests = ref([]);

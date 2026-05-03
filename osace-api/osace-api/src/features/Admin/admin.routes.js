@@ -288,7 +288,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
   router.get('/users', [verifyToken, verifyAdmin], async (req, res) => {
     try {
       const usersResult = await pool.query(
-       `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, 
+       `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.avatar_url, u.created_at,
                COALESCE(SUM(ea.awarded_hours), 0) AS total_hours
         FROM users u
         LEFT JOIN event_attendance ea ON u.id = ea.user_id AND ea.confirmation_status = 'attended'
@@ -306,7 +306,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
   router.get('/users/managed', [verifyToken, verifyManager], async (req, res) => {
     try {
       const usersResult = await pool.query(
-       `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role,
+       `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.avatar_url, u.created_at,
                COALESCE(SUM(ea.awarded_hours), 0) AS total_hours
         FROM users u
         LEFT JOIN event_attendance ea ON u.id = ea.user_id AND ea.confirmation_status = 'attended'
