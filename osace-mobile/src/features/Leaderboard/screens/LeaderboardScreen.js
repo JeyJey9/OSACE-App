@@ -25,7 +25,11 @@ export default function LeaderboardScreen() {
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('general');
   const [availableYears, setAvailableYears] = useState([]);
-  const [selectedYear, setSelectedYear] = useState(null); // null = current year (default)
+  
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYearDate = new Date().getFullYear();
+  const defaultYear = currentMonth >= 9 ? currentYearDate : currentYearDate - 1;
+  const [selectedYear, setSelectedYear] = useState(defaultYear);
   
   const navigation = useNavigation();
   const { colors, isDark } = useThemeColor();
@@ -179,8 +183,8 @@ export default function LeaderboardScreen() {
             {/* Year Selector */}
             <View style={styles.dropdownWrapper}>
               <DropdownPicker
-                options={availableYears.map(y => ({ label: `Anul ${y.label}`, value: y.startYear }))}
-                selectedValue={selectedYear || (availableYears[0] ? availableYears[0].startYear : null)}
+                options={[...availableYears.map(y => ({ label: `Anul ${y.label}`, value: y.startYear })), { label: 'Din Toate Timpurile', value: 'all' }]}
+                selectedValue={selectedYear}
                 onValueChange={handleYearChange}
                 placeholder="Selectează anul"
               />

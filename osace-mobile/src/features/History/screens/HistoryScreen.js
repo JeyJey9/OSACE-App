@@ -14,6 +14,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import api from '../../../services/api';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import HistorySkeleton from '../components/HistorySkeleton';
+import EmptyState from '../../../components/EmptyState';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import CustomHeader from '../../../components/layout/CustomHeader';
 import DropdownPicker from '../../../components/DropdownPicker';
@@ -29,11 +30,7 @@ export default function HistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState('mine'); // 'mine' | 'all'
   const [availableYears, setAvailableYears] = useState([]);
-
-  const currentMonth = new Date().getMonth() + 1;
-  const currentYearDate = new Date().getFullYear();
-  const defaultYear = currentMonth >= 9 ? currentYearDate : currentYearDate - 1;
-  const [selectedYear, setSelectedYear] = useState(defaultYear);
+  const [selectedYear, setSelectedYear] = useState(null); // null = current year (default)
   const { colors, isDark } = useThemeColor();
 
   const CATEGORY_TAGS = {
@@ -214,7 +211,7 @@ export default function HistoryScreen() {
         <View style={styles.dropdownWrapper}>
           <DropdownPicker
             options={dropdownOptions}
-            selectedValue={selectedYear}
+            selectedValue={selectedYear || (availableYears[0] ? availableYears[0].startYear : null)}
             onValueChange={handleYearChange}
             placeholder="Selectează perioada"
           />
@@ -257,8 +254,8 @@ export default function HistoryScreen() {
     );
   };
 
-    return (
-      <ScreenContainer scrollable={false}>
+  return (
+    <ScreenContainer scrollable={false}>
         <CustomHeader />
 
         <View style={styles.toggleContainer}>
@@ -510,4 +507,4 @@ export default function HistoryScreen() {
       fontWeight: 'bold',
       marginLeft: 8,
     },
-  })
+  });
