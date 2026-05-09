@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const argon2 = require('argon2'); 
 const { uploadAvatar } = require('../../config/multer');
+const { getCurrentAcademicYear, parseYearParam } = require('../../utils/academicYear');
 
 const { 
   checkBadgesOnProfileView, 
@@ -50,19 +51,31 @@ module.exports = (pool, verifyToken) => {
   	}
   });
   
-  // Traseul: /my-past-events (Neschimbat)
+  // Traseul: /my-past-events — Optional ?year=2025 or ?year=all
   router.get('/my-past-events', verifyToken, async (req, res) => {
     const userId = req.user.userId;
+    const yearFilter = parseYearParam(req.query.year);
     try {
-      const result = await pool.query(
-        `SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 
+      let query, params;
+      if (yearFilter) {
+        query = `SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 
                 ea.confirmation_status, ea.awarded_hours 
          FROM events e
          JOIN event_attendance ea ON e.id = ea.event_id
          WHERE ea.user_id = $1 AND e.end_time <= NOW()
-         ORDER BY e.start_time DESC`,
-        [userId]
-      );
+           AND e.start_time >= $2 AND e.start_time < $3
+         ORDER BY e.start_time DESC`;
+        params = [userId, yearFilter.start, yearFilter.end];
+      } else {
+        query = `SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 
+                ea.confirmation_status, ea.awarded_hours 
+         FROM events e
+         JOIN event_attendance ea ON e.id = ea.event_id
+         WHERE ea.user_id = $1 AND e.end_time <= NOW()
+         ORDER BY e.start_time DESC`;
+        params = [userId];
+      }
+      const result = await pool.query(query, params);
       res.json(result.rows);
     } catch (error) {
       console.error('Eroare la preluarea istoricului:', error);
@@ -70,19 +83,31 @@ module.exports = (pool, verifyToken) => {
     }
   });
 
-  // Traseul: /all-past-events (Toate evenimentele trecute din asociație)
+  // Traseul: /all-past-events — Optional ?year=2025 or ?year=all
   router.get('/all-past-events', verifyToken, async (req, res) => {
     const userId = req.user.userId;
+    const yearFilter = parseYearParam(req.query.year);
     try {
-      const result = await pool.query(
-        `SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 
+      let query, params;
+      if (yearFilter) {
+        query = `SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 
                 ea.confirmation_status, ea.awarded_hours 
          FROM events e
          LEFT JOIN event_attendance ea ON e.id = ea.event_id AND ea.user_id = $1
          WHERE e.end_time <= NOW()
-         ORDER BY e.start_time DESC`,
-        [userId]
-      );
+           AND e.start_time >= $2 AND e.start_time < $3
+         ORDER BY e.start_time DESC`;
+        params = [userId, yearFilter.start, yearFilter.end];
+      } else {
+        query = `SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 
+                ea.confirmation_status, ea.awarded_hours 
+         FROM events e
+         LEFT JOIN event_attendance ea ON e.id = ea.event_id AND ea.user_id = $1
+         WHERE e.end_time <= NOW()
+         ORDER BY e.start_time DESC`;
+        params = [userId];
+      }
+      const result = await pool.query(query, params);
       res.json(result.rows);
     } catch (error) {
       console.error('Eroare la preluarea tuturor evenimentelor trecute:', error);
@@ -326,7 +351,8 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
   }
 });
 
-  // Ruta dinamică /:id (Profilul PUBLIC al altcuiva) - Rămâne la sfârșit
+  // Ruta dinamică /:id (Profilul PUBLIC al altcuiva)
+  // Query params: ?year=2025 for specific year, ?year=all for all-time, default = current year
   router.get('/:id', verifyToken, async (req, res) => {
     const { id } = req.params; 
 
@@ -334,19 +360,46 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
         return res.status(400).json({ error: 'ID utilizator invalid.' });
     }
 
+    const yearFilter = parseYearParam(req.query.year) || getCurrentAcademicYear();
+    const isAllTime = req.query.year === 'all';
+
     try {
-      const profileQuery = `
-        SELECT
-          u.id, u.display_name, u.first_name, u.last_name, u.avatar_url, u.created_at,
-          (
-            (SELECT COALESCE(SUM(ea.awarded_hours), 0) FROM event_attendance ea WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended') +
-            (SELECT COALESCE(SUM(sc.awarded_hours), 0) FROM special_contributions sc WHERE sc.user_id = u.id AND sc.status = 'approved')
-          ) AS total_hours
-        FROM users u
-        WHERE u.id = $1;
-      `;
+      let profileQuery, params;
       
-      const result = await pool.query(profileQuery, [id]);
+      if (isAllTime) {
+        profileQuery = `
+          SELECT
+            u.id, u.display_name, u.first_name, u.last_name, u.avatar_url, u.created_at,
+            (
+              (SELECT COALESCE(SUM(ea.awarded_hours), 0) FROM event_attendance ea WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended') +
+              (SELECT COALESCE(SUM(sc.awarded_hours), 0) FROM special_contributions sc WHERE sc.user_id = u.id AND sc.status = 'approved')
+            ) AS total_hours
+          FROM users u
+          WHERE u.id = $1;
+        `;
+        params = [id];
+      } else {
+        profileQuery = `
+          SELECT
+            u.id, u.display_name, u.first_name, u.last_name, u.avatar_url, u.created_at,
+            (
+              (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
+               FROM event_attendance ea 
+               JOIN events e ON ea.event_id = e.id
+               WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended'
+                 AND e.start_time >= $2 AND e.start_time < $3) +
+              (SELECT COALESCE(SUM(sc.awarded_hours), 0) 
+               FROM special_contributions sc 
+               WHERE sc.user_id = u.id AND sc.status = 'approved'
+                 AND sc.created_at >= $2 AND sc.created_at < $3)
+            ) AS total_hours
+          FROM users u
+          WHERE u.id = $1;
+        `;
+        params = [id, yearFilter.start, yearFilter.end];
+      }
+      
+      const result = await pool.query(profileQuery, params);
 
       if (result.rows.length === 0) return res.status(404).json({ error: 'Utilizator negăsit.' });
       
@@ -365,15 +418,33 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
     const { id } = req.params;
     if (isNaN(id)) return res.status(400).json({ error: 'ID invalid' });
 
+    const yearFilter = parseYearParam(req.query.year);
+
     try {
-      const result = await pool.query(`
-        SELECT c.*, 
-               coord.display_name as coord_name, coord.first_name as coord_first, coord.last_name as coord_last
-        FROM special_contributions c
-        LEFT JOIN users coord ON c.coordinator_id = coord.id
-        WHERE c.user_id = $1 AND c.status = 'approved'
-        ORDER BY c.created_at DESC
-      `, [id]);
+      let query, params;
+      if (yearFilter) {
+        query = `
+          SELECT c.*, 
+                 coord.display_name as coord_name, coord.first_name as coord_first, coord.last_name as coord_last
+          FROM special_contributions c
+          LEFT JOIN users coord ON c.coordinator_id = coord.id
+          WHERE c.user_id = $1 AND c.status = 'approved'
+            AND c.created_at >= $2 AND c.created_at < $3
+          ORDER BY c.created_at DESC
+        `;
+        params = [id, yearFilter.start, yearFilter.end];
+      } else {
+        query = `
+          SELECT c.*, 
+                 coord.display_name as coord_name, coord.first_name as coord_first, coord.last_name as coord_last
+          FROM special_contributions c
+          LEFT JOIN users coord ON c.coordinator_id = coord.id
+          WHERE c.user_id = $1 AND c.status = 'approved'
+          ORDER BY c.created_at DESC
+        `;
+        params = [id];
+      }
+      const result = await pool.query(query, params);
       res.json(result.rows);
     } catch (error) {
       console.error('Eroare la preluarea contribuțiilor:', error);

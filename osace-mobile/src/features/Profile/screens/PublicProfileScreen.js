@@ -1,6 +1,6 @@
 // src/features/Profile/screens/PublicProfileScreen.js
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, Alert } from 'react-native';
+import { StyleSheet, Alert, View, TouchableOpacity, Text } from 'react-native';
 import { useRoute, useFocusEffect } from '@react-navigation/native';
 import api from '../../../services/api';
 import { format } from 'date-fns';
@@ -13,6 +13,7 @@ import BadgeList from '../components/BadgeList';
 import ContributionList from '../components/ContributionList';
 import ProfileSkeleton from '../components/ProfileSkeleton';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
+import DropdownPicker from '../../../components/DropdownPicker';
 
 // Hook pentru temă
 import { useThemeColor } from '../../../constants/useThemeColor';
@@ -20,22 +21,24 @@ import { useThemeColor } from '../../../constants/useThemeColor';
 export default function PublicProfileScreen() {
   const route = useRoute();
   const { userId } = route.params;
-  const { colors } = useThemeColor();
+  const { colors, isDark } = useThemeColor();
 
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [availableYears, setAvailableYears] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(null);
 
-  const fetchProfileData = async () => {
+  const fetchProfileData = async (yearParam) => {
     try {
       setLoading(true);
+      const yearQuery = yearParam === 'all' ? '?year=all' : (yearParam ? `?year=${yearParam}` : '');
       
-      // Apeluri paralele pentru datele profilului și badge-uri
       const [profileResponse, badgesResponse, contributionsResponse] = await Promise.all([
-        api.get(`/api/profile/${userId}`),
+        api.get(`/api/profile/${userId}${yearQuery}`),
         api.get(`/api/profile/${userId}/badges`),
-        api.get(`/api/profile/${userId}/contributions`)
+        api.get(`/api/profile/${userId}/contributions${yearQuery}`)
       ]);
       
       setProfile(profileResponse.data);
@@ -49,18 +52,33 @@ export default function PublicProfileScreen() {
     }
   };
 
+  const fetchAvailableYears = async () => {
+    try {
+      const response = await api.get('/api/leaderboard/available-years');
+      setAvailableYears(response.data);
+    } catch (error) {
+      console.error("Eroare la preluarea anilor disponibili:", error);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
-      fetchProfileData();
-    }, [userId])
+      fetchAvailableYears();
+      fetchProfileData(selectedYear);
+    }, [userId, selectedYear])
   );
+
+  const handleYearChange = (year) => {
+    setSelectedYear(year);
+  };
 
   if (loading || !profile) {
     return <ProfileSkeleton />;
   }
 
-  // Formatăm data de înscriere
   const memberSince = format(new Date(profile.created_at), 'dd MMMM yyyy', { locale: ro });
+
+  const styles = createStyles(colors, isDark);
 
   return (
     <ScreenContainer scrollable={true}>
@@ -68,6 +86,16 @@ export default function PublicProfileScreen() {
         user={profile}
         roleText="Membru Voluntar" 
       />
+
+      {/* Hours Toggle -> Dropdown */}
+      <View style={styles.dropdownContainer}>
+        <DropdownPicker
+          options={[...availableYears.map(y => ({ label: `Anul ${y.label}`, value: y.startYear })), { label: 'Toate Orele', value: 'all' }]}
+          selectedValue={selectedYear}
+          onValueChange={handleYearChange}
+          placeholder="Selectează perioada"
+        />
+      </View>
       
       <ProfileStats 
         totalHours={parseFloat(profile.total_hours) || 0}
@@ -84,6 +112,9 @@ export default function PublicProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  // Stilurile sunt acum gestionate de ScreenContainer și componentele interne
+const createStyles = (colors, isDark) => StyleSheet.create({
+  dropdownContainer: { 
+    marginHorizontal: 20, 
+    marginTop: 15, 
+  },
 });

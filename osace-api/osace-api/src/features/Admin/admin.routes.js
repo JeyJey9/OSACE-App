@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { STATS_QUERY, USER_DETAILS_QUERY } = require('./admin.queries');
 const { logAction } = require('../../utils/auditLog');
+const { getCurrentAcademicYear } = require('../../utils/academicYear');
 
 // Primește 'pool', 'axios' și middleware-urile
 module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
@@ -284,16 +285,18 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
 });
 
   // Traseul: /api/admin/users
-  // Traseul: /api/admin/users
   router.get('/users', [verifyToken, verifyAdmin], async (req, res) => {
     try {
+      const year = getCurrentAcademicYear();
       const usersResult = await pool.query(
        `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.avatar_url, u.created_at,
                COALESCE(SUM(ea.awarded_hours), 0) AS total_hours
         FROM users u
         LEFT JOIN event_attendance ea ON u.id = ea.user_id AND ea.confirmation_status = 'attended'
+        LEFT JOIN events e ON ea.event_id = e.id AND e.start_time >= $1 AND e.start_time < $2
         GROUP BY u.id
-        ORDER BY u.last_name ASC;`
+        ORDER BY u.last_name ASC;`,
+        [year.start, year.end]
     );
       res.json(usersResult.rows);
     } catch (error) {
@@ -302,16 +305,19 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
     }
   });
 
-  // Traseul: /api/admin/users/managed - Accesibil pentru Admin SI Coordonator (pentru AssignHours)
+  // Traseul: /api/admin/users/managed - Accesibil pentru Admin SI Coordonator
   router.get('/users/managed', [verifyToken, verifyManager], async (req, res) => {
     try {
+      const year = getCurrentAcademicYear();
       const usersResult = await pool.query(
        `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.avatar_url, u.created_at,
                COALESCE(SUM(ea.awarded_hours), 0) AS total_hours
         FROM users u
         LEFT JOIN event_attendance ea ON u.id = ea.user_id AND ea.confirmation_status = 'attended'
+        LEFT JOIN events e ON ea.event_id = e.id AND e.start_time >= $1 AND e.start_time < $2
         GROUP BY u.id
-        ORDER BY u.last_name ASC;`
+        ORDER BY u.last_name ASC;`,
+        [year.start, year.end]
     );
       res.json(usersResult.rows);
     } catch (error) {

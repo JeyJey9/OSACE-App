@@ -16,6 +16,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import LeaderboardSkeleton from '../components/LeaderboardSkeleton';
 
 import ScreenContainer from '../../../components/layout/ScreenContainer';
+import DropdownPicker from '../../../components/DropdownPicker';
 import { useThemeColor } from '../../../constants/useThemeColor';
 
 export default function LeaderboardScreen() {
@@ -23,14 +24,17 @@ export default function LeaderboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('general');
+  const [availableYears, setAvailableYears] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(null); // null = current year (default)
   
   const navigation = useNavigation();
   const { colors, isDark } = useThemeColor();
   const { reloadUser } = useAuth(); // <-- NOU: extragem reloadUser
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = async (yearParam) => {
     try {
-      const response = await api.get('/api/leaderboard');
+      const yearQuery = yearParam ? `?year=${yearParam}` : '';
+      const response = await api.get(`/api/leaderboard${yearQuery}`);
       setLeaderboardData(response.data);
     } catch (error) {
       console.error("Eroare la preluarea clasamentului:", error);
@@ -40,21 +44,35 @@ export default function LeaderboardScreen() {
     }
   };
 
+  const fetchAvailableYears = async () => {
+    try {
+      const response = await api.get('/api/leaderboard/available-years');
+      setAvailableYears(response.data);
+    } catch (error) {
+      console.error("Eroare la preluarea anilor disponibili:", error);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      fetchLeaderboard();
-    }, [])
+      fetchAvailableYears();
+      fetchLeaderboard(selectedYear);
+    }, [selectedYear])
   );
 
-  // ▼▼▼ MODIFICAT: Reîncărcăm și utilizatorul la refresh ▼▼▼
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
-      fetchLeaderboard(),
+      fetchLeaderboard(selectedYear),
+      fetchAvailableYears(),
       reloadUser()
     ]);
-  }, [reloadUser]);
+  }, [reloadUser, selectedYear]);
+
+  const handleYearChange = (yearStartYear) => {
+    setSelectedYear(yearStartYear);
+  };
 
   const sortedData = useMemo(() => {
     let sortKey = 'total_hours';
@@ -158,6 +176,17 @@ export default function LeaderboardScreen() {
         }
         ListHeaderComponent={
           <>
+            {/* Year Selector */}
+            <View style={styles.dropdownWrapper}>
+              <DropdownPicker
+                options={availableYears.map(y => ({ label: `Anul ${y.label}`, value: y.startYear }))}
+                selectedValue={selectedYear || (availableYears[0] ? availableYears[0].startYear : null)}
+                onValueChange={handleYearChange}
+                placeholder="Selectează anul"
+              />
+            </View>
+
+            {/* Category Filter */}
             <View style={styles.filterWrapper}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
                 <TouchableOpacity style={[styles.filterButton, selectedCategory === 'general' && styles.filterActive]} onPress={() => setSelectedCategory('general')}>
@@ -195,8 +224,9 @@ export default function LeaderboardScreen() {
 }
 
 const createStyles = (colors, isDark) => StyleSheet.create({
-  filterWrapper: { backgroundColor: colors.card, paddingTop: 15 },
-  filterScroll: { paddingHorizontal: 15, paddingBottom: 15 },
+  dropdownWrapper: { paddingHorizontal: 15, paddingTop: 15, paddingBottom: 5, backgroundColor: colors.card },
+  filterWrapper: { backgroundColor: colors.card, paddingTop: 10 },
+  filterScroll: { paddingHorizontal: 15, paddingBottom: 10 },
   filterButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: colors.border, marginHorizontal: 4, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f0f0f0' },
   filterActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   filterText: { color: colors.textSecondary, fontWeight: 'bold', fontSize: 13 },

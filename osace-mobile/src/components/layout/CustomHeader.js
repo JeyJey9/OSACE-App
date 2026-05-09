@@ -86,9 +86,8 @@ const getGreeting = () => {
     } else {
       // Late night (21-24)
       msgs = [
-        'Seară târzie,',
         'Seară faină,',
-        'Noapte bună... sau nu,',
+        'Noapte bună,',
       ];
     }
   } // <-- End of REGULAR TIME-BASED GREETINGS else block

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { StyleSheet, Alert } from 'react-native';
+import { StyleSheet, Alert, View, TouchableOpacity, Text } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../features/Auth/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
@@ -14,6 +14,7 @@ import ProfileActions from '../components/ProfileActions';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import Toast from 'react-native-toast-message';
 import ProfileSkeleton from '../components/ProfileSkeleton';
+import DropdownPicker from '../../../components/DropdownPicker';
 
 // Hook pentru temă
 import { useThemeColor } from '../../../constants/useThemeColor';
@@ -28,11 +29,18 @@ export default function ProfileScreen() {
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [badges, setBadges] = useState([]);
   const [contributions, setContributions] = useState([]);
+  const [availableYears, setAvailableYears] = useState([]);
+  
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYearDate = new Date().getFullYear();
+  const defaultYear = currentMonth >= 9 ? currentYearDate : currentYearDate - 1;
+  const [selectedYear, setSelectedYear] = useState(defaultYear);
 
   // --- Logica de preluare a datelor ---
-  const fetchHistory = async () => {
+  const fetchHistory = async (yearParam) => {
     try {
-      const response = await api.get('/api/profile/my-past-events');
+      const yearQuery = yearParam === 'all' ? '?year=all' : (yearParam ? `?year=${yearParam}` : '');
+      const response = await api.get(`/api/profile/my-past-events${yearQuery}`);
       setPastEvents(response.data);
     } catch (error) {
       console.error("Eroare la preluarea istoricului (Profil):", error);
@@ -50,13 +58,23 @@ export default function ProfileScreen() {
     }
   };
 
-  const fetchContributions = async () => {
+  const fetchContributions = async (yearParam) => {
     try {
-      const response = await api.get(`/api/profile/${user.userId || user.id}/contributions`);
+      const yearQuery = yearParam === 'all' ? '?year=all' : (yearParam ? `?year=${yearParam}` : '');
+      const response = await api.get(`/api/profile/${user.userId || user.id}/contributions${yearQuery}`);
       setContributions(response.data);
     } catch (error) {
       console.error("Eroare la preluarea contribuțiilor:", error);
       throw error;
+    }
+  };
+
+  const fetchAvailableYears = async () => {
+    try {
+      const response = await api.get('/api/leaderboard/available-years');
+      setAvailableYears(response.data);
+    } catch (error) {
+      console.error("Eroare la preluarea anilor disponibili:", error);
     }
   };
 
@@ -66,9 +84,10 @@ export default function ProfileScreen() {
         setLoading(true);
         try {
           await Promise.all([
-            fetchHistory(),
+            fetchAvailableYears(),
+            fetchHistory(selectedYear),
             fetchBadges(),
-            fetchContributions()
+            fetchContributions(selectedYear)
           ]);
         } catch (error) {
           Alert.alert("Eroare", "Nu am putut încărca profilul complet.");
@@ -77,8 +96,12 @@ export default function ProfileScreen() {
         }
       };
       loadProfileData();
-    }, [])
+    }, [selectedYear])
   );
+
+  const handleYearChange = (year) => {
+    setSelectedYear(year);
+  };
 
   // --- Calcule și Formatare ---
   const totalHours = useMemo(() => {
@@ -187,9 +210,11 @@ export default function ProfileScreen() {
     }
   };
 
-  if (loading) {
+  if (loading && (!pastEvents.length && !contributions.length)) {
     return <ProfileSkeleton />;
   }
+
+  const styles = createStyles(colors, isDark);
 
   return (
     <ScreenContainer scrollable={true}>
@@ -199,6 +224,16 @@ export default function ProfileScreen() {
         avatarLoading={avatarLoading}
         onAvatarPress={handlePickAvatar}
       />
+
+      {/* Hours Toggle -> Dropdown */}
+      <View style={styles.dropdownContainer}>
+        <DropdownPicker
+          options={[...availableYears.map(y => ({ label: `Anul ${y.label}`, value: y.startYear })), { label: 'Toate Orele', value: 'all' }]}
+          selectedValue={selectedYear}
+          onValueChange={handleYearChange}
+          placeholder="Selectează perioada"
+        />
+      </View>
       
       <ProfileStats 
         totalHours={totalHours}
@@ -221,5 +256,9 @@ export default function ProfileScreen() {
   );
 }
 
-// Stilurile sunt gestionate intern de componentele atomice pentru consistență tematică
-const styles = StyleSheet.create({});
+const createStyles = (colors, isDark) => StyleSheet.create({
+  dropdownContainer: { 
+    marginHorizontal: 20, 
+    marginTop: 15, 
+  },
+});

@@ -5,6 +5,15 @@
       <p class="subtitle">Cei mai activi membri ai comunității OSACE.</p>
     </header>
 
+    <!-- Year Selector -->
+    <div class="year-selector">
+      <select v-model="selectedYear" @change="fetchLeaderboard" class="year-dropdown">
+        <option v-for="y in availableYears" :key="y.startYear" :value="y.startYear">
+          Anul {{ y.label }}
+        </option>
+      </select>
+    </div>
+
     <div v-if="loading" class="loading-state">
       <p>Se încarcă clasamentul...</p>
     </div>
@@ -21,8 +30,12 @@
           <h3>{{ user.display_name }}</h3>
         </div>
         <div class="hours-badge">
-          {{ user.total_hours }}h
+          {{ parseFloat(user.total_hours || 0).toFixed(1) }}h
         </div>
+      </div>
+
+      <div v-if="users.length === 0" class="empty-state">
+        Nu există voluntari cu ore înregistrate în această perioadă.
       </div>
     </div>
   </div>
@@ -34,11 +47,15 @@ import api from '../services/api';
 
 const users = ref([]);
 const loading = ref(true);
+const availableYears = ref([]);
+const selectedYear = ref(null);
 
 const fetchLeaderboard = async () => {
+  loading.value = true;
   try {
-    const res = await api.get('/leaderboard');
-    users.value = res.data;
+    const yearQuery = selectedYear.value ? `?year=${selectedYear.value}` : '';
+    const res = await api.get(`/leaderboard${yearQuery}`);
+    users.value = res.data.filter(u => parseFloat(u.total_hours) > 0);
   } catch (error) {
     console.error("Error fetching leaderboard", error);
   } finally {
@@ -46,23 +63,33 @@ const fetchLeaderboard = async () => {
   }
 };
 
-const displayRole = (role) => {
-  const mapping = {
-    admin: 'Administrator',
-    coordonator: 'Coordonator',
-    voluntar: 'Voluntar'
-  };
-  return mapping[role] || role;
+const fetchAvailableYears = async () => {
+  try {
+    const res = await api.get('/leaderboard/available-years');
+    availableYears.value = res.data;
+    // Default to the first (most recent) year
+    if (res.data.length > 0 && !selectedYear.value) {
+      selectedYear.value = res.data[0].startYear;
+    }
+  } catch (error) {
+    console.error("Error fetching available years", error);
+  }
 };
 
-onMounted(() => {
+const selectYear = (startYear) => {
+  selectedYear.value = startYear;
+  fetchLeaderboard();
+};
+
+onMounted(async () => {
+  await fetchAvailableYears();
   fetchLeaderboard();
 });
 </script>
 
 <style scoped>
 .page-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   text-align: center;
 }
 
@@ -73,6 +100,35 @@ onMounted(() => {
 
 .subtitle {
   color: var(--color-text-secondary);
+}
+
+.year-selector {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.year-dropdown {
+  padding: 0.6rem 2.5rem 0.6rem 1.2rem;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1em;
+  transition: all 0.2s ease;
+  min-width: 200px;
+}
+
+.year-dropdown:hover, .year-dropdown:focus {
+  border-color: var(--color-primary);
+  outline: none;
 }
 
 .ranking-container {
@@ -110,11 +166,6 @@ onMounted(() => {
   font-size: 1.1rem;
 }
 
-.role {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
-
 .hours-badge {
   background: var(--color-bg-surface);
   color: var(--color-primary);
@@ -122,6 +173,12 @@ onMounted(() => {
   padding: 0.5rem 1rem;
   border-radius: 20px;
   border: 1px solid var(--border-color);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-secondary);
 }
 
 /* Stilizare specifică pentru Top 3 */
