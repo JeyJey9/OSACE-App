@@ -94,17 +94,24 @@ export default function MyEventsScreen() {
         </View>
 
         <View style={styles.cardBody}>
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconWrapper}>
-              <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
+          <View style={styles.dateIntervalContainer}>
+            <View style={styles.dateRow}>
+              <View style={[styles.dateDot, { backgroundColor: '#2ecc71' }]} />
+              {isOngoing ? (
+                <Text style={styles.ongoingText}>În desfășurare</Text>
+              ) : (
+                <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {startTime.toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}
+                </Text>
+              )}
             </View>
-            {isOngoing ? (
-              <Text style={styles.ongoingText}>În desfășurare</Text>
-            ) : (
-              <Text style={styles.eventDetails}>
-                {startTime.toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}
+            <View style={styles.dateDivider} />
+            <View style={styles.dateRow}>
+              <View style={[styles.dateDot, { backgroundColor: '#e74c3c' }]} />
+              <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
+                {item.end_time ? new Date(item.end_time).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
               </Text>
-            )}
+            </View>
           </View>
           <View style={styles.infoRow}>
             <View style={styles.infoIconWrapper}>
@@ -237,6 +244,30 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   
   cardBody: {
     marginBottom: 15,
+  },
+  dateIntervalContainer: {
+    marginBottom: 6,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 10,
+    marginLeft: 6,
+  },
+  dateDivider: {
+    borderLeftWidth: 2,
+    borderStyle: 'dotted',
+    borderColor: colors.textSecondary,
+    height: 12,
+    marginLeft: 9,
+    marginTop: 2,
+    marginBottom: 2,
+    opacity: 0.5,
   },
   infoRow: {
     flexDirection: 'row',

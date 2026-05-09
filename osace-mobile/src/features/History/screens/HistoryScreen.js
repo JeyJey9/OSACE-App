@@ -165,11 +165,16 @@ export default function HistoryScreen() {
         </View>
 
         <View style={styles.cardBody}>
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconWrapper}>
-              <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
+          <View style={styles.dateIntervalContainer}>
+            <View style={styles.dateRow}>
+              <View style={[styles.dateDot, { backgroundColor: '#2ecc71' }]} />
+              <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{formatData(item.start_time)}</Text>
             </View>
-            <Text style={styles.eventDetails}>{formatData(item.start_time)}</Text>
+            <View style={styles.dateDivider} />
+            <View style={styles.dateRow}>
+              <View style={[styles.dateDot, { backgroundColor: '#e74c3c' }]} />
+              <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{formatData(item.end_time)}</Text>
+            </View>
           </View>
 
           {isAttended && (
@@ -450,6 +455,30 @@ export default function HistoryScreen() {
 
     cardBody: {
       marginBottom: 12,
+    },
+    dateIntervalContainer: {
+      marginBottom: 6,
+    },
+    dateRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    dateDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: 10,
+      marginLeft: 6,
+    },
+    dateDivider: {
+      borderLeftWidth: 2,
+      borderStyle: 'dotted',
+      borderColor: colors.textSecondary,
+      height: 12,
+      marginLeft: 9,
+      marginTop: 2,
+      marginBottom: 2,
+      opacity: 0.5,
     },
     infoRow: {
       flexDirection: 'row',

@@ -26,7 +26,17 @@
               <span class="ev-title">{{ ev.title }}</span>
               <span class="ev-category" :class="ev.category">{{ ev.category }}</span>
             </div>
-            <span class="ev-date">{{ formatDate(ev.start_time) }}</span>
+            <div class="ev-date-interval">
+              <div class="date-row">
+                <span class="date-dot start-dot"></span>
+                <span class="ev-date">{{ formatDate(ev.start_time) }}</span>
+              </div>
+              <div class="date-divider"></div>
+              <div class="date-row">
+                <span class="date-dot end-dot"></span>
+                <span class="ev-date">{{ formatDate(ev.end_time) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -407,6 +417,36 @@ onUnmounted(() => { clearQrTimers(); });
 .ev-category.social    { background: rgba(16,185,129,0.15); color: #10b981; }
 .ev-category.proiect   { background: rgba(59,130,246,0.15); color: #60a5fa; }
 .ev-category.sedinta   { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+/* ── Date Interval ─────────────────────────────────────────────────── */
+.ev-date-interval {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.2rem;
+}
+
+.date-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.start-dot { background: #10b981; }
+.end-dot { background: #ef4444; }
+
+.date-divider {
+  border-left: 2px dotted var(--color-text-muted);
+  height: 12px;
+  margin-left: 2px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  opacity: 0.5;
+}
 
 /* ── Detail Panel ───────────────────────────────────────────────────── */
 .event-detail-panel {

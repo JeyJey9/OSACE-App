@@ -24,9 +24,21 @@ const EventItem = memo(({ item, can, navigation, openQrModal, openTeamModal, han
           </Text>
         </View>
       </View>
-      <Text style={styles.eventDetails}>
-        {new Date(item.start_time).toLocaleString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-      </Text>
+      <View style={styles.dateIntervalContainer}>
+        <View style={styles.dateRow}>
+          <View style={[styles.dateDot, { backgroundColor: '#2ecc71' }]} />
+          <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
+            {new Date(item.start_time).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}
+          </Text>
+        </View>
+        <View style={styles.dateDivider} />
+        <View style={styles.dateRow}>
+          <View style={[styles.dateDot, { backgroundColor: '#e74c3c' }]} />
+          <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
+            {item.end_time ? new Date(item.end_time).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
+          </Text>
+        </View>
+      </View>
 
       <View style={styles.buttonRow}>
         {canScanQR && (
