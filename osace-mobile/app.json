@@ -13,6 +13,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "bundleIdentifier": "ro.osace.app",
       "supportsTablet": true
     },
     "android": {
@@ -21,7 +22,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.osace.mobile",
+      "package": "ro.osace.app",
       "googleServicesFile": "./google-services.json"
     },
     "extra": {

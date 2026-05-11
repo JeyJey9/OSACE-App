@@ -182,7 +182,7 @@ export default function CustomDrawerContent(props) {
             fontWeight: '500',
             letterSpacing: 0.5
           }}>
-            Versiune: 1.1.0
+            Versiune: 1.0.0
           </Text>
         </TouchableOpacity>
       </View>
