@@ -1,5 +1,8 @@
 const rateLimit = require('express-rate-limit');
 
+// Helper to bypass rate limits during development
+const skipInDev = (req, res) => process.env.NODE_ENV !== 'production';
+
 // 1. Limitator Global: Pentru întregul API
 // Permite 300 de request-uri la fiecare 15 minute pe IP
 const globalLimiter = rateLimit({
@@ -8,6 +11,7 @@ const globalLimiter = rateLimit({
   message: { error: 'Prea multe cereri de la acest IP, te rugăm să încerci din nou mai târziu.' },
   standardHeaders: true, 
   legacyHeaders: false,
+  skip: skipInDev,
 });
 
 // 2. Limitator Autentificare: Pentru /login, /register
@@ -18,6 +22,7 @@ const authLimiter = rateLimit({
   message: { error: 'Prea multe încercări de autentificare, te rugăm să încerci din nou în 5 minute.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipInDev,
 });
 
 // 3. Limitator Acțiuni Eveniment: Pentru /attend și /unattend
@@ -28,6 +33,7 @@ const eventActionLimiter = rateLimit({
   message: { error: 'Prea multe acțiuni rapide! Te rugăm să aștepți un minut.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipInDev,
 });
 
 module.exports = {
