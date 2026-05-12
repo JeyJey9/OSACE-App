@@ -133,10 +133,20 @@ module.exports = (pool, verifyToken, verifyAdmin) => {
 
       const request = check.rows[0];
 
-      // Update verification record
+      // GDPR: Delete the image file from server immediately
+      if (request.image_url) {
+        const UPLOAD_DIRECTORY = '/var/www/osace-uploads';
+        const filename = request.image_url.split('/').pop();
+        const physicalPath = path.join(UPLOAD_DIRECTORY, 'student-ids', filename);
+        if (fs.existsSync(physicalPath)) {
+          try { fs.unlinkSync(physicalPath); } catch(e) { console.error('[Verification] Error deleting image:', e); }
+        }
+      }
+
+      // Update verification record (remove image URL)
       await client.query(
         `UPDATE student_id_verifications
-           SET status = 'approved', reviewed_by = $1, updated_at = NOW()
+           SET status = 'approved', image_url = NULL, reviewed_by = $1, updated_at = NOW()
          WHERE id = $2`,
         [adminId, id]
       );
@@ -215,9 +225,19 @@ module.exports = (pool, verifyToken, verifyAdmin) => {
 
       const request = check.rows[0];
 
+      // GDPR: Delete the image file from server immediately
+      if (request.image_url) {
+        const UPLOAD_DIRECTORY = '/var/www/osace-uploads';
+        const filename = request.image_url.split('/').pop();
+        const physicalPath = path.join(UPLOAD_DIRECTORY, 'student-ids', filename);
+        if (fs.existsSync(physicalPath)) {
+          try { fs.unlinkSync(physicalPath); } catch(e) { console.error('[Verification] Error deleting image:', e); }
+        }
+      }
+
       await client.query(
         `UPDATE student_id_verifications
-           SET status = 'rejected', rejection_reason = $1, reviewed_by = $2, updated_at = NOW()
+           SET status = 'rejected', image_url = NULL, rejection_reason = $1, reviewed_by = $2, updated_at = NOW()
          WHERE id = $3`,
         [reason.trim(), adminId, id]
       );

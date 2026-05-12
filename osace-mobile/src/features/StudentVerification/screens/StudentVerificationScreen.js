@@ -124,6 +124,14 @@ export default function StudentVerificationScreen({ navigation }) {
           ))}
         </View>
 
+        {/* GDPR Disclaimer */}
+        <View style={s.gdprBanner}>
+          <Ionicons name="shield-checkmark" size={20} color="#f39c12" />
+          <Text style={s.gdprText}>
+            Conform normelor GDPR privind protecția datelor sensibile (Nume, CNP), fotografia legitimației <Text style={{ fontWeight: '800' }}>va fi ștearsă definitiv și irevocabil de pe serverele noastre</Text> în momentul în care un administrator îți procesează cererea.
+          </Text>
+        </View>
+
         <TouchableOpacity
           style={[s.checkRow, confirmed && { borderColor: '#27ae60', backgroundColor: '#27ae6012' }]}
           onPress={() => setConfirmed(!confirmed)} activeOpacity={0.8}
@@ -181,6 +189,8 @@ const createStyles = (colors, isDark, insets, BLUE) => StyleSheet.create({
   checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 16, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1.5, borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0', marginBottom: 20 },
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: isDark ? 'rgba(255,255,255,0.25)' : '#C5CDD6', justifyContent: 'center', alignItems: 'center', marginTop: 1, flexShrink: 0 },
   checkText: { flex: 1, fontSize: 13.5, color: colors.textSecondary, lineHeight: 21 },
+  gdprBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: isDark ? 'rgba(243,156,18,0.12)' : '#FEF9E7', borderRadius: 14, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(243,156,18,0.3)' },
+  gdprText: { flex: 1, fontSize: 13, color: isDark ? '#f0c070' : '#7D5C00', lineHeight: 20 },
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 56, borderRadius: 16, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6, marginBottom: 16 },
   submitText: { color: 'white', fontSize: 16, fontWeight: '800' },
   footer: { textAlign: 'center', fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
