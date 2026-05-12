@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
   ScrollView, ActivityIndicator, Alert, Platform,
@@ -18,7 +18,22 @@ export default function StudentVerificationScreen({ navigation }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState(null);
   const BLUE = isDark ? '#4A90E2' : '#1566B9';
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await api.get('/api/verification/my-status');
+        if (res.data.status === 'unverified' && res.data.rejection_reason) {
+          setRejectionReason(res.data.rejection_reason);
+        }
+      } catch (err) {
+        console.error('[Verification] Failed to fetch status:', err);
+      }
+    };
+    fetchStatus();
+  }, []);
 
   const pick = async (source) => {
     const perm = source === 'camera'
@@ -84,6 +99,16 @@ export default function StudentVerificationScreen({ navigation }) {
           <Text style={s.heroTitle}>Verificare Student</Text>
           <Text style={s.heroSubtitle}>Încarcă legitimația ta pentru a putea participa la activitățile OSACE.</Text>
         </View>
+
+        {rejectionReason && (
+          <View style={[s.infoStrip, { backgroundColor: '#e74c3c15', borderColor: '#e74c3c40' }]}>
+            <Ionicons name="warning" size={20} color="#e74c3c" />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.infoText, { color: '#e74c3c', fontWeight: '800', marginBottom: 2 }]}>Cerere respinsă</Text>
+              <Text style={[s.infoText, { color: isDark ? '#f8d7da' : '#c0392b' }]}>Motiv: {rejectionReason}</Text>
+            </View>
+          </View>
+        )}
 
         <View style={[s.infoStrip, { backgroundColor: BLUE + '12', borderColor: BLUE + '30' }]}>
           <Ionicons name="information-circle-outline" size={18} color={BLUE} />
