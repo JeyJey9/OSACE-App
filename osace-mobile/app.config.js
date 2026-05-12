@@ -13,6 +13,7 @@ export default {
       backgroundColor: "#ffffff"
     },
     ios: {
+      bundleIdentifier: "ro.osace.app",  // ✅ ADĂUGAT
       supportsTablet: true
     },
     android: {
@@ -21,8 +22,11 @@ export default {
         backgroundColor: "#ffffff"
       },
       edgeToEdgeEnabled: true,
-      package: "com.osace.mobile",
-      googleServicesFile: process.env.GOOGLE_SERVICES_JSON || "./google-services.json"
+      package: "ro.osace.app",  // ✅ SCHIMBAT (sincronizat cu app.json)
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON || "./google-services.json",
+      blockedPermissions: [  // ✅ ADĂUGAT (preventiv pentru AD_ID)
+        "com.google.android.gms.permission.AD_ID"
+      ]
     },
     extra: {
       eas: {

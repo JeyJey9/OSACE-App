@@ -16,6 +16,30 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColor } from '../../../constants/useThemeColor';
 
+const FormField = ({ label, icon, isFocused, onFocus, onBlur, colors, STANDARD_BLUE, loading, styles, ...props }) => (
+  <View style={styles.fieldWrapper}>
+    <Text style={styles.fieldLabel}>{label}</Text>
+    <View style={[
+      styles.inputContainer,
+      isFocused && { borderColor: STANDARD_BLUE, borderWidth: 1.5 },
+    ]}>
+      <Ionicons
+        name={icon}
+        size={18}
+        color={isFocused ? STANDARD_BLUE : colors.textSecondary}
+        style={styles.inputIcon}
+      />
+      <TextInput
+        style={styles.input}
+        placeholderTextColor={colors.textSecondary + '80'}
+        editable={!loading}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        {...props}
+      />
+    </View>
+  </View>
+);
 
 export default function RegisterScreen({ navigation }) {
   const [displayName, setDisplayName] = useState('');
@@ -72,33 +96,6 @@ export default function RegisterScreen({ navigation }) {
 
   const styles = createStyles(colors, isDark, insets, STANDARD_BLUE);
 
-  const inputStyle = (field) => [
-    styles.inputContainer,
-    focusedField === field && { borderColor: STANDARD_BLUE, borderWidth: 1.5 },
-  ];
-
-  const Field = ({ label, icon, field, ...props }) => (
-    <View style={styles.fieldWrapper}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={inputStyle(field)}>
-        <Ionicons
-          name={icon}
-          size={18}
-          color={focusedField === field ? STANDARD_BLUE : colors.textSecondary}
-          style={styles.inputIcon}
-        />
-        <TextInput
-          style={styles.input}
-          placeholderTextColor={colors.textSecondary + '80'}
-          editable={!loading}
-          onFocus={() => setFocusedField(field)}
-          onBlur={() => setFocusedField(null)}
-          {...props}
-        />
-      </View>
-    </View>
-  );
-
   return (
     <View style={styles.container}>
       {/* Decorative blobs */}
@@ -122,37 +119,61 @@ export default function RegisterScreen({ navigation }) {
 
           {/* Glass Card */}
           <View style={styles.card}>
-            <Field
+            <FormField
               label="PRENUME"
               icon="person-outline"
-              field="firstName"
+              isFocused={focusedField === 'firstName'}
+              onFocus={() => setFocusedField('firstName')}
+              onBlur={() => setFocusedField(null)}
+              colors={colors}
+              STANDARD_BLUE={STANDARD_BLUE}
+              loading={loading}
+              styles={styles}
               placeholder="Prenumele tău"
               value={firstName}
               onChangeText={(t) => { setFirstName(t); setError(null); }}
               autoCapitalize="words"
             />
-            <Field
+            <FormField
               label="NUME"
               icon="person-outline"
-              field="lastName"
+              isFocused={focusedField === 'lastName'}
+              onFocus={() => setFocusedField('lastName')}
+              onBlur={() => setFocusedField(null)}
+              colors={colors}
+              STANDARD_BLUE={STANDARD_BLUE}
+              loading={loading}
+              styles={styles}
               placeholder="Numele de familie"
               value={lastName}
               onChangeText={(t) => { setLastName(t); setError(null); }}
               autoCapitalize="words"
             />
-            <Field
+            <FormField
               label="PORECLĂ (VIZIBILĂ ÎN APP)"
               icon="at-outline"
-              field="displayName"
+              isFocused={focusedField === 'displayName'}
+              onFocus={() => setFocusedField('displayName')}
+              onBlur={() => setFocusedField(null)}
+              colors={colors}
+              STANDARD_BLUE={STANDARD_BLUE}
+              loading={loading}
+              styles={styles}
               placeholder="Cum vrei să fii cunoscut?"
               value={displayName}
               onChangeText={(t) => { setDisplayName(t); setError(null); }}
               autoCapitalize="words"
             />
-            <Field
+            <FormField
               label="EMAIL"
               icon="mail-outline"
-              field="email"
+              isFocused={focusedField === 'email'}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
+              colors={colors}
+              STANDARD_BLUE={STANDARD_BLUE}
+              loading={loading}
+              styles={styles}
               placeholder="adresa@email.com"
               value={email}
               onChangeText={(t) => { setEmail(t); setError(null); }}
@@ -163,7 +184,10 @@ export default function RegisterScreen({ navigation }) {
             {/* Password field — manual, needs eye toggle */}
             <View style={styles.fieldWrapper}>
               <Text style={styles.fieldLabel}>PAROLĂ</Text>
-              <View style={inputStyle('password')}>
+              <View style={[
+                styles.inputContainer,
+                focusedField === 'password' && { borderColor: STANDARD_BLUE, borderWidth: 1.5 },
+              ]}>
                 <Ionicons
                   name="lock-closed-outline"
                   size={18}
