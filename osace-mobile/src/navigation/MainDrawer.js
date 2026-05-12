@@ -14,6 +14,8 @@ import ManagementNavigator from './ManagementNavigator';
 import StatisticsScreen from '../features/Admin/screens/StatisticsScreen';
 import LeaderboardScreen from '../features/Leaderboard/screens/LeaderboardScreen';
 import EditProfileScreen from '../features/Profile/screens/EditProfileScreen';
+import DataExportScreen from '../features/Profile/screens/DataExportScreen';
+import NotificationPreferencesScreen from '../features/Profile/screens/NotificationPreferencesScreen';
 import BadgeCatalogScreen from '../features/BadgeCatalog/screens/BadgeCatalogScreen';
 import MapScreen from '../features/Map/screens/MapScreen';
 import CustomHeader from '../components/layout/CustomHeader';
@@ -138,6 +140,28 @@ export default function MainDrawer() {
           headerShown: false,
           drawerItemStyle: { height: 0 }
         }} 
+      />
+
+      {/* 9. Export Date (RGPD) - Ascuns din listă */}
+      <Drawer.Screen
+        name="DataExport"
+        component={DataExportScreen}
+        options={{
+          title: 'Export Date Personale',
+          headerShown: true,
+          drawerItemStyle: { height: 0 }
+        }}
+      />
+
+      {/* 10. Preferințe Notificări - Ascuns din listă */}
+      <Drawer.Screen
+        name="NotificationPreferences"
+        component={NotificationPreferencesScreen}
+        options={{
+          title: 'Preferințe Notificări',
+          headerShown: true,
+          drawerItemStyle: { height: 0 }
+        }}
       />
     </Drawer.Navigator>
   );
