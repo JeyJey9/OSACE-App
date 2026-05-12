@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "642267640183",
+    "project_id": "osace-app-notifications",
+    "storage_bucket": "osace-app-notifications.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:642267640183:android:5c6dfa570f6356dc0df172",
+        "android_client_info": {
+          "package_name": "com.osace.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3iHPYRXC1h-cKotJ9xIMsQOdsmrPNsDE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:642267640183:android:950b645454dd7e3a0df172",
+        "android_client_info": {
+          "package_name": "ro.osace.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3iHPYRXC1h-cKotJ9xIMsQOdsmrPNsDE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
