@@ -168,12 +168,12 @@ export default function HistoryScreen() {
           <View style={styles.dateIntervalContainer}>
             <View style={styles.dateRow}>
               <View style={[styles.dateDot, { backgroundColor: '#2ecc71' }]} />
-              <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{formatData(item.start_time)}</Text>
+              <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1}>{formatData(item.start_time)}</Text>
             </View>
             <View style={styles.dateDivider} />
             <View style={styles.dateRow}>
               <View style={[styles.dateDot, { backgroundColor: '#e74c3c' }]} />
-              <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{formatData(item.end_time)}</Text>
+              <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1}>{formatData(item.end_time)}</Text>
             </View>
           </View>
 

@@ -339,7 +339,6 @@ const createStyles = (colors, isDark, STANDARD_BLUE) => StyleSheet.create({
   notificationTime: {
     fontSize: 11,
     color: colors.textSecondary,
-    fontSize: 16,
-    color: colors.textSecondary,
+    flexShrink: 1,
   },
 });
