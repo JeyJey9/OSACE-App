@@ -251,6 +251,8 @@ export default function ProfileScreen() {
         onEdit={() => navigation.navigate('EditProfile')}
         onLogout={handleLogout}
         onDelete={handleDeleteAccount}
+        onExport={() => navigation.navigate('DataExport')}
+        onNotifPrefs={() => navigation.navigate('NotificationPreferences')}
       />
     </ScreenContainer>
   );

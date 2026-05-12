@@ -4,7 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useThemeColor } from '../../../constants/useThemeColor';
 
-export default function ProfileActions({ onEdit, onLogout, onDelete }) {
+export default function ProfileActions({ onEdit, onLogout, onDelete, onExport, onNotifPrefs }) {
   const { colors, isDark } = useThemeColor();
   const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
   const styles = createStyles(colors, isDark, STANDARD_BLUE);
@@ -13,7 +13,6 @@ export default function ProfileActions({ onEdit, onLogout, onDelete }) {
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>ACȚIUNI CONT</Text>
       <View style={styles.actionsContainer}>
-        {/* Buton Setări */}
         <TouchableOpacity style={styles.button} onPress={onEdit}>
           <View style={[styles.iconContainer, { backgroundColor: STANDARD_BLUE + '15' }]}>
             <Ionicons name="settings" size={20} color={STANDARD_BLUE} />
@@ -22,7 +21,28 @@ export default function ProfileActions({ onEdit, onLogout, onDelete }) {
           <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.chevron} />
         </TouchableOpacity>
 
-        {/* Buton Deconectare */}
+        <View style={styles.divider} />
+
+        <TouchableOpacity style={styles.button} onPress={onNotifPrefs}>
+          <View style={[styles.iconContainer, { backgroundColor: '#f39c1215' }]}>
+            <Ionicons name="notifications-outline" size={20} color="#f39c12" />
+          </View>
+          <Text style={styles.buttonText}>Preferințe Notificări</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.chevron} />
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        <TouchableOpacity style={styles.button} onPress={onExport}>
+          <View style={[styles.iconContainer, { backgroundColor: '#27ae6015' }]}>
+            <Ionicons name="document-text-outline" size={20} color="#27ae60" />
+          </View>
+          <Text style={styles.buttonText}>Export Date (RGPD)</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.chevron} />
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
         <TouchableOpacity style={styles.button} onPress={onLogout}>
           <View style={[styles.iconContainer, { backgroundColor: STANDARD_BLUE + '15' }]}>
             <Ionicons name="log-out" size={20} color={STANDARD_BLUE} />
@@ -31,13 +51,14 @@ export default function ProfileActions({ onEdit, onLogout, onDelete }) {
           <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.chevron} />
         </TouchableOpacity>
 
-        {/* Buton Ștergere (Atenție: Culoare de eroare/danger) */}
+        <View style={styles.divider} />
+
         <TouchableOpacity style={styles.button} onPress={onDelete}>
           <View style={[styles.iconContainer, { backgroundColor: 'rgba(231, 76, 60, 0.1)' }]}>
             <Ionicons name="trash" size={20} color="#E74C3C" />
           </View>
           <Text style={[styles.buttonText, styles.deleteButtonText]}>Șterge Contul</Text>
-        </TouchableOpacity> 
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -89,10 +110,11 @@ const createStyles = (colors, isDark, STANDARD_BLUE) => StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '700',
   },
-  chevron: {
-    opacity: 0.5,
+  chevron: { opacity: 0.5 },
+  divider: {
+    height: 1,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F0F5',
+    marginHorizontal: 16,
   },
-  deleteButtonText: {
-    color: '#E74C3C',
-  },
+  deleteButtonText: { color: '#E74C3C' },
 });

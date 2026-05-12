@@ -14,7 +14,16 @@
     },
     "ios": {
       "bundleIdentifier": "ro.osace.app",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": []
+      },
+      "infoPlist": {
+        "NSCameraUsageDescription": "OSACE folosește camera pentru a fotografia legitimația ta de student în vederea verificării contului de voluntar.",
+        "NSPhotoLibraryUsageDescription": "OSACE accesează galeria foto pentru a selecta fotografia legitimației tale de student.",
+        "NSPhotoLibraryAddUsageDescription": "OSACE poate salva fotografii în galeria ta.",
+        "NSUserNotificationsUsageDescription": "OSACE îți trimite notificări despre activități noi și starea cererii tale de verificare."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +32,13 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "ro.osace.app",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "extra": {
       "eas": {

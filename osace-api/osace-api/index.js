@@ -19,6 +19,7 @@
   const badgeRoutes = require('./src/features/Badge/badge.routes');
   const leaderboardRoutes = require('./src/features/Leaderboard/leaderboard.routes');
   const verificationRoutes = require('./src/features/StudentVerification/verification.routes');
+  const dataExportRoutes = require('./src/features/Profile/dataExport.routes');
   const { startCheckoutWorker } = require('./src/scripts/checkoutWorker');
 
   const app = express();
@@ -129,6 +130,7 @@
   app.use('/api/badges', badgeRoutes(pool, verifyToken));
   app.use('/api/leaderboard', leaderboardRoutes(pool, verifyToken));
   app.use('/api/verification', verificationRoutes(pool, verifyToken, verifyAdmin));
+  app.use('/api/profile', dataExportRoutes);
 
   // Ruta rădăcină
   app.get('/', (req, res) => {

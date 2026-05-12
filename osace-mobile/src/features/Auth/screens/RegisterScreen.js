@@ -15,6 +15,7 @@ import Toast from 'react-native-toast-message';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColor } from '../../../constants/useThemeColor';
+import { Linking } from 'react-native';
 
 const FormField = ({ label, icon, isFocused, onFocus, onBlur, colors, STANDARD_BLUE, loading, styles, ...props }) => (
   <View style={styles.fieldWrapper}>
@@ -51,6 +52,7 @@ export default function RegisterScreen({ navigation }) {
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const { colors, isDark } = useThemeColor();
   const insets = useSafeAreaInsets();
@@ -95,6 +97,7 @@ export default function RegisterScreen({ navigation }) {
   };
 
   const styles = createStyles(colors, isDark, insets, STANDARD_BLUE);
+  const s = styles; // alias for brevity in new JSX
 
   return (
     <View style={styles.container}>
@@ -219,6 +222,24 @@ export default function RegisterScreen({ navigation }) {
               </View>
             ) : null}
 
+            {/* T&C Checkbox */}
+            <TouchableOpacity
+              style={[s.termsRow, termsAccepted && { borderColor: '#27ae60', backgroundColor: '#27ae6010' }]}
+              onPress={() => setTermsAccepted(!termsAccepted)}
+              activeOpacity={0.8}
+            >
+              <View style={[s.termsCb, termsAccepted && { backgroundColor: '#27ae60', borderColor: '#27ae60' }]}>
+                {termsAccepted && <Ionicons name="checkmark" size={13} color="white" />}
+              </View>
+              <Text style={s.termsText}>
+                Sunt de acord cu{' '}
+                <Text style={[s.termsLink, { color: STANDARD_BLUE }]} onPress={() => Linking.openURL('https://osace.ro/app#terms&conditions')}>Termenii și Condițiile</Text>
+                {' '}și{' '}
+                <Text style={[s.termsLink, { color: STANDARD_BLUE }]} onPress={() => Linking.openURL('https://osace.ro/app#privacy-policy')}>Politica de Confidențialitate</Text>
+                {' '}OSACE.
+              </Text>
+            </TouchableOpacity>
+
             {/* Register Button */}
             {loading ? (
               <View style={[styles.primaryBtn, { backgroundColor: STANDARD_BLUE + 'AA', shadowOpacity: 0 }]}>
@@ -226,8 +247,9 @@ export default function RegisterScreen({ navigation }) {
               </View>
             ) : (
               <TouchableOpacity
-                style={[styles.primaryBtn, { backgroundColor: STANDARD_BLUE, shadowColor: STANDARD_BLUE }]}
+                style={[styles.primaryBtn, { backgroundColor: STANDARD_BLUE, shadowColor: STANDARD_BLUE }, !termsAccepted && { opacity: 0.45, shadowOpacity: 0 }]}
                 onPress={handleRegister}
+                disabled={!termsAccepted}
               >
                 <Text style={styles.primaryBtnText}>Creează Cont</Text>
                 <Ionicons name="checkmark-circle-outline" size={18} color="white" style={{ marginLeft: 8 }} />
@@ -402,4 +424,27 @@ const createStyles = (colors, isDark, insets, STANDARD_BLUE) => StyleSheet.creat
     fontSize: 14,
     fontWeight: '800',
   },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+    backgroundColor: colors.background,
+    marginBottom: 14,
+    marginTop: 4,
+  },
+  termsCb: {
+    width: 20, height: 20, borderRadius: 5,
+    borderWidth: 2, borderColor: isDark ? 'rgba(255,255,255,0.25)' : '#C5CDD6',
+    justifyContent: 'center', alignItems: 'center',
+    flexShrink: 0, marginTop: 1,
+  },
+  termsText: {
+    flex: 1, fontSize: 12.5,
+    color: colors.textSecondary, lineHeight: 19,
+  },
+  termsLink: { fontWeight: '700' },
 });

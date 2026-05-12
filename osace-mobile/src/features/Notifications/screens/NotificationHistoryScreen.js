@@ -138,7 +138,7 @@ export default function NotificationHistoryScreen() {
           <Text style={styles.notificationBody} numberOfLines={3}>{item.body}</Text>
           <View style={styles.timeRow}>
             <Ionicons name="time-outline" size={11} color={colors.textSecondary} style={{ marginRight: 3 }} />
-            <Text style={styles.notificationTime}>{formatTimestamp(item.created_at)}</Text>
+            <Text style={styles.notificationTime} maxFontSizeMultiplier={1}>{formatTimestamp(item.created_at)}</Text>
           </View>
         </View>
       </View>

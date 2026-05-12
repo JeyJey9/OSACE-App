@@ -17,6 +17,7 @@ import api from '../../../services/api';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColor } from '../../../constants/useThemeColor';
+import { Linking } from 'react-native';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -165,6 +166,17 @@ export default function LoginScreen() {
                 <Text style={[styles.registerLink, { color: STANDARD_BLUE }]}>Creează unul acum</Text>
               </TouchableOpacity>
             </View>
+          </View>
+
+          {/* Legal footer */}
+          <View style={styles.legalFooter}>
+            <Text style={styles.legalText}>
+              <Text style={styles.legalLink} onPress={() => Linking.openURL('https://osace.ro/app#privacy-policy')}>Politică de Confidențialitate</Text>
+              {'  ·  '}
+              <Text style={styles.legalLink} onPress={() => Linking.openURL('https://osace.ro/app#terms&conditions')}>Termeni și Condiții</Text>
+              {'  ·  '}
+              <Text style={styles.legalLink} onPress={() => Linking.openURL('https://osace.ro/app#account-deletion')}>Ștergere Cont</Text>
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -350,5 +362,21 @@ const createStyles = (colors, isDark, insets, STANDARD_BLUE) => StyleSheet.creat
   registerLink: {
     fontSize: 14,
     fontWeight: '800',
+  },
+  legalFooter: {
+    alignItems: 'center',
+    marginTop: 24,
+    paddingBottom: 8,
+  },
+  legalText: {
+    fontSize: 11.5,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  legalLink: {
+    color: colors.textSecondary,
+    textDecorationLine: 'underline',
+    fontWeight: '600',
   },
 });
