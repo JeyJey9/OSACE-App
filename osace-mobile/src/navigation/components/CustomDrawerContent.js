@@ -206,7 +206,7 @@ export default function CustomDrawerContent(props) {
               Developed out of passion for- hai că crecă...{'\n'}
               Sper să vă placă.{'\n\n'}
               <Text style={{ fontWeight: 'bold' }}>@george_1613</Text>{'\n'}
-              Versiune: V1.1.0
+              Versiune: V1.0.0
             </Text>
             <TouchableOpacity
               style={styles.modalCloseButton}
