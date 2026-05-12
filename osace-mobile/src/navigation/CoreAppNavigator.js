@@ -11,6 +11,7 @@ import NotificationHistoryScreen from '../features//Notifications/screens/Notifi
 // ▼▼▼ NOU: Importăm noul ecran de comentarii ▼▼▼
 import CommentsScreen from '../features/Feed/screens/CommentsScreen';
 import PublicProfileScreen from '../features/Profile/screens/PublicProfileScreen';
+import StudentVerificationScreen from '../features/StudentVerification/screens/StudentVerificationScreen';
 import { useThemeColor } from '../constants/useThemeColor';
 
 const Stack = createNativeStackNavigator();
@@ -84,6 +85,12 @@ export default function CoreAppNavigator() {
           headerShown: true,
           headerBackTitle: 'Înapoi'
         }} 
+      />
+
+      <Stack.Screen
+        name="StudentVerification"
+        component={StudentVerificationScreen}
+        options={{ headerShown: false }}
       />
 
     </Stack.Navigator>

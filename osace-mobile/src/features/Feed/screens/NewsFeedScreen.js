@@ -18,15 +18,28 @@ import ScreenContainer from '../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import EmptyState from '../../../components/EmptyState';
 import CustomHeader from '../../../components/layout/CustomHeader';
+import { Animated, Easing } from 'react-native';
 
 export default function NewsFeedScreen() {
   const navigation = useNavigation();
   const { user, reloadUser } = useAuth();
-  // Tab name differs by role: admin uses 'Admin', coordinator uses 'Coordonare'
   const managementTabName = user?.role === 'admin' ? 'Admin' : 'Coordonare';
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false); // <-- NOU: state pentru refresh
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Pulse animation for the verification banner
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  React.useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.06, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [pulseAnim]);
 
   const { colors } = useThemeColor();
 
@@ -71,6 +84,7 @@ export default function NewsFeedScreen() {
     );
   };
 
+  const isUnverified = user?.role === 'user' && user?.student_verification_status !== 'verified';
   const styles = createStyles(colors);
 
   return (
@@ -90,7 +104,6 @@ export default function NewsFeedScreen() {
             />
           )}
           keyExtractor={(item) => item.id.toString()}
-          // ▼▼▼ NOU: Adăugat refreshControl ▼▼▼
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -110,6 +123,30 @@ export default function NewsFeedScreen() {
         />
       )}
 
+      {/* Verification banner — for unverified volunteers only */}
+      {isUnverified && (
+        <Animated.View style={[styles.verifyBanner, { transform: [{ scale: pulseAnim }] }]}>
+          <TouchableOpacity
+            style={styles.verifyBannerInner}
+            onPress={() => navigation.navigate('StudentVerification')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.verifyBannerIconWrap}>
+              <Ionicons name="shield-half-outline" size={22} color="white" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.verifyBannerTitle}>Verifică-ți contul de student</Text>
+              <Text style={styles.verifyBannerSub}>
+                {user?.student_verification_status === 'pending'
+                  ? 'Cererea ta este în așteptare — vei fi notificat.'
+                  : 'Necesar pentru a te înscrie la activități.'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="white" />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
       {(user?.role === 'admin' || user?.role === 'coordonator') && (
         <TouchableOpacity
           style={styles.fab}
@@ -127,4 +164,21 @@ const createStyles = (colors) => StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
   emptyText: { fontSize: 16, color: colors.textSecondary },
   fab: { position: 'absolute', right: 20, bottom: 100, backgroundColor: colors.primary, width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
+  verifyBanner: {
+    position: 'absolute', left: 16, right: 16, bottom: 100,
+    borderRadius: 18,
+    shadowColor: '#E67E22', shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4, shadowRadius: 12, elevation: 10,
+  },
+  verifyBannerInner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#E67E22', borderRadius: 18, padding: 14,
+  },
+  verifyBannerIconWrap: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  verifyBannerTitle: { color: 'white', fontWeight: '800', fontSize: 14 },
+  verifyBannerSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2 },
 });

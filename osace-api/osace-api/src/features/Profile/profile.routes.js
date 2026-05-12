@@ -19,7 +19,7 @@ module.exports = (pool, verifyToken) => {
   router.get('/me', verifyToken, async (req, res) => {
   	try {
   	  const userResult = await pool.query(
-   		 'SELECT id, display_name, first_name, last_name, email, role, created_at, avatar_url FROM users WHERE id = $1',
+   		 'SELECT id, display_name, first_name, last_name, email, role, created_at, avatar_url, student_verification_status FROM users WHERE id = $1',
   		 [req.user.userId]
   );
   	  if (userResult.rows.length === 0) {

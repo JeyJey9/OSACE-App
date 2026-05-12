@@ -42,6 +42,12 @@
       >
         🗒 Jurnale
       </button>
+      <button 
+        :class="['tab-btn', { active: activeTab === 'verifications' }]" 
+        @click="activeTab = 'verifications'; fetchVerifications()"
+      >
+        🛡️ Verificări
+      </button>
     </div>
 
     <div v-if="activeTab === 'requests'" class="tab-content">
@@ -147,11 +153,11 @@
 
     <!-- JURNALE TAB -->
     <div v-if="activeTab === 'logs'" class="tab-content">
+      <!-- (unchanged journal content) -->
       <div class="logs-header">
         <h3>Jurnal de Audit</h3>
         <p class="desc">Toate acțiunile administrative, în ordine cronologică inversă.</p>
       </div>
-
       <div v-if="loadingLogs" class="loading-state">Se încarcă jurnalele...</div>
       <div v-else-if="auditLogs.length === 0" class="empty-state">Nu există înregistrări în jurnal.</div>
       <div v-else class="logs-list">
@@ -176,11 +182,47 @@
             </div>
           </div>
         </div>
-
         <div class="logs-pagination">
           <button @click="fetchAuditLogs(logsPage - 1)" :disabled="logsPage <= 1" class="btn-secondary">← Anterior</button>
           <span>Pagina {{ logsPage }} / {{ logsTotalPages }}</span>
           <button @click="fetchAuditLogs(logsPage + 1)" :disabled="logsPage >= logsTotalPages" class="btn-secondary">Următor →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VERIFICĂRI TAB -->
+    <div v-if="activeTab === 'verifications'" class="tab-content">
+      <div class="logs-header">
+        <h3>Verificări Legitimație Student</h3>
+        <p class="desc">Aprobă sau respinge cererile de verificare ale voluntarilor.</p>
+      </div>
+      <div v-if="loadingVerif" class="loading-state">Se încarcă...</div>
+      <div v-else-if="verifications.length === 0" class="empty-state">Nicio cerere în așteptare. 🎉</div>
+      <div v-else class="requests-grid">
+        <div v-for="v in verifications" :key="v.id" class="request-card glass-panel">
+          <div class="req-header">
+            <h4>{{ v.first_name }} {{ v.last_name }}</h4>
+            <span class="hours-tag" style="background: #f39c12">@{{ v.display_name }}</span>
+          </div>
+          <p class="req-desc" style="font-size:0.85rem;color:var(--color-text-secondary)">{{ v.email }}</p>
+          <img :src="apiBase + v.image_url" alt="Student ID" style="width:100%;border-radius:10px;margin:0.75rem 0;max-height:220px;object-fit:contain;background:var(--color-bg-surface);" />
+          <div class="action-buttons">
+            <button @click="openVerifReject(v.id)" class="btn-reject">Respinge</button>
+            <button @click="handleVerifApprove(v.id, v.first_name + ' ' + v.last_name)" class="btn-approve">Aprobă</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reject modal -->
+      <div v-if="verifRejectModal.visible" class="modal-overlay" @click.self="verifRejectModal.visible = false">
+        <div class="modal-card glass-panel">
+          <h3>Motiv respingere</h3>
+          <p>Explică utilizatorului ce trebuie corectat:</p>
+          <textarea v-model="verifRejectReason" class="input-field" rows="3" placeholder="Ex: Fotografia este neclară..."></textarea>
+          <div class="action-buttons" style="margin-top:1rem">
+            <button @click="verifRejectModal.visible = false" class="btn-secondary" style="flex:1;padding:0.75rem">Anulează</button>
+            <button @click="handleVerifReject" class="btn-reject" style="flex:1">Respinge</button>
+          </div>
         </div>
       </div>
     </div>
@@ -221,6 +263,8 @@ const ACTION_META = {
   NOTIFICATION_SEND:               { label: 'Notificare Trimisă',    color: '#3498db' },
   USER_ROLE_CHANGE:                { label: 'Schimbare Rol',         color: '#9b59b6' },
   USER_DELETE:                     { label: 'Ștergere Utilizator',   color: '#e74c3c' },
+  STUDENT_ID_APPROVE:              { label: 'Verificare Aprobată',   color: '#27ae60' },
+  STUDENT_ID_REJECT:               { label: 'Verificare Respinsă',   color: '#e74c3c' },
 };
 
 const getActionColor = (action) => ACTION_META[action]?.color ?? '#95a5a6';
@@ -333,6 +377,53 @@ onMounted(() => {
   fetchRequests();
   fetchUsers();
 });
+
+// ─── Verifications ───────────────────────────────────
+const verifications = ref([]);
+const loadingVerif = ref(false);
+const verifRejectModal = ref({ visible: false, id: null });
+const verifRejectReason = ref('');
+const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+
+const fetchVerifications = async () => {
+  loadingVerif.value = true;
+  try {
+    const res = await api.get('/verification/pending');
+    verifications.value = res.data;
+  } catch (err) {
+    console.error('Eroare la preluarea verificărilor:', err);
+  } finally {
+    loadingVerif.value = false;
+  }
+};
+
+const handleVerifApprove = async (id, name) => {
+  if (!confirm(`Aprobă cererea lui ${name}?`)) return;
+  try {
+    await api.post(`/verification/${id}/approve`);
+    alert('Cont verificat! Utilizatorul a fost notificat.');
+    fetchVerifications();
+  } catch (err) {
+    alert(err.response?.data?.error || 'Eroare la aprobare.');
+  }
+};
+
+const openVerifReject = (id) => {
+  verifRejectReason.value = '';
+  verifRejectModal.value = { visible: true, id };
+};
+
+const handleVerifReject = async () => {
+  if (!verifRejectReason.value.trim()) { alert('Te rugăm să specifici un motiv.'); return; }
+  try {
+    await api.post(`/verification/${verifRejectModal.value.id}/reject`, { reason: verifRejectReason.value.trim() });
+    verifRejectModal.value.visible = false;
+    alert('Cerere respinsă. Utilizatorul poate re-trimite.');
+    fetchVerifications();
+  } catch (err) {
+    alert(err.response?.data?.error || 'Eroare la respingere.');
+  }
+};
 </script>
 
 <style scoped>
@@ -617,4 +708,24 @@ button[type="submit"] {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 480px;
+  padding: 2rem;
+  border-radius: 20px;
+}
+
+.modal-card h3 { margin-bottom: 0.5rem; }
+.modal-card p  { color: var(--color-text-secondary); margin-bottom: 1rem; font-size: 0.9rem; }
 </style>

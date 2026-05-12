@@ -71,6 +71,7 @@ export default function EventDetailScreen() {
   const [actionLoading, setActionLoading] = useState(false);
   const [attendees, setAttendees] = useState([]);
   const [loadingAttendees, setLoadingAttendees] = useState(true);
+  const [showVerifyPrompt, setShowVerifyPrompt] = useState(false);
 
   const CATEGORY_TAGS = {
     sedinta: { label: 'Ședință', color: '#3498db' },
@@ -100,8 +101,14 @@ export default function EventDetailScreen() {
       });
       fetchAttendees(); 
     } catch (error) {
-      const errMsg = error.response?.data?.error || error.response?.data?.message || "Nu s-a putut realiza înscrierea.";
-      Alert.alert("Eroare", errMsg);
+      const errCode = error.response?.data?.error;
+      if (errCode === 'student_not_verified') {
+        // Show a non-disruptive in-screen notification instead of a blocking alert
+        setShowVerifyPrompt(true);
+      } else {
+        const errMsg = error.response?.data?.error || error.response?.data?.message || 'Nu s-a putut realiza înscrierea.';
+        Alert.alert('Eroare', errMsg);
+      }
     } finally {
       setActionLoading(false);
     }
@@ -387,6 +394,24 @@ export default function EventDetailScreen() {
           }
         ]}
       >
+        {showVerifyPrompt && (
+          <View style={[styles.floatingCard, { backgroundColor: isDark ? 'rgba(230,126,34,0.18)' : '#FEF3E2', borderWidth: 1, borderColor: 'rgba(230,126,34,0.35)', marginBottom: 12 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Ionicons name="shield-half-outline" size={20} color="#E67E22" />
+              <Text style={[styles.statusBannerText, { color: '#E67E22' }]}>Cont neverificat</Text>
+            </View>
+            <Text style={{ fontSize: 13, color: isDark ? '#f0c080' : '#7D4E0A', lineHeight: 19, marginBottom: 12 }}>
+              Trebuie să îți verifici legitimația de student înainte de a te putea înscrie la activități.
+            </Text>
+            <TouchableOpacity
+              style={{ backgroundColor: '#E67E22', borderRadius: 12, paddingVertical: 10, alignItems: 'center' }}
+              onPress={() => { setShowVerifyPrompt(false); navigation.navigate('StudentVerification'); }}
+            >
+              <Text style={{ color: 'white', fontWeight: '800', fontSize: 14 }}>Verifică-ți contul</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {is_attending && (
           <View style={[styles.floatingCard, bannerStyle]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: confirmation_status === 'checked_in' ? 6 : 0 }}>

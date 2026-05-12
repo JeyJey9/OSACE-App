@@ -59,8 +59,31 @@ const uploadPostImages = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
 
-// --- Exportăm ambele ---
+// --- Configurare 3: Upload Legitimație Student (pentru Verificare) ---
+const studentIdStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(UPLOAD_DIRECTORY, 'student-ids');
+    fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    if (!req.user || !req.user.userId) {
+      return cb(new Error('Utilizator neautentificat pentru upload legitimație'), null);
+    }
+    const uniqueName = `student-id-${req.user.userId}-${Date.now()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  }
+});
+
+const uploadStudentId = multer({
+  storage: studentIdStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: avatarFileFilter            // Doar imagini
+});
+
+// --- Exportăm toate trei ---
 module.exports = {
   uploadAvatar,
-  uploadPostImages
+  uploadPostImages,
+  uploadStudentId
 };

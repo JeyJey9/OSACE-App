@@ -128,10 +128,12 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
   dateText: {
     fontSize: 12,
     color: colors.textSecondary,
     marginLeft: 4,
+    flexShrink: 1,
   },
 });

@@ -322,13 +322,30 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
     }
   });
 
-  // --- ACȚIUNI PE EVENIMENT ---
+  // --- ACŢIUNI PE EVENIMENT ---
 
-  // POST /:id/attend (Înscriere)
+  // POST /:id/attend (Întscriere)
   router.post('/:id/attend', verifyToken, eventActionLimiter, async (req, res) => {
     try {
       const eventId = req.params.id;
       const userId = req.user.userId;
+      const role = req.user.role;
+
+      // Only volunteers (role === 'user') must be verified
+      if (role === 'user') {
+        const verifResult = await pool.query(
+          'SELECT student_verification_status FROM users WHERE id = $1',
+          [userId]
+        );
+        const verifStatus = verifResult.rows[0]?.student_verification_status;
+        if (verifStatus !== 'verified') {
+          return res.status(403).json({
+            error: 'student_not_verified',
+            message: 'Trebuie să îți verifici legitimația de student înainte de a te înscrie la activități.',
+            verif_status: verifStatus,
+          });
+        }
+      }
       
       const eventResult = await pool.query('SELECT * FROM events WHERE id = $1', [eventId]);
       if (eventResult.rows.length === 0) return res.status(404).json({ error: 'Evenimentul nu a fost găsit.' });

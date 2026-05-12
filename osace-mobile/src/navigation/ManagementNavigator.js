@@ -29,6 +29,10 @@ import BadgeFormScreen from '../features/Admin/badges/screens/BadgeFormScreen';
 import AssignContributionScreen from '../features/Admin/screens/AssignContributionScreen';
 import ContributionRequestsScreen from '../features/Admin/screens/ContributionRequestsScreen';
 
+// Verificare Studenți
+import StudentVerificationRequestsScreen from '../features/Admin/screens/StudentVerificationRequestsScreen';
+import StudentVerificationScreen from '../features/StudentVerification/screens/StudentVerificationScreen';
+
 const Stack = createNativeStackNavigator();
 
 export default function ManagementNavigator() {
@@ -69,13 +73,11 @@ export default function ManagementNavigator() {
         })} 
       />
 
-      <Stack.Screen 
-        name="UserDetails" 
-        component={UserDetailsScreen} 
-        options={({ route }) => ({ 
-          title: route.params?.userName || 'Detalii Utilizator' 
-        })} 
-      />
+      <Stack.Screen name="UserDetails" component={UserDetailsScreen} options={({ route }) => ({ title: route.params?.userName || 'Detalii Utilizator' })} />
+
+      {/* Verificare Studenți */}
+      <Stack.Screen name="StudentVerificationRequests" component={StudentVerificationRequestsScreen} options={{ title: 'Verificări Studenți' }} />
+      <Stack.Screen name="StudentVerification" component={StudentVerificationScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
