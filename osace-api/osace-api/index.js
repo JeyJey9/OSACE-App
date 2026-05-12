@@ -130,7 +130,7 @@
   app.use('/api/badges', badgeRoutes(pool, verifyToken));
   app.use('/api/leaderboard', leaderboardRoutes(pool, verifyToken));
   app.use('/api/verification', verificationRoutes(pool, verifyToken, verifyAdmin));
-  app.use('/api/profile', dataExportRoutes);
+  app.use('/api/profile', dataExportRoutes(pool, verifyToken));
 
   // Ruta rădăcină
   app.get('/', (req, res) => {
