@@ -1,10 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
 import {
   View, Text, StyleSheet, Switch, TouchableOpacity,
   ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import api from '../../../services/api';
@@ -13,6 +13,7 @@ import Toast from 'react-native-toast-message';
 export default function NotificationPreferencesScreen() {
   const { colors, isDark } = useThemeColor();
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const BLUE = isDark ? '#4A90E2' : '#1566B9';
 
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,16 @@ export default function NotificationPreferencesScreen() {
     event_announcements: true,
     verification_updates: true,
   });
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 8, padding: 4 }}>
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
 
   const fetchPrefs = async () => {
     try {

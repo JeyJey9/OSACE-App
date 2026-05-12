@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ActivityIndicator, Alert, ScrollView,
@@ -7,6 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import { useAuth } from '../../Auth/AuthContext';
+import { useNavigation } from '@react-navigation/native';
 import api from '../../../services/api';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -16,9 +17,20 @@ import { ro } from 'date-fns/locale';
 export default function DataExportScreen() {
   const { colors, isDark } = useThemeColor();
   const { user } = useAuth();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const BLUE = isDark ? '#4A90E2' : '#1566B9';
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 8, padding: 4 }}>
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
 
   const generatePDF = async () => {
     setLoading(true);
@@ -57,9 +69,9 @@ export default function DataExportScreen() {
 
       const badgeRows = data.badges.map(b => `
         <tr>
-          <td>${b.icon || '🏅'} ${b.name}</td>
+          <td>${b.icon_name || '🏅'} ${b.name}</td>
           <td>${b.description || '—'}</td>
-          <td>${format(new Date(b.awarded_at), 'dd.MM.yyyy')}</td>
+          <td>${format(new Date(b.earned_at), 'dd.MM.yyyy')}</td>
         </tr>
       `).join('');
 
