@@ -69,8 +69,6 @@ yarn-error.*
 # Fișiere Google Services
 # Notă: De obicei, google-services.json NU este ignorat dacă nu este privat.
 # L-am păstrat pe baza fișierului tău vechi.
-osace-mobile/android/app/google-services.json
-/osace-mobile/google-services.json
 
 # Chei private
 /osace-mobile/*.pem

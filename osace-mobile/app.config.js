@@ -17,6 +17,7 @@ export default {
       supportsTablet: true
     },
     android: {
+      versionCode: 1,
       adaptiveIcon: {
         foregroundImage: "./src/assets/osace.png",
         backgroundColor: "#ffffff"
