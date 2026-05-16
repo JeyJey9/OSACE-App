@@ -10,34 +10,20 @@ const awardBadge = async (userId, badgeKey, pool) => {
       ON CONFLICT (user_id, badge_id) DO NOTHING;
     `;
     await pool.query(query, [userId, badgeKey]);
-    console.log(`[BadgeService] Verificat ${badgeKey} pentru user ${userId}.`);
+    console.log(`[BadgeService] Verificat/Acordat ${badgeKey} pentru user ${userId}.`);
   } catch (err) {
   	console.error(`[BadgeService] Eroare la acordarea badge-ului ${badgeKey} pentru user ${userId}:`, err);
   }
 };
 
-/**
- * O funcție ajutătoare generică pentru a acorda badge-uri bazate pe COUNT.
- * @param {string} userId - ID-ul utilizatorului
- * @param {object} pool - Conexiunea la baza de date
- * @param {string} table - Tabela pe care se face COUNT (ex: 'post_likes')
- * @param {string} userColumn - Coloana de user pe care se filtrează (ex: 'user_id')
- * @param {Array<object>} badgeChecks - Un array de obiecte de verificat.
- * Exemplu: [
- * { key: 'FIRST_LIKE', threshold: 1 },
- * { key: '25_LIKES', threshold: 25 }
- * ]
- */
 const checkCountAndAward = async (userId, pool, table, userColumn, badgeChecks) => {
   try {
     const query = `SELECT COUNT(*) FROM ${table} WHERE ${userColumn} = $1`;
     const result = await pool.query(query, [userId]);
     const count = parseInt(result.rows[0].count, 10);
 
-    // Iterăm prin toate verificările și acordăm badge-urile necesare
     for (const check of badgeChecks) {
       if (count >= check.threshold) {
-        // Nu e nevoie de 'await' aici, lăsăm 'awardBadge' să ruleze în fundal
         awardBadge(userId, check.key, pool);
       }
     }
@@ -46,13 +32,11 @@ const checkCountAndAward = async (userId, pool, table, userColumn, badgeChecks) 
   }
 };
 
-// --- Logica pentru Badge-urile de Evenimente ---
+// --- Logica DYNAMICĂ pentru Badge-urile de Evenimente ---
 
-
-
-// checkAttendanceStatsBadges (neschimbată)
 const checkAttendanceStatsBadges = async (userId, pool) => {
   try {
+    // 1. Preluăm statisticile utilizatorului
     const statsQuery = `
       SELECT
         COUNT(ea.event_id) AS total_events,
@@ -75,75 +59,79 @@ const checkAttendanceStatsBadges = async (userId, pool) => {
     const totalSedinte = parseInt(stats.total_sedinte, 10);
     const totalSocial = parseInt(stats.total_social, 10);
     const totalProiect = parseInt(stats.total_proiect, 10);
+    const hoursSedinte = parseFloat(stats.hours_sedinte);
+    const hoursSocial = parseFloat(stats.hours_social);
+    const hoursProiect = parseFloat(stats.hours_proiect);
     
-    // --- 2. Verificăm badge-urile pe rând ---
+    // 2. Preluăm toate badge-urile dinamice de tip stats
+    const badgesQuery = `SELECT * FROM badges WHERE rule_type IN ('total_events', 'total_hours', 'category_count', 'category_hours', 'diversified')`;
+    const badgesResult = await pool.query(badgesQuery);
     
-    // Total Evenimente
-    if (totalEvents >= 1)   await awardBadge(userId, 'FIRST_EVENT', pool);
-    if (totalEvents >= 5)   await awardBadge(userId, '5_EVENTS', pool);
-    if (totalEvents >= 10)  await awardBadge(userId, '10_EVENTS', pool);
-    if (totalEvents >= 25)  await awardBadge(userId, '25_EVENTS', pool);
-    if (totalEvents >= 50)  await awardBadge(userId, '50_EVENTS', pool);
-    if (totalEvents >= 100) await awardBadge(userId, '100_EVENTS', pool);
+    for (const badge of badgesResult.rows) {
+      const type = badge.rule_type;
+      const val = badge.rule_value;
 
-    // Total Ore
-    if (totalHours >= 1) 	  await awardBadge(userId, '1_HOUR', pool);
-    if (totalHours >= 10) 	  await awardBadge(userId, '10_HOURS', pool);
-  	if (totalHours >= 24)   await awardBadge(userId, '24_HOURS_TOTAL', pool);
-  	if (totalHours >= 25)   await awardBadge(userId, '25_HOURS', pool);
-  	if (totalHours >= 50)   await awardBadge(userId, '50_HOURS', pool);
-    if (totalHours >= 100)  await awardBadge(userId, '100_HOURS', pool);
-  	if (totalHours >= 200)  await awardBadge(userId, '200_HOURS', pool);
-  	if (totalHours >= 250)  await awardBadge(userId, '250_HOURS', pool);
-  	if (totalHours >= 500)  await awardBadge(userId, '500_HOURS', pool);
-
-  	// Total pe Categorii
-  	if (totalSedinte >= 5) 	await awardBadge(userId, '5_SEDINTE', pool);
-  	if (totalSocial >= 5) 	await awardBadge(userId, '5_SOCIAL', pool);
-  	if (totalProiect >= 5) 	await awardBadge(userId, '5_PROIECT', pool);
-  	if (totalSedinte >= 20) await awardBadge(userId, '20_SEDINTE', pool);
-  	if (totalSocial >= 20) 	await awardBadge(userId, '20_SOCIAL', pool);
-  	if (totalProiect >= 20) await awardBadge(userId, '20_PROIECT', pool);
-
-  	// Ore pe Categorii
-  	if (parseFloat(stats.hours_sedinte) >= 25)  await awardBadge(userId, '25_HOURS_SEDINTE', pool);
-  	if (parseFloat(stats.hours_sedinte) >= 50)  await awardBadge(userId, '50_HOURS_SEDINTE', pool);
-  	if (parseFloat(stats.hours_social) >= 25) 	 await awardBadge(userId, '25_HOURS_SOCIAL', pool);
-  	if (parseFloat(stats.hours_proiect) >= 25)  await awardBadge(userId, '25_HOURS_PROIECT', pool);
-
-    // Verificarea pentru 'DIVERSIFIED'
-    if (totalSedinte > 0 && totalSocial > 0 && totalProiect > 0) {
-      await awardBadge(userId, 'DIVERSIFIED', pool);
+      if (type === 'total_events' && totalEvents >= parseInt(val, 10)) {
+        await awardBadge(userId, badge.key, pool);
+      }
+      else if (type === 'total_hours' && totalHours >= parseFloat(val)) {
+        await awardBadge(userId, badge.key, pool);
+      }
+      else if (type === 'category_count' && val) {
+        const [cat, count] = val.split(':');
+        const targetCount = parseInt(count, 10);
+        if ((cat === 'sedinta' && totalSedinte >= targetCount) ||
+            (cat === 'social' && totalSocial >= targetCount) ||
+            (cat === 'proiect' && totalProiect >= targetCount)) {
+          await awardBadge(userId, badge.key, pool);
+        }
+      }
+      else if (type === 'category_hours' && val) {
+        const [cat, hours] = val.split(':');
+        const targetHours = parseFloat(hours);
+        if ((cat === 'sedinta' && hoursSedinte >= targetHours) ||
+            (cat === 'social' && hoursSocial >= targetHours) ||
+            (cat === 'proiect' && hoursProiect >= targetHours)) {
+          await awardBadge(userId, badge.key, pool);
+        }
+      }
+      else if (type === 'diversified') {
+        if (totalSedinte > 0 && totalSocial > 0 && totalProiect > 0) {
+          await awardBadge(userId, badge.key, pool);
+        }
+      }
     }
 
   } catch (err) {
-  	console.error(`[BadgeService] Eroare majoră la checkAttendanceStatsBadges pentru user ${userId}:`, err);
+  	console.error(`[BadgeService] Eroare la checkAttendanceStatsBadges pentru user ${userId}:`, err);
   }
 };
 
-// checkSpecificEventBadges (neschimbată)
 const checkSpecificEventBadges = async (userId, eventId, pool) => {
   try {
     const eventResult = await pool.query('SELECT * FROM events WHERE id = $1', [eventId]);
     const event = eventResult.rows[0];
-
-    if (event.totp_secret) {
-      await awardBadge(userId, 'FIRST_SCAN_TOTP', pool);
-    }
     
+    const badgesResult = await pool.query(`SELECT * FROM badges WHERE rule_type IN ('night_owl', 'early_bird', 'evening_events')`);
+    const badges = badgesResult.rows;
+
     const endTime = new Date(event.end_time);
-    if (endTime.getHours() >= 0 && endTime.getHours() < 5) { 
-      await awardBadge(userId, 'NIGHT_OWL', pool);
-    }
-
     const startTime = new Date(event.start_time);
-    if (startTime.getHours() < 9) { 
-      await awardBadge(userId, 'EARLY_BIRD', pool);
+
+    // Verificăm dacă event-ul e 'night_owl'
+    if (endTime.getHours() >= 0 && endTime.getHours() < 5) { 
+      const noBadge = badges.find(b => b.rule_type === 'night_owl');
+      if (noBadge) await awardBadge(userId, noBadge.key, pool);
     }
 
-    // Evening event (starts at or after 18:00)
+    // Verificăm dacă event-ul e 'early_bird'
+    if (startTime.getHours() < 9) { 
+      const ebBadge = badges.find(b => b.rule_type === 'early_bird');
+      if (ebBadge) await awardBadge(userId, ebBadge.key, pool);
+    }
+
+    // Verificăm dacă event-ul e seară
     if (startTime.getHours() >= 18) {
-      // Count how many evening events this user has attended
       const eveningQuery = `
         SELECT COUNT(*) FROM event_attendance ea
         JOIN events e ON ea.event_id = e.id
@@ -152,9 +140,18 @@ const checkSpecificEventBadges = async (userId, eventId, pool) => {
           AND EXTRACT(HOUR FROM e.start_time) >= 18
       `;
       const eveningResult = await pool.query(eveningQuery, [userId]);
-      if (parseInt(eveningResult.rows[0].count, 10) >= 10) {
-        await awardBadge(userId, '10_EVENING_EVENTS', pool);
+      const eveningCount = parseInt(eveningResult.rows[0].count, 10);
+
+      const eveningBadges = badges.filter(b => b.rule_type === 'evening_events');
+      for (const badge of eveningBadges) {
+        if (eveningCount >= parseInt(badge.rule_value, 10)) {
+          await awardBadge(userId, badge.key, pool);
+        }
       }
+    }
+
+    if (event.totp_secret) {
+      await awardBadge(userId, 'FIRST_SCAN_TOTP', pool); // Păstrat ca static/manual default pentru simplitate, dar poate fi adus în db ca 'specific_action'
     }
 
   } catch (err) {
@@ -164,7 +161,6 @@ const checkSpecificEventBadges = async (userId, eventId, pool) => {
 
 const checkQuickRegisterBadge = async (userId, eventId, pool) => {
   try {
-    // Preluăm ora creării evenimentului ȘI ora înscrierii (care acum există)
     const query = `
       SELECT 
         e.created_at AS event_created_at,
@@ -181,10 +177,14 @@ const checkQuickRegisterBadge = async (userId, eventId, pool) => {
     const attendTime = new Date(result.rows[0].attendance_created_at);
 
     const diffMs = attendTime - eventTime;
-    const diffHours = diffMs / 3600000; // 1 oră = 3,600,000 ms
+    const diffHours = diffMs / 3600000;
 
-    if (diffHours <= 1) { // Dacă s-a înscris în mai puțin de 1 oră
-      await awardBadge(userId, 'QUICK_REGISTER', pool);
+    if (diffHours <= 1) { 
+      const badgeQuery = `SELECT * FROM badges WHERE rule_type = 'quick_register'`;
+      const badgesResult = await pool.query(badgeQuery);
+      for (const b of badgesResult.rows) {
+        await awardBadge(userId, b.key, pool);
+      }
     }
     
   } catch (err) {
@@ -192,7 +192,6 @@ const checkQuickRegisterBadge = async (userId, eventId, pool) => {
   }
 };
 
-// checkMonthlyBadges (neschimbată)
 const checkMonthlyBadges = async (userId, pool) => {
   try {
     const query = `
@@ -206,18 +205,21 @@ const checkMonthlyBadges = async (userId, pool) => {
     const result = await pool.query(query, [userId]);
     const monthlyCount = parseInt(result.rows[0].count, 10);
 
-    if (monthlyCount >= 5)  await awardBadge(userId, '5_EVENTS_MONTH', pool);
-    if (monthlyCount >= 10) await awardBadge(userId, '10_EVENTS_MONTH', pool);
+    const badgesQuery = `SELECT * FROM badges WHERE rule_type = 'monthly_events'`;
+    const badgesResult = await pool.query(badgesQuery);
+
+    for (const badge of badgesResult.rows) {
+      if (monthlyCount >= parseInt(badge.rule_value, 10)) {
+        await awardBadge(userId, badge.key, pool);
+      }
+    }
   } catch (err) {
     console.error(`[BadgeService] Eroare la checkMonthlyBadges pentru user ${userId}:`, err);
   }
 };
 
-// ▼▼▼ NOU: Funcție pentru a verifica badge-urile săptămânale ▼▼▼
 const checkWeeklyBadges = async (userId, pool) => {
   try {
-    // Calculăm totalul orelor confirmate
-    // a căror dată de start a fost în săptămâna curentă (Luni-Duminică)
     const query = `
       SELECT COALESCE(SUM(e.duration_hours), 0) AS weekly_hours
       FROM event_attendance ea
@@ -229,73 +231,68 @@ const checkWeeklyBadges = async (userId, pool) => {
     const result = await pool.query(query, [userId]);
     const weeklyHours = parseFloat(result.rows[0].weekly_hours);
 
-    if (weeklyHours >= 10) {
-      await awardBadge(userId, '10_HOURS_WEEK', pool);
-    }
-    if (weeklyHours >= 20) {
-      await awardBadge(userId, '20_HOURS_WEEK', pool);
+    const badgesQuery = `SELECT * FROM badges WHERE rule_type = 'weekly_hours'`;
+    const badgesResult = await pool.query(badgesQuery);
+
+    for (const badge of badgesResult.rows) {
+      if (weeklyHours >= parseFloat(badge.rule_value)) {
+        await awardBadge(userId, badge.key, pool);
+      }
     }
   } catch (err) {
     console.error(`[BadgeService] Eroare la checkWeeklyBadges pentru user ${userId}:`, err);
   }
 };
-// ▲▲▲ SFÂRȘIT BLOC NOU ▲▲▲
 
 const checkStreakBadges = async (userId, pool) => {
   try {
-    // Preluăm TOATE participările (confirmate sau nu) la evenimente TRECUTE
-    // Ordonăm de la cel mai recent la cel mai vechi
     const query = `
       SELECT ea.confirmation_status
       FROM event_attendance ea
       JOIN events e ON ea.event_id = e.id
       WHERE ea.user_id = $1
-        AND e.end_time < NOW() -- Doar evenimente care s-au terminat
-      ORDER BY e.start_time DESC; -- De la cel mai recent
+        AND e.end_time < NOW()
+      ORDER BY e.start_time DESC;
     `;
     const result = await pool.query(query, [userId]);
     
     let currentStreak = 0;
     
-    // Iterăm prin istoricul participărilor
     for (const row of result.rows) {
       if (row.confirmation_status === 'attended') {
-        currentStreak++; // Continuăm seria
+        currentStreak++;
       } else {
-        // Dacă dăm peste un 'registered' (neconfirmat) sau alt status, seria s-a rupt
         break; 
       }
     }
 
-    // Acordăm badge-urile pe baza seriei curente
-    if (currentStreak >= 3)  await awardBadge(userId, 'PERFECT_STREAK_3', pool);
-    if (currentStreak >= 10) await awardBadge(userId, 'PERFECT_STREAK_10', pool);
-    if (currentStreak >= 20) await awardBadge(userId, 'PERFECT_STREAK_20', pool);
-    if (currentStreak >= 20) await awardBadge(userId, 'UNSTOPPABLE', pool);
+    const badgesQuery = `SELECT * FROM badges WHERE rule_type = 'perfect_streak'`;
+    const badgesResult = await pool.query(badgesQuery);
+
+    for (const badge of badgesResult.rows) {
+      if (currentStreak >= parseInt(badge.rule_value, 10)) {
+        await awardBadge(userId, badge.key, pool);
+      }
+    }
     
   } catch (err) {
     console.error(`[BadgeService] Eroare la checkStreakBadges pentru user ${userId}:`, err);
   }
 };
-// ▲▲▲ SFÂRȘIT BLOC NOU ▲▲▲
 
-
-// ▼▼▼ MODIFICAT: Funcția principală de confirmare ▼▼▼
 const checkBadgesOnConfirmation = async (userId, eventId, pool) => {
   await Promise.all([
     checkAttendanceStatsBadges(userId, pool),
     checkSpecificEventBadges(userId, eventId, pool),
     checkMonthlyBadges(userId, pool),
     checkWeeklyBadges(userId, pool),
-    checkStreakBadges(userId, pool) // <-- Am adăugat noua verificare
+    checkStreakBadges(userId, pool)
   ]).catch(err => {
     console.error(`[BadgeService] Eroare la rularea Promise.all pentru confirmare badge user ${userId}:`, err);
   });
 };
-// ▲▲▲ SFÂRȘIT MODIFICARE ▲▲▲
 
-
-// --- Alte funcții de verificare (neschimbate) ---
+// --- Alte funcții de verificare (păstrate statice pentru acțiuni unice) ---
 const checkBadgesOnLike = (userId, pool) => {
   checkCountAndAward(userId, pool, 'post_likes', 'user_id', [
     { key: 'FIRST_LIKE',    threshold: 1   },
@@ -314,29 +311,20 @@ const checkBadgesOnComment = (userId, pool) => {
 
 const checkBadgesOnProfileView = async (userId, pool) => {
   try {
-    // Acordă badge-ul 'VIEWED_PROFILE' la prima vizualizare a unui profil
     await awardBadge(userId, 'VIEWED_PROFILE', pool);
-  } catch (err) {
-    console.error(`[BadgeService] Eroare la checkBadgesOnProfileView pentru user ${userId}:`, err);
-  }
+  } catch (err) {}
 };
 
 const checkBadgesOnAvatarUpload = async (userId, pool) => {
   try {
-    // Acordă badge-ul 'AVATAR_UPLOADED' la prima încărcare de avatar
     await awardBadge(userId, 'AVATAR_UPLOADED', pool);
-  } catch (err) {
-    console.error(`[BadgeService] Eroare la checkBadgesOnAvatarUpload pentru user ${userId}:`, err);
-  }
+  } catch (err) {}
 };
 
 const checkBadgesOnProfileEdit = async (userId, pool) => {
   try {
-    // Acordă badge-ul 'FIRST_PROFILE_EDIT' la prima editare de nume/parolă
     await awardBadge(userId, 'FIRST_PROFILE_EDIT', pool);
-  } catch (err) {
-    console.error(`[BadgeService] Eroare la checkBadgesOnProfileEdit pentru user ${userId}:`, err);
-  }
+  } catch (err) {}
 };
 
 const checkBadgesOnEventCreate = (userId, pool) => {
@@ -349,25 +337,18 @@ const checkBadgesOnEventCreate = (userId, pool) => {
 
 const checkBadgesOnRoleChange = async (userId, newRole, pool) => {
   try {
-    // Acordă badge-ul 'PROMOTED_COORDONATOR' la promovare
     if (newRole === 'coordonator' || newRole === 'admin') {
       await awardBadge(userId, 'PROMOTED_COORDONATOR', pool);
     }
-  } catch (err) {
-    console.error(`[BadgeService] Eroare la checkBadgesOnRoleChange pentru user ${userId}:`, err);
-  }
+  } catch (err) {}
 };
 
 const checkBadgesOnUnattend = async (userId, pool) => {
   try {
-    // Acordă badge-ul 'FIRST_UNATTEND' la prima retragere de la un eveniment
     await awardBadge(userId, 'FIRST_UNATTEND', pool);
-  } catch (err) {
-    console.error(`[BadgeService] Eroare la checkBadgesOnUnattend pentru user ${userId}:`, err);
-  }
+  } catch (err) {}
 };
 
-// Exportăm toate funcțiile
 module.exports = {
   awardBadge,
   checkBadgesOnConfirmation,

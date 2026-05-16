@@ -7,6 +7,22 @@ import ScreenContainer from '../../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../../constants/useThemeColor';
 import EmptyState from '../../../../components/EmptyState';
 
+const RULE_TYPE_LABELS = {
+  'manual': 'Manual',
+  'total_events': 'Total Evenimente',
+  'total_hours': 'Total Ore',
+  'category_count': 'Evenimente pe Categorie',
+  'category_hours': 'Ore pe Categorie',
+  'monthly_events': 'Evenimente Lunare',
+  'weekly_hours': 'Ore Săptămânale',
+  'perfect_streak': 'Streak (Consecutive)',
+  'evening_events': 'Evenimente de Seară',
+  'diversified': 'Diversificat (Sedinta, Social, Proiect)',
+  'night_owl': 'Night Owl',
+  'early_bird': 'Early Bird',
+  'quick_register': 'Quick Register'
+};
+
 export default function ManageBadgesScreen() {
   const navigation = useNavigation();
   const { colors, isDark } = useThemeColor();
@@ -41,6 +57,28 @@ export default function ManageBadgesScreen() {
     });
   }, [navigation, colors.primary]);
 
+  const handleDelete = (id, name) => {
+    Alert.alert(
+      "Confirmare",
+      `Sigur dorești să ștergi badge-ul "${name}"?`,
+      [
+        { text: "Anulează", style: "cancel" },
+        { 
+          text: "Șterge", 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/api/admin/badges/${id}`);
+              fetchBadges();
+            } catch (error) {
+              Alert.alert("Eroare", error.response?.data?.error || "Ștergerea a eșuat.");
+            }
+          } 
+        }
+      ]
+    );
+  };
+
   const styles = createStyles(colors, isDark);
 
   const renderItem = ({ item }) => (
@@ -49,12 +87,18 @@ export default function ManageBadgesScreen() {
       <View style={styles.textContainer}>
         <Text style={styles.name}>{item.name} <Text style={styles.keyText}>({item.key})</Text></Text>
         <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
+        <View style={styles.ruleBadge}>
+          <Text style={styles.ruleText}>
+            ⚙️ {RULE_TYPE_LABELS[item.rule_type] || item.rule_type} 
+            {item.rule_value ? ` : ${item.rule_value}` : ''}
+          </Text>
+        </View>
       </View>
       <View style={styles.actions}>
         <TouchableOpacity onPress={() => navigation.navigate('BadgeForm', { badge: item, onGoBack: fetchBadges })}>
           <Ionicons name="pencil" size={22} color="#E67E22" style={styles.actionIcon} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => {/* Logică ștergere */}}>
+        <TouchableOpacity onPress={() => handleDelete(item.id, item.name)}>
           <Ionicons name="trash" size={22} color="#C0392B" style={styles.actionIcon} />
         </TouchableOpacity>
       </View>
@@ -95,6 +139,15 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   name: { fontWeight: 'bold', fontSize: 16, color: colors.textPrimary },
   keyText: { fontSize: 12, color: colors.textSecondary, fontWeight: 'normal' },
   description: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  ruleBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F3F4',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  ruleText: { fontSize: 11, color: colors.textSecondary, fontWeight: 'bold' },
   actions: { flexDirection: 'row', alignItems: 'center' },
   actionIcon: { marginLeft: 15 },
   emptyText: { textAlign: 'center', marginTop: 50, color: colors.textSecondary, fontSize: 16 },

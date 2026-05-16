@@ -523,16 +523,16 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
   // --- RUTE CRUD PENTRU ADMIN BADGES ---
   
   router.post('/badges', [verifyToken, verifyAdmin], async (req, res) => {
-    const { name, description, icon_name, key } = req.body;
+    const { name, description, icon_name, key, rule_type, rule_value } = req.body;
     if (!name || !description || !icon_name || !key) {
-      return res.status(400).json({ error: 'Toate câmpurile (name, description, icon_name, key) sunt obligatorii.' });
+      return res.status(400).json({ error: 'Câmpurile (name, description, icon_name, key) sunt obligatorii.' });
     }
     try {
       const newBadge = await pool.query(
-        `INSERT INTO badges (name, description, icon_name, key)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO badges (name, description, icon_name, key, rule_type, rule_value)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *;`,
-        [name, description, icon_name, key]
+        [name, description, icon_name, key, rule_type || 'manual', rule_value || null]
       );
       res.status(201).json(newBadge.rows[0]);
     } catch (err) {
@@ -556,7 +556,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
 
   router.put('/badges/:id', [verifyToken, verifyAdmin], async (req, res) => {
     const { id } = req.params;
-    const { name, description, icon_name } = req.body; 
+    const { name, description, icon_name, rule_type, rule_value } = req.body; 
 
     if (!name || !description || !icon_name) {
       return res.status(400).json({ error: 'Câmpurile (name, description, icon_name) sunt obligatorii.' });
@@ -564,13 +564,13 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
     try {
       const updatedBadge = await pool.query(
         `UPDATE badges
-         SET name = $1, description = $2, icon_name = $3
-         WHERE id = $4
+         SET name = $1, description = $2, icon_name = $3, rule_type = $4, rule_value = $5
+         WHERE id = $6
          RETURNING *;`,
-        [name, description, icon_name, id]
+        [name, description, icon_name, rule_type || 'manual', rule_value || null, id]
       );
       if (updatedBadge.rows.length === 0) {
-        return res.status(44).json({ error: 'Badge-ul nu a fost găsit.' });
+        return res.status(404).json({ error: 'Badge-ul nu a fost găsit.' });
       }
       res.json(updatedBadge.rows[0]);
     } catch (err) {
@@ -598,6 +598,55 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
       }
       console.error(`Eroare la ștergerea badge-ului ${id}:`, err);
       res.status(500).json({ error: 'Eroare server la ștergerea badge-ului.' });
+    }
+  });
+
+  // --- ACORDARE / REVOCARE MANUALA BADGE-URI ---
+
+  router.get('/users/:id/badges', [verifyToken, verifyAdmin], async (req, res) => {
+    try {
+      const result = await pool.query(`
+        SELECT b.*, ub.earned_at
+        FROM user_badges ub
+        JOIN badges b ON ub.badge_id = b.id
+        WHERE ub.user_id = $1
+        ORDER BY ub.earned_at DESC
+      `, [req.params.id]);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Eroare preluare badge-uri utilizator:', error);
+      res.status(500).json({ error: 'Eroare server la preluarea badge-urilor.' });
+    }
+  });
+
+  router.post('/users/:id/badges', [verifyToken, verifyAdmin], async (req, res) => {
+    const { id } = req.params;
+    const { badge_id } = req.body;
+    try {
+      await pool.query(
+        'INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [id, badge_id]
+      );
+      await logAction(pool, req.user.userId, 'BADGE_AWARD_MANUAL', 'user', parseInt(id), { badge_id });
+      res.json({ message: 'Badge acordat cu succes.' });
+    } catch (error) {
+      console.error('Eroare acordare badge manual:', error);
+      res.status(500).json({ error: 'Eroare server la acordarea badge-ului.' });
+    }
+  });
+
+  router.delete('/users/:id/badges/:badgeId', [verifyToken, verifyAdmin], async (req, res) => {
+    const { id, badgeId } = req.params;
+    try {
+      await pool.query(
+        'DELETE FROM user_badges WHERE user_id = $1 AND badge_id = $2',
+        [id, badgeId]
+      );
+      await logAction(pool, req.user.userId, 'BADGE_REVOKE_MANUAL', 'user', parseInt(id), { badge_id: badgeId });
+      res.json({ message: 'Badge revocat cu succes.' });
+    } catch (error) {
+      console.error('Eroare revocare badge manual:', error);
+      res.status(500).json({ error: 'Eroare server la revocarea badge-ului.' });
     }
   });
 

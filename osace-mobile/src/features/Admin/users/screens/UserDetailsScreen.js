@@ -7,7 +7,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import ScreenContainer from '../../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../../constants/useThemeColor';
 import { useAuth } from '../../../Auth/AuthContext';
-import UserPermissionsModal from '../components/UserPermissionsModal'; // Import adăugat
+import UserPermissionsModal from '../components/UserPermissionsModal'; 
+import UserBadgesModal from '../components/UserBadgesModal'; // NOU
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -37,8 +38,9 @@ export default function UserDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [pieChartData, setPieChartData] = useState([]);
 
-  // State pentru Modal Permisiuni
+  // State pentru Modal Permisiuni & Badge-uri
   const [permModalVisible, setPermModalVisible] = useState(false);
+  const [badgesModalVisible, setBadgesModalVisible] = useState(false); // NOU
 
   const fetchDetails = async () => {
     if (!details) setLoading(true);
@@ -74,7 +76,7 @@ export default function UserDetailsScreen() {
     try {
       await api.put(`/api/admin/users/${userId}/role`, { newRole });
       Alert.alert("Succes", "Rolul a fost actualizat.");
-      fetchDetails(); // Reîncărcăm detaliile pentru a vedea noul rol
+      fetchDetails(); 
     } catch (error) {
       Alert.alert("Eroare", 'Actualizarea a eșuat.');
     }
@@ -107,7 +109,7 @@ export default function UserDetailsScreen() {
             try {
               await api.delete(`/api/admin/users/${userId}`);
               Alert.alert("Succes", "Utilizatorul a fost șters.");
-              navigation.goBack(); // Ne întoarcem la listă după ștergere
+              navigation.goBack(); 
             } catch (error) {
               Alert.alert("Eroare", "Ștergerea a eșuat.");
             }
@@ -177,6 +179,11 @@ export default function UserDetailsScreen() {
                     <Text style={[localStyles.adminBtnText, { color: colors.textPrimary }]}>Permisiuni</Text>
                   </TouchableOpacity>
                 </View>
+                
+                <TouchableOpacity style={[localStyles.adminBtn, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 10 }]} onPress={() => setBadgesModalVisible(true)}>
+                  <Ionicons name="medal-outline" size={20} color="#9b59b6" />
+                  <Text style={[localStyles.adminBtnText, { color: colors.textPrimary }]}>Gestionează Badge-uri</Text>
+                </TouchableOpacity>
 
                 <TouchableOpacity style={localStyles.deleteBtn} onPress={handleDeleteUser}>
                   <Ionicons name="trash-outline" size={20} color="#e74c3c" />
@@ -212,6 +219,13 @@ export default function UserDetailsScreen() {
         userId={userId}
         userName={userName}
       />
+      
+      <UserBadgesModal
+        isVisible={badgesModalVisible}
+        onClose={() => setBadgesModalVisible(false)}
+        userId={userId}
+        userName={userName}
+      />
     </ScreenContainer>
   );
 }
@@ -230,7 +244,6 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   rolePillText: { fontSize: 12, fontWeight: 'bold' },
   statCardRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 15, marginTop: 20 },
 
-  // Stiluri noi pt zona de Admin
   adminControlsContainer: { paddingHorizontal: 20, marginTop: 25 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
   adminButtonsRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
