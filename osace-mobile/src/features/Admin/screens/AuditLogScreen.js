@@ -33,16 +33,72 @@ const ACTION_META = {
   NOTIFICATION_SEND:              { label: 'Notificare Trimisă',   color: '#3498db', icon: 'notifications-outline' },
   USER_ROLE_CHANGE:               { label: 'Schimbare Rol',        color: '#9b59b6', icon: 'shield-outline' },
   USER_DELETE:                    { label: 'Ștergere Utilizator',  color: '#e74c3c', icon: 'person-remove-outline' },
+  BADGE_AWARD_MANUAL:             { label: 'Acordare Badge',       color: '#e67e22', icon: 'medal-outline' },
+  BADGE_REVOKE_MANUAL:            { label: 'Revocare Badge',       color: '#c0392b', icon: 'medal-outline' },
 };
 
 const getActionMeta = (action) =>
   ACTION_META[action] || { label: action, color: '#95a5a6', icon: 'ellipse-outline' };
 
+const getHumanReadableTarget = (item) => {
+  const d = item.details || {};
+  const userNameStr = item.resolved_target_name ? `(${item.resolved_target_name})` : '';
+  
+  switch (item.action) {
+    case 'CONTRIBUTION_APPROVE':
+    case 'CONTRIBUTION_REJECT':
+      return d.title ? `Contribuția: "${d.title}" ${userNameStr}` : `Contribuție Specială ${userNameStr}`;
+    case 'HOUR_REQUEST_ADMIN_APPROVE':
+    case 'HOUR_REQUEST_COORDINATOR_APPROVE':
+      return d.approved_hours ? `Cerere: ${d.approved_hours} ore ${userNameStr}` : `Cerere Ore ${userNameStr}`;
+    case 'USER_ROLE_CHANGE':
+      return d.target_name ? `${d.target_name} -> ${d.new_role}` : `Utilizator #${item.target_id} ${userNameStr}`;
+    case 'USER_DELETE':
+      return d.deleted_name ? `Cont șters: ${d.deleted_name}` : `Utilizator #${item.target_id} ${userNameStr}`;
+    case 'NOTIFICATION_SEND':
+      return d.title ? `Subiect: "${d.title}"` : 'Notificare Push';
+    case 'EVENT_CREATE':
+    case 'EVENT_UPDATE':
+    case 'EVENT_DELETE':
+      return d.event_title ? `Evenimentul: "${d.event_title}"` : `Eveniment #${item.target_id}`;
+    case 'BADGE_AWARD_MANUAL':
+    case 'BADGE_REVOKE_MANUAL':
+      return `Badge ID #${d.badge_id || '?'} pt. ${item.resolved_target_name || 'Utilizator #' + item.target_id}`;
+    default:
+      if (item.target_type) {
+        const type = item.target_type.replace(/_/g, ' ');
+        return `${type.charAt(0).toUpperCase() + type.slice(1)} #${item.target_id} ${userNameStr}`;
+      }
+      return null;
+  }
+};
+
 const formatDetails = (details) => {
   if (!details || Object.keys(details).length === 0) return null;
+  
+  const keyMap = {
+    approved_hours: 'Ore aprobate',
+    target_user_id: 'ID Utilizator',
+    event_id: 'ID Eveniment',
+    title: 'Titlu',
+    awarded_hours: 'Ore acordate',
+    new_role: 'Rol nou',
+    target_name: 'Nume utilizator',
+    deleted_email: 'Email',
+    deleted_name: 'Nume',
+    roles: 'Grupuri',
+    recipient_count: 'Dispozitive',
+    badge_id: 'ID Badge'
+  };
+
   return Object.entries(details)
-    .filter(([, v]) => v !== null && v !== undefined)
-    .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
+    .filter(([k, v]) => v !== null && v !== undefined && k !== 'title' && k !== 'target_name' && k !== 'deleted_name') // ascundem ce e deja in target
+    .map(([k, v]) => {
+      const niceKey = keyMap[k] || k.replace(/_/g, ' ');
+      // Daca valoarea este un array (cum e la 'roles') il facem string
+      const niceValue = Array.isArray(v) ? v.join(', ') : v;
+      return `${niceKey}: ${niceValue}`;
+    })
     .join(' · ');
 };
 
@@ -90,6 +146,7 @@ export default function AuditLogScreen() {
     const meta = getActionMeta(item.action);
     const details = formatDetails(item.details);
     const timeAgo = formatDistanceToNowStrict(new Date(item.created_at), { addSuffix: true, locale: ro });
+    const friendlyTarget = getHumanReadableTarget(item);
 
     return (
       <View style={styles.logCard}>
@@ -113,14 +170,14 @@ export default function AuditLogScreen() {
           </Text>
 
           {/* Target */}
-          {item.target_type && (
+          {friendlyTarget && (
             <Text style={styles.targetText}>
-              Target: <Text style={styles.targetValue}>{item.target_type} #{item.target_id}</Text>
+              <Ionicons name="arrow-forward-outline" size={12} color={colors.textSecondary} /> {friendlyTarget}
             </Text>
           )}
 
           {/* Details */}
-          {details && <Text style={styles.detailsText}>{details}</Text>}
+          {details && details.length > 0 && <Text style={styles.detailsText}>{details}</Text>}
         </View>
       </View>
     );

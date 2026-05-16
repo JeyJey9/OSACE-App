@@ -759,9 +759,12 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
            al.created_at,
            u.id        AS actor_id,
            u.display_name AS actor_name,
-           u.role      AS actor_role
+           u.role      AS actor_role,
+           COALESCE(tu1.display_name, tu2.display_name) AS resolved_target_name
          FROM audit_logs al
          LEFT JOIN users u ON al.actor_id = u.id
+         LEFT JOIN users tu1 ON al.target_type = 'user' AND al.target_id = tu1.id
+         LEFT JOIN users tu2 ON (al.details->>'target_user_id') IS NOT NULL AND (al.details->>'target_user_id') ~ '^[0-9]+$' AND tu2.id = (al.details->>'target_user_id')::int
          ${whereSQL}
          ORDER BY al.created_at DESC
          LIMIT $${params.length - 1} OFFSET $${params.length}`,
