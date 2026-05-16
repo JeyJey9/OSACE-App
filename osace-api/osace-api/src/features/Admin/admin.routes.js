@@ -737,8 +737,12 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
     const params = [];
 
     if (action) {
-      params.push(action);
-      whereClauses.push(`al.action = $${params.length}`);
+      const actions = action.split(',');
+      const placeholders = actions.map(a => {
+        params.push(a);
+        return `$${params.length}`;
+      });
+      whereClauses.push(`al.action IN (${placeholders.join(', ')})`);
     }
     if (actor_id) {
       params.push(parseInt(actor_id));

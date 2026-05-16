@@ -15,7 +15,6 @@ import { ro } from 'date-fns/locale';
 import api from '../../../services/api';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
-import CustomHeader from '../../../components/layout/CustomHeader';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -104,6 +103,17 @@ const formatDetails = (details) => {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
+const LOG_CATEGORIES = [
+  { id: 'all', label: 'Toate Acțiunile', actions: null },
+  { id: 'events', label: 'Evenimente', actions: 'EVENT_CREATE,EVENT_UPDATE,EVENT_DELETE' },
+  { id: 'hours', label: 'Cereri Ore', actions: 'HOUR_REQUEST_COORDINATOR_APPROVE,HOUR_REQUEST_ADMIN_APPROVE,HOUR_REQUEST_REJECT' },
+  { id: 'contributions', label: 'Contribuții', actions: 'CONTRIBUTION_APPROVE,CONTRIBUTION_REJECT' },
+  { id: 'users', label: 'Utilizatori', actions: 'USER_ROLE_CHANGE,USER_DELETE' },
+  { id: 'badges', label: 'Badge-uri', actions: 'BADGE_AWARD_MANUAL,BADGE_REVOKE_MANUAL' },
+  { id: 'posts', label: 'Postări', actions: 'POST_CREATE,POST_DELETE' },
+  { id: 'notifications', label: 'Notificări', actions: 'NOTIFICATION_SEND' }
+];
+
 export default function AuditLogScreen() {
   const { colors, isDark } = useThemeColor();
   const [logs, setLogs] = useState([]);
@@ -111,10 +121,17 @@ export default function AuditLogScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  
+  const [selectedCategory, setSelectedCategory] = useState(LOG_CATEGORIES[0]);
 
-  const fetchLogs = useCallback(async (pageNum = 1, append = false) => {
+  const fetchLogs = useCallback(async (pageNum = 1, append = false, category = selectedCategory) => {
     try {
-      const res = await api.get(`/api/admin/audit-logs?page=${pageNum}`);
+      let url = `/api/admin/audit-logs?page=${pageNum}`;
+      if (category && category.actions) {
+        url += `&action=${category.actions}`;
+      }
+
+      const res = await api.get(url);
       const { logs: newLogs, totalPages: tp } = res.data;
       setLogs((prev) => append ? [...prev, ...newLogs] : newLogs);
       setTotalPages(tp);
@@ -125,19 +142,26 @@ export default function AuditLogScreen() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, []);
+  }, [selectedCategory]);
 
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      fetchLogs(1);
-    }, [fetchLogs])
+      fetchLogs(1, false, selectedCategory);
+    }, [fetchLogs, selectedCategory])
   );
 
   const handleLoadMore = () => {
     if (loadingMore || page >= totalPages) return;
     setLoadingMore(true);
-    fetchLogs(page + 1, true);
+    fetchLogs(page + 1, true, selectedCategory);
+  };
+
+  const handleCategorySelect = (category) => {
+    if (selectedCategory.id === category.id) return;
+    setSelectedCategory(category);
+    setLoading(true);
+    // fetchLogs will be called by the effect dependency change
   };
 
   const styles = createStyles(colors, isDark);
@@ -185,7 +209,29 @@ export default function AuditLogScreen() {
 
   return (
     <ScreenContainer scrollable={false}>
-      <CustomHeader />
+      <View style={styles.filterContainer}>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={LOG_CATEGORIES}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => {
+            const isSelected = selectedCategory.id === item.id;
+            return (
+              <TouchableOpacity
+                style={[styles.filterChip, isSelected && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                onPress={() => handleCategorySelect(item)}
+              >
+                <Text style={[styles.filterChipText, isSelected && { color: '#fff', fontWeight: 'bold' }]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 10, gap: 8 }}
+        />
+      </View>
+
       {loading ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
       ) : (
@@ -209,9 +255,28 @@ export default function AuditLogScreen() {
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
 const createStyles = (colors, isDark) => StyleSheet.create({
+  filterContainer: {
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingBottom: 5,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F3F4',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E8E8',
+  },
+  filterChipText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
   listContent: {
     paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingTop: 12,
     paddingBottom: 120,
   },
   logCard: {
@@ -241,6 +306,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
+    gap: 8,
   },
   badge: {
     flexDirection: 'row',
@@ -248,14 +314,17 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 20,
+    flexShrink: 1,
   },
   badgeText: {
     fontSize: 12,
     fontWeight: '700',
+    flexShrink: 1,
   },
   timeText: {
     fontSize: 11,
     color: colors.textSecondary,
+    flexShrink: 0,
   },
   actorText: {
     fontSize: 13,
