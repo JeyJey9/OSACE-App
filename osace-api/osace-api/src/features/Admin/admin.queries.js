@@ -158,36 +158,45 @@ const USER_DETAILS_QUERY = `
     FROM users 
     WHERE id = $1
   ),
+
+  UserSpecialContributions AS (
+    SELECT id, title, 'contributie' AS category, awarded_hours AS duration_hours, created_at AS start_time, 'approved' AS confirmation_status
+    FROM special_contributions
+    WHERE user_id = $1 AND status = 'approved'
+  ),
   
   Aggregates AS (
     SELECT
-      COALESCE(SUM(duration_hours), 0) as total_hours,
-      COALESCE(COUNT(*), 0) as total_attended_events
-    FROM UserAttendedEvents
+      (SELECT COALESCE(SUM(duration_hours), 0) FROM UserAttendedEvents) + 
+      (SELECT COALESCE(SUM(duration_hours), 0) FROM UserSpecialContributions) as total_hours,
+      (SELECT COALESCE(COUNT(*), 0) FROM UserAttendedEvents) as total_attended_events
   ),
   
   CategoryHours AS (
-    SELECT
-      COALESCE(category, 'social') as category,
-      SUM(duration_hours) as hours
-    FROM UserAttendedEvents
-    GROUP BY COALESCE(category, 'social')
+    SELECT category, SUM(hours) as hours FROM (
+      SELECT COALESCE(category, 'social') as category, duration_hours as hours FROM UserAttendedEvents
+      UNION ALL
+      SELECT category, duration_hours as hours FROM UserSpecialContributions
+    ) combined
+    GROUP BY category
   ),
   
   RecentEvents AS (
-    SELECT id, title, confirmation_status
-    FROM UserAllEvents
+    SELECT id, title, confirmation_status FROM (
+      SELECT id, title, confirmation_status, start_time FROM UserAllEvents
+      UNION ALL
+      SELECT id, title, confirmation_status, start_time FROM UserSpecialContributions
+    ) combined
     ORDER BY start_time DESC
     LIMIT 5
   )
   
   SELECT 
     (SELECT row_to_json(ui) FROM UserInfo ui) as user_info,
-    a.total_hours,
-    a.total_attended_events,
+    (SELECT total_hours FROM Aggregates) as total_hours,
+    (SELECT total_attended_events FROM Aggregates) as total_attended_events,
     COALESCE((SELECT json_agg(ch) FROM CategoryHours ch), '[]') as hours_by_category,
-    COALESCE((SELECT json_agg(re) FROM RecentEvents re), '[]') as recent_events
-  FROM Aggregates a;
+    COALESCE((SELECT json_agg(re) FROM RecentEvents re), '[]') as recent_events;
 `;
 
 module.exports = {

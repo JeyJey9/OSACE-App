@@ -49,6 +49,7 @@ export default function AdminMenuScreen({ navigation }) {
         {isAdmin && (
           <>
             {renderMenuItem("Aprobări Contribuții", "shield-checkmark-outline", "ContributionRequests")}
+            {renderMenuItem("Gestionează Contribuții", "list-outline", "ManageContributions")}
             {renderMenuItem("Verificări Studenți", "card-outline", "StudentVerificationRequests")}
             {renderMenuItem("Utilizatori", "people-circle-outline", "AdminUserList")}
             {renderMenuItem("Notificare", "notifications-outline", "SendNotification")}

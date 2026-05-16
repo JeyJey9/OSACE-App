@@ -28,6 +28,8 @@ import BadgeFormScreen from '../features/Admin/badges/screens/BadgeFormScreen';
 // Sub-domeniu: Contribuții Speciale
 import AssignContributionScreen from '../features/Admin/screens/AssignContributionScreen';
 import ContributionRequestsScreen from '../features/Admin/screens/ContributionRequestsScreen';
+import ManageContributionsScreen from '../features/Admin/screens/ManageContributionsScreen';
+import EditContributionScreen from '../features/Admin/screens/EditContributionScreen';
 
 // Verificare Studenți
 import StudentVerificationRequestsScreen from '../features/Admin/screens/StudentVerificationRequestsScreen';
@@ -54,6 +56,8 @@ export default function ManagementNavigator() {
       {/* NOU: Ecrane Contribuții Speciale */}
       <Stack.Screen name="AssignContribution" component={AssignContributionScreen} options={{ title: 'Acordare Contribuție' }} />
       <Stack.Screen name="ContributionRequests" component={ContributionRequestsScreen} options={{ title: 'Aprobări Contribuții' }} />
+      <Stack.Screen name="ManageContributions" component={ManageContributionsScreen} options={{ title: 'Toate Contribuțiile' }} />
+      <Stack.Screen name="EditContribution" component={EditContributionScreen} options={{ title: 'Editare Contribuție' }} />
 
       {/* --- ECRANE DOAR PENTRU ADMIN (Definite întotdeauna) --- */}
       <Stack.Screen name="AdminUserList" component={UserListScreen} options={{ title: 'Utilizatori' }} />

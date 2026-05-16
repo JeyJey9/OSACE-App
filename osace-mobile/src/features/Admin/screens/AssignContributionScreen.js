@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { 
-  View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, TextInput
+  View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, TextInput, Modal, SafeAreaView
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import api from '../../../services/api';
@@ -11,10 +11,14 @@ import { useThemeColor } from '../../../constants/useThemeColor';
 
 export default function AssignContributionScreen() {
   const [users, setUsers] = useState([]);
+  const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   
-  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventModalVisible, setEventModalVisible] = useState(false);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [hoursToGrant, setHoursToGrant] = useState('');
@@ -26,10 +30,14 @@ export default function AssignContributionScreen() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/api/admin/users');
-      setUsers(res.data);
+      const [usersRes, eventsRes] = await Promise.all([
+        api.get('/api/admin/users'),
+        api.get('/api/admin/events/all')
+      ]);
+      setUsers(usersRes.data);
+      setEvents(eventsRes.data);
     } catch (error) {
-      Toast.show({ type: 'error', text1: 'Eroare la încărcarea utilizatorilor.' });
+      Toast.show({ type: 'error', text1: 'Eroare la încărcarea datelor.' });
     } finally {
       setLoading(false);
     }
@@ -39,8 +47,8 @@ export default function AssignContributionScreen() {
 
   const handleSubmit = async () => {
     const numericHours = parseFloat(hoursToGrant.replace(',', '.'));
-    if (!selectedUserId) {
-      Alert.alert('Eroare', 'Selectează un voluntar.');
+    if (selectedUserIds.length === 0) {
+      Alert.alert('Eroare', 'Selectează cel puțin un voluntar.');
       return;
     }
     if (!title.trim() || !description.trim()) {
@@ -55,16 +63,17 @@ export default function AssignContributionScreen() {
     setSubmitLoading(true);
     try {
       await api.post('/api/admin/contributions', {
-        user_id: selectedUserId,
+        userIds: selectedUserIds,
         title: title.trim(),
         description: description.trim(),
         awarded_hours: numericHours,
+        event_id: selectedEvent ? selectedEvent.id : null
       });
-      Toast.show({ type: 'success', text1: 'Cerere trimisă!', text2: 'Așteaptă aprobarea unui admin.' });
+      Toast.show({ type: 'success', text1: 'Cereri trimise!', text2: 'Așteaptă aprobarea unui admin.' });
       navigation.goBack();
     } catch (error) {
       console.error(error.response?.data || error);
-      Alert.alert('Eroare', error.response?.data?.error || 'Nu am putut trimite cererea.');
+      Alert.alert('Eroare', error.response?.data?.error || 'Nu am putut trimite cererile.');
     } finally {
       setSubmitLoading(false);
     }
@@ -80,15 +89,38 @@ export default function AssignContributionScreen() {
     );
   }, [users, searchQuery]);
 
+  const toggleUserSelection = (userId) => {
+    setSelectedUserIds(prev => 
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const selectAllFiltered = () => {
+    const newSelected = [...selectedUserIds];
+    let changed = false;
+    filteredUsers.forEach(u => {
+      if (!newSelected.includes(u.id)) {
+        newSelected.push(u.id);
+        changed = true;
+      }
+    });
+    if (changed) setSelectedUserIds(newSelected);
+  };
+
+  const deselectAllFiltered = () => {
+    const filteredIds = filteredUsers.map(u => u.id);
+    setSelectedUserIds(prev => prev.filter(id => !filteredIds.includes(id)));
+  };
+
   const styles = createStyles(colors, isDark);
 
   const renderUserItem = ({ item }) => {
-    const isSelected = selectedUserId === item.id;
+    const isSelected = selectedUserIds.includes(item.id);
 
     return (
       <TouchableOpacity 
         style={[styles.userCard, isSelected && styles.userCardSelected]}
-        onPress={() => setSelectedUserId(isSelected ? null : item.id)}
+        onPress={() => toggleUserSelection(item.id)}
         activeOpacity={0.7}
       >
         <View style={styles.userInfo}>
@@ -110,22 +142,33 @@ export default function AssignContributionScreen() {
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>Acordare Contribuție Specială</Text>
           <Text style={styles.headerSubtitle}>
-            Alege un voluntar și completează detaliile realizării (ex: Grafică Poster, Ajutor Logistică).
+            Alege voluntarii și completează detaliile realizării (ex: Grafică Poster, Ajutor Logistică).
           </Text>
         </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Caută voluntar..."
-          placeholderTextColor={colors.textSecondary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        <View style={styles.searchRow}>
+          <TextInput
+            style={[styles.input, { flex: 1, marginBottom: 0 }]}
+            placeholder="Caută voluntari..."
+            placeholderTextColor={colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          <TouchableOpacity onPress={selectAllFiltered} style={styles.selectBtn}>
+            <Text style={{color: colors.primary, fontWeight: 'bold'}}>Select Toți</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={deselectAllFiltered} style={styles.selectBtn}>
+            <Text style={{color: colors.textSecondary}}>Deselect</Text>
+          </TouchableOpacity>
+        </View>
 
         {loading ? (
           <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
         ) : (
           <View style={styles.listContainer}>
+            <Text style={{color: colors.textSecondary, marginBottom: 8, fontSize: 12}}>
+              {selectedUserIds.length} voluntari selectați
+            </Text>
             <FlatList
               data={filteredUsers}
               keyExtractor={(item) => item.id.toString()}
@@ -138,9 +181,19 @@ export default function AssignContributionScreen() {
         )}
 
         <View style={styles.formContainer}>
+          <TouchableOpacity 
+            style={styles.eventSelector} 
+            onPress={() => setEventModalVisible(true)}
+          >
+            <Text style={{ color: selectedEvent ? colors.textPrimary : colors.textSecondary }}>
+              {selectedEvent ? selectedEvent.title : "Asociază unui eveniment (Opțional)"}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+
           <TextInput
             style={styles.input}
-            placeholder="Titlu (ex: Design Poster Event)"
+            placeholder="Titlu (ex: Design Poster)"
             placeholderTextColor={colors.textSecondary}
             value={title}
             onChangeText={setTitle}
@@ -164,9 +217,9 @@ export default function AssignContributionScreen() {
           />
           
           <TouchableOpacity 
-            style={[styles.submitButton, (!selectedUserId || !title || !description || !hoursToGrant) && styles.submitButtonDisabled]}
+            style={[styles.submitButton, (selectedUserIds.length === 0 || !title || !description || !hoursToGrant) && styles.submitButtonDisabled]}
             onPress={handleSubmit}
-            disabled={!selectedUserId || submitLoading}
+            disabled={selectedUserIds.length === 0 || submitLoading}
           >
             {submitLoading ? (
               <ActivityIndicator color="#fff" />
@@ -176,6 +229,41 @@ export default function AssignContributionScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Modal pentru selecție eveniment */}
+      <Modal visible={eventModalVisible} animationType="slide" transparent={true}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selectează Evenimentul</Text>
+              <TouchableOpacity onPress={() => setEventModalVisible(false)}>
+                <Ionicons name="close" size={28} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity 
+              style={styles.modalItem}
+              onPress={() => { setSelectedEvent(null); setEventModalVisible(false); }}
+            >
+              <Text style={{ color: colors.textSecondary, fontStyle: 'italic' }}>Fără eveniment asociat</Text>
+            </TouchableOpacity>
+            <FlatList
+              data={events}
+              keyExtractor={item => item.id.toString()}
+              renderItem={({item}) => (
+                <TouchableOpacity 
+                  style={styles.modalItem}
+                  onPress={() => { setSelectedEvent(item); setEventModalVisible(false); }}
+                >
+                  <Text style={{ color: colors.textPrimary }}>{item.title}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                    {new Date(item.start_time).toLocaleDateString('ro-RO')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </SafeAreaView>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -187,7 +275,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     paddingBottom: 110,
   },
   headerInfo: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   headerTitle: {
     fontSize: 20,
@@ -199,6 +287,15 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  selectBtn: {
+    padding: 10,
+    marginLeft: 5,
+  },
   input: {
     backgroundColor: colors.card,
     color: colors.textPrimary,
@@ -208,6 +305,17 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     padding: 14,
     marginBottom: 12,
     fontSize: 16,
+  },
+  eventSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
   },
   listContainer: {
     flex: 1,
@@ -266,4 +374,33 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  modalContent: {
+    backgroundColor: colors.background,
+    margin: 20,
+    marginTop: 100,
+    borderRadius: 16,
+    flex: 1,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+  },
+  modalItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  }
 });

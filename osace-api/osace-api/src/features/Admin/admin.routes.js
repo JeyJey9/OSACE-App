@@ -126,23 +126,31 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
   // ==========================================
   
   router.post('/contributions', [verifyToken, verifyManager], async (req, res) => {
-    const { user_id, title, description, awarded_hours } = req.body;
+    const { userIds, title, description, awarded_hours, event_id } = req.body;
     const { userId } = req.user;
 
-    if (!user_id || !title || !description || awarded_hours == null) {
-      return res.status(400).json({ error: 'Toate câmpurile sunt obligatorii.' });
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0 || !title || !description || awarded_hours == null) {
+      return res.status(400).json({ error: 'Toate câmpurile sunt obligatorii și trebuie selectat cel puțin un voluntar.' });
     }
 
+    const client = await pool.connect();
     try {
-      await pool.query(
-        `INSERT INTO special_contributions (user_id, coordinator_id, title, description, awarded_hours, status)
-         VALUES ($1, $2, $3, $4, $5, 'pending')`,
-        [user_id, userId, title, description, awarded_hours]
-      );
+      await client.query('BEGIN');
+      for (const uid of userIds) {
+        await client.query(
+          `INSERT INTO special_contributions (user_id, coordinator_id, title, description, awarded_hours, event_id, status)
+           VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
+          [uid, userId, title, description, awarded_hours, event_id || null]
+        );
+      }
+      await client.query('COMMIT');
       res.status(201).json({ message: 'Contribuția specială a fost înregistrată și așteaptă aprobarea unui Admin.' });
     } catch (error) {
+      await client.query('ROLLBACK');
       console.error('Eroare la crearea contribuției:', error);
       res.status(500).json({ error: 'Eroare server.' });
+    } finally {
+      client.release();
     }
   });
 
@@ -212,6 +220,69 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
       res.json({ message: 'Contribuție respinsă.' });
     } catch (error) {
       console.error('Eroare la respingerea contribuției:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
+  router.get('/contributions/all', [verifyToken, verifyAdmin], async (req, res) => {
+    try {
+      const result = await pool.query(`
+        SELECT c.*, 
+               u.display_name as target_name, u.first_name as target_first, u.last_name as target_last,
+               coord.display_name as coord_name, coord.first_name as coord_first, coord.last_name as coord_last,
+               e.title as event_title
+        FROM special_contributions c
+        JOIN users u ON c.user_id = u.id
+        LEFT JOIN users coord ON c.coordinator_id = coord.id
+        LEFT JOIN events e ON c.event_id = e.id
+        ORDER BY c.created_at DESC
+      `);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Eroare la preluarea tuturor contribuțiilor:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
+  router.put('/contributions/:id', [verifyToken, verifyAdmin], async (req, res) => {
+    const { id } = req.params;
+    const { title, description, awarded_hours, event_id } = req.body;
+
+    if (!title || !description || awarded_hours == null) {
+      return res.status(400).json({ error: 'Titlul, descrierea și orele sunt obligatorii.' });
+    }
+
+    try {
+      const updated = await pool.query(
+        `UPDATE special_contributions 
+         SET title = $1, description = $2, awarded_hours = $3, event_id = $4, updated_at = NOW() 
+         WHERE id = $5 RETURNING *`,
+        [title, description, awarded_hours, event_id || null, id]
+      );
+
+      if (updated.rowCount === 0) {
+        return res.status(404).json({ error: 'Contribuția nu a fost găsită.' });
+      }
+
+      res.json({ message: 'Contribuția a fost actualizată.', contribution: updated.rows[0] });
+    } catch (error) {
+      console.error('Eroare la editarea contribuției:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
+  router.delete('/contributions/:id', [verifyToken, verifyAdmin], async (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const deleted = await pool.query('DELETE FROM special_contributions WHERE id = $1 RETURNING *', [id]);
+      if (deleted.rowCount === 0) {
+        return res.status(404).json({ error: 'Contribuția nu a fost găsită.' });
+      }
+
+      res.json({ message: 'Contribuția a fost ștearsă.' });
+    } catch (error) {
+      console.error('Eroare la ștergerea contribuției:', error);
       res.status(500).json({ error: 'Eroare server.' });
     }
   });
@@ -290,11 +361,18 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
       const year = getCurrentAcademicYear();
       const usersResult = await pool.query(
        `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.avatar_url, u.created_at,
-               COALESCE(SUM(ea.awarded_hours), 0) AS total_hours
+               (
+                 (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
+                  FROM event_attendance ea 
+                  JOIN events e ON ea.event_id = e.id
+                  WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended'
+                    AND e.start_time >= $1 AND e.start_time < $2) +
+                 (SELECT COALESCE(SUM(sc.awarded_hours), 0) 
+                  FROM special_contributions sc 
+                  WHERE sc.user_id = u.id AND sc.status = 'approved'
+                    AND sc.created_at >= $1 AND sc.created_at < $2)
+               ) AS total_hours
         FROM users u
-        LEFT JOIN event_attendance ea ON u.id = ea.user_id AND ea.confirmation_status = 'attended'
-        LEFT JOIN events e ON ea.event_id = e.id AND e.start_time >= $1 AND e.start_time < $2
-        GROUP BY u.id
         ORDER BY u.last_name ASC;`,
         [year.start, year.end]
     );
@@ -311,11 +389,18 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
       const year = getCurrentAcademicYear();
       const usersResult = await pool.query(
        `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.avatar_url, u.created_at,
-               COALESCE(SUM(ea.awarded_hours), 0) AS total_hours
+               (
+                 (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
+                  FROM event_attendance ea 
+                  JOIN events e ON ea.event_id = e.id
+                  WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended'
+                    AND e.start_time >= $1 AND e.start_time < $2) +
+                 (SELECT COALESCE(SUM(sc.awarded_hours), 0) 
+                  FROM special_contributions sc 
+                  WHERE sc.user_id = u.id AND sc.status = 'approved'
+                    AND sc.created_at >= $1 AND sc.created_at < $2)
+               ) AS total_hours
         FROM users u
-        LEFT JOIN event_attendance ea ON u.id = ea.user_id AND ea.confirmation_status = 'attended'
-        LEFT JOIN events e ON ea.event_id = e.id AND e.start_time >= $1 AND e.start_time < $2
-        GROUP BY u.id
         ORDER BY u.last_name ASC;`,
         [year.start, year.end]
     );
