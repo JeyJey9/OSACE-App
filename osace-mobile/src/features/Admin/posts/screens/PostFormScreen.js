@@ -93,10 +93,12 @@ export default function PostFormScreen() {
   const pickImages = async () => {
     if (isEditMode) return; 
 
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Eroare', 'Avem nevoie de permisiunea de a accesa galeria foto.');
-      return;
+    if (Platform.OS === 'ios') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Eroare', 'Avem nevoie de permisiunea de a accesa galeria foto.');
+        return;
+      }
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({

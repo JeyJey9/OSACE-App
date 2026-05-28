@@ -36,12 +36,18 @@ export default function StudentVerificationScreen({ navigation }) {
   }, []);
 
   const pick = async (source) => {
-    const perm = source === 'camera'
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (perm.status !== 'granted') {
-      Alert.alert('Permisiune necesară', 'Acordă accesul la ' + (source === 'camera' ? 'cameră' : 'galerie') + ' din Setări.');
-      return;
+    if (source === 'camera') {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert('Permisiune necesară', 'Acordă accesul la cameră din Setări.');
+        return;
+      }
+    } else if (Platform.OS === 'ios') {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert('Permisiune necesară', 'Acordă accesul la galerie din Setări.');
+        return;
+      }
     }
     const result = source === 'camera'
       ? await ImagePicker.launchCameraAsync({ quality: 0.85, allowsEditing: true })

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { StyleSheet, Alert, View, TouchableOpacity, Text } from 'react-native';
+import { StyleSheet, Alert, View, TouchableOpacity, Text, Platform } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../features/Auth/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
@@ -159,11 +159,13 @@ export default function ProfileScreen() {
   const handlePickAvatar = async () => {
     setAvatarLoading(true);
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (permissionResult.granted === false) {
-        Alert.alert("Permisiune necesară", "Avem nevoie de permisiunea ta pentru a accesa galeria foto.");
-        setAvatarLoading(false);
-        return;
+      if (Platform.OS === 'ios') {
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permissionResult.granted === false) {
+          Alert.alert("Permisiune necesară", "Avem nevoie de permisiunea ta pentru a accesa galeria foto.");
+          setAvatarLoading(false);
+          return;
+        }
       }
 
       const pickerResult = await ImagePicker.launchImageLibraryAsync({
