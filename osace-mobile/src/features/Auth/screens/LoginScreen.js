@@ -86,7 +86,7 @@ export default function LoginScreen() {
 
           {/* Glass Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Bun venit înapoi</Text>
+            <Text style={styles.cardTitle}>Bine ai venit!</Text>
             <Text style={styles.cardSubtitle}>Autentifică-te pentru a continua</Text>
 
             {/* Email */}
