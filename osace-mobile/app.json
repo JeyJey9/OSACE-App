@@ -36,6 +36,7 @@
         ]
       },
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "OSACE folosește camera pentru a fotografia legitimația ta de student în vederea verificării contului de voluntar.",
         "NSPhotoLibraryUsageDescription": "OSACE accesează galeria foto pentru a selecta fotografia legitimației tale de student.",
         "NSPhotoLibraryAddUsageDescription": "OSACE poate salva fotografii în galeria ta.",
