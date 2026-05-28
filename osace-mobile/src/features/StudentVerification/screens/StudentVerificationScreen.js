@@ -51,7 +51,7 @@ export default function StudentVerificationScreen({ navigation }) {
     }
     const result = source === 'camera'
       ? await ImagePicker.launchCameraAsync({ quality: 0.85, allowsEditing: true })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.85, allowsEditing: true });
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, allowsEditing: true });
     if (!result.canceled && result.assets?.length > 0) setSelectedImage(result.assets[0]);
   };
 
