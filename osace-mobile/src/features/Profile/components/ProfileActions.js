@@ -4,7 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useThemeColor } from '../../../constants/useThemeColor';
 
-export default function ProfileActions({ onEdit, onLogout, onDelete, onExport, onNotifPrefs }) {
+export default function ProfileActions({ onEdit, onLogout, onDelete, onExport, onNotifPrefs, onBlockedUsers }) {
   const { colors, isDark } = useThemeColor();
   const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
   const styles = createStyles(colors, isDark, STANDARD_BLUE);
@@ -38,6 +38,16 @@ export default function ProfileActions({ onEdit, onLogout, onDelete, onExport, o
             <Ionicons name="document-text-outline" size={20} color="#27ae60" />
           </View>
           <Text style={styles.buttonText}>Export Date (RGPD)</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.chevron} />
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        <TouchableOpacity style={styles.button} onPress={onBlockedUsers}>
+          <View style={[styles.iconContainer, { backgroundColor: 'rgba(192, 57, 43, 0.1)' }]}>
+            <Ionicons name="ban-outline" size={20} color="#C0392B" />
+          </View>
+          <Text style={styles.buttonText}>Utilizatori Blocați</Text>
           <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.chevron} />
         </TouchableOpacity>
 

@@ -35,6 +35,9 @@ import EditContributionScreen from '../features/Admin/screens/EditContributionSc
 import StudentVerificationRequestsScreen from '../features/Admin/screens/StudentVerificationRequestsScreen';
 import StudentVerificationScreen from '../features/StudentVerification/screens/StudentVerificationScreen';
 
+// Rapoarte Comentarii
+import ReportedCommentsScreen from '../features/Admin/screens/ReportedCommentsScreen';
+
 const Stack = createNativeStackNavigator();
 
 export default function ManagementNavigator() {
@@ -82,6 +85,9 @@ export default function ManagementNavigator() {
       {/* Verificare Studenți */}
       <Stack.Screen name="StudentVerificationRequests" component={StudentVerificationRequestsScreen} options={{ title: 'Verificări Studenți' }} />
       <Stack.Screen name="StudentVerification" component={StudentVerificationScreen} options={{ headerShown: false }} />
+
+      {/* Rapoarte Comentarii */}
+      <Stack.Screen name="ReportedComments" component={ReportedCommentsScreen} options={{ title: 'Comentarii Raportate' }} />
     </Stack.Navigator>
   );
 }

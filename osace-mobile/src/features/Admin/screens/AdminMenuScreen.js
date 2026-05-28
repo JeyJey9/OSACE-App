@@ -44,6 +44,7 @@ export default function AdminMenuScreen({ navigation }) {
         {renderMenuItem("Activități", "calendar-outline", "AdminManageEvents")}
         {renderMenuItem("Aprobări Ore", "time-outline", "HourRequests")}
         {renderMenuItem("Cerere Contribuție", "star-outline", "AssignContribution")}
+        {renderMenuItem("Rapoarte", "flag-outline", "ReportedComments")}
         
         {/* --- VIZIBIL DOAR PENTRU ADMIN --- */}
         {isAdmin && (

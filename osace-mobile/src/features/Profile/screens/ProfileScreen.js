@@ -253,6 +253,7 @@ export default function ProfileScreen() {
         onDelete={handleDeleteAccount}
         onExport={() => navigation.navigate('DataExport')}
         onNotifPrefs={() => navigation.navigate('NotificationPreferences')}
+        onBlockedUsers={() => navigation.navigate('BlockedUsers')}
       />
     </ScreenContainer>
   );

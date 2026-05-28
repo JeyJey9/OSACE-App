@@ -14,6 +14,7 @@ import PublicProfileScreen from '../features/Profile/screens/PublicProfileScreen
 import StudentVerificationScreen from '../features/StudentVerification/screens/StudentVerificationScreen';
 import DataExportScreen from '../features/Profile/screens/DataExportScreen';
 import NotificationPreferencesScreen from '../features/Profile/screens/NotificationPreferencesScreen';
+import BlockedUsersScreen from '../features/Profile/screens/BlockedUsersScreen';
 import { useThemeColor } from '../constants/useThemeColor';
 
 const Stack = createNativeStackNavigator();
@@ -105,6 +106,12 @@ export default function CoreAppNavigator() {
         name="NotificationPreferences"
         component={NotificationPreferencesScreen}
         options={{ title: 'Preferințe Notificări', headerShown: true }}
+      />
+
+      <Stack.Screen
+        name="BlockedUsers"
+        component={BlockedUsersScreen}
+        options={{ title: 'Utilizatori Blocați', headerShown: true }}
       />
 
     </Stack.Navigator>

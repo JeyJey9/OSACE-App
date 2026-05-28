@@ -325,7 +325,8 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
       const expoMessage = { to: pushTokens, sound: 'default', title: title, body: message, data: { _displayInForeground: true } };
       try {
         console.log(`[Push Notify] Se trimit ${pushTokens.length} notificări către rolurile: ${roles.join(', ')}`);
-        await axios.post('https://api.expo.dev/v2/push/send', expoMessage, {
+        console.log(`[Push Notify] Tokenuri:`, JSON.stringify(pushTokens));
+        const expoResponse = await axios.post('https://api.expo.dev/v2/push/send', expoMessage, {
           headers: { 
             'Accept': 'application/json', 
             'Accept-encoding': 'gzip, deflate', 
@@ -333,6 +334,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
             'Authorization': `Bearer ${process.env.EXPO_ACCESS_TOKEN}`
           }
         });
+        console.log(`[Push Notify] Răspuns Expo API:`, JSON.stringify(expoResponse.data, null, 2));
       } catch (expoError) {
         console.error('--- EROARE CRITICĂ EXPO API ---');
         if (expoError.response) {

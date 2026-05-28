@@ -92,6 +92,7 @@ module.exports = (pool, verifyToken, verifyManager) => {
 
   router.get('/:id/comments', verifyToken, async (req, res) => {
     const { id } = req.params; // ID-ul postării
+    const currentUserId = req.user.userId;
 
     try {
       const commentsQuery = `
@@ -108,10 +109,13 @@ module.exports = (pool, verifyToken, verifyManager) => {
           users u ON c.user_id = u.id
         WHERE
           c.post_id = $1
+          AND c.user_id NOT IN (
+            SELECT blocked_id FROM user_blocks WHERE blocker_id = $2
+          )
         ORDER BY
           c.created_at ASC; -- Arată comentariile de la cel mai vechi la cel mai nou
       `;
-      const result = await pool.query(commentsQuery, [id]);
+      const result = await pool.query(commentsQuery, [id, currentUserId]);
       res.json(result.rows);
       
     } catch (error) {
@@ -168,6 +172,203 @@ module.exports = (pool, verifyToken, verifyManager) => {
       res.status(500).json({ error: 'Eroare server la adăugarea comentariului.' });
     }
   });
+
+  // ======================================================
+  // ## DELETE /comments/:commentId (Șterge un comentariu - Admin/Coordonator)
+  // ======================================================
+  router.delete('/comments/:commentId', [verifyToken, verifyManager], async (req, res) => {
+    const { commentId } = req.params;
+    const actorId = req.user.userId;
+
+    try {
+      const deleteResult = await pool.query(
+        `DELETE FROM post_comments WHERE id = $1 RETURNING id, post_id, content`,
+        [commentId]
+      );
+
+      if (deleteResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Comentariul nu a fost găsit.' });
+      }
+
+      await logAction(pool, actorId, 'COMMENT_DELETE', 'comment', parseInt(commentId), {
+        post_id: deleteResult.rows[0].post_id,
+        content_preview: deleteResult.rows[0].content?.substring(0, 100)
+      });
+
+      res.status(200).json({ message: 'Comentariul a fost șters.' });
+    } catch (error) {
+      console.error('Eroare la ștergerea comentariului:', error);
+      res.status(500).json({ error: 'Eroare server la ștergerea comentariului.' });
+    }
+  });
+
+  // ======================================================
+  // ## POST /comments/:commentId/report (Raportează un comentariu)
+  // ======================================================
+  router.post('/comments/:commentId/report', verifyToken, async (req, res) => {
+    const { commentId } = req.params;
+    const reporterId = req.user.userId;
+
+    try {
+      // Verificăm că comentariul există
+      const commentCheck = await pool.query(
+        'SELECT id, user_id FROM post_comments WHERE id = $1', [commentId]
+      );
+      if (commentCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Comentariul nu a fost găsit.' });
+      }
+
+      // Nu poți raporta propriul comentariu
+      if (commentCheck.rows[0].user_id === reporterId) {
+        return res.status(400).json({ error: 'Nu poți raporta propriul comentariu.' });
+      }
+
+      await pool.query(
+        `INSERT INTO comment_reports (comment_id, reporter_id)
+         VALUES ($1, $2)
+         ON CONFLICT (comment_id, reporter_id) DO NOTHING`,
+        [commentId, reporterId]
+      );
+
+      res.status(201).json({ message: 'Raportul a fost trimis.' });
+    } catch (error) {
+      console.error('Eroare la raportarea comentariului:', error);
+      res.status(500).json({ error: 'Eroare server la raportare.' });
+    }
+  });
+
+  // ======================================================
+  // ## GET /reports (Listează rapoartele - Admin/Coordonator)
+  // ======================================================
+  router.get('/reports', [verifyToken, verifyManager], async (req, res) => {
+    try {
+      const result = await pool.query(`
+        SELECT
+          cr.id AS report_id,
+          cr.status,
+          cr.created_at AS reported_at,
+          cr.comment_id,
+          c.content AS comment_content,
+          c.created_at AS comment_date,
+          c.post_id,
+          reporter.id AS reporter_id,
+          reporter.display_name AS reporter_name,
+          author.id AS author_id,
+          author.display_name AS author_name
+        FROM comment_reports cr
+        JOIN post_comments c ON cr.comment_id = c.id
+        JOIN users reporter ON cr.reporter_id = reporter.id
+        JOIN users author ON c.user_id = author.id
+        ORDER BY
+          CASE cr.status WHEN 'pending' THEN 0 ELSE 1 END ASC,
+          cr.created_at DESC
+      `);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Eroare la preluarea rapoartelor:', error);
+      res.status(500).json({ error: 'Eroare server la preluarea rapoartelor.' });
+    }
+  });
+
+  // ======================================================
+  // ## PATCH /reports/:reportId (Actualizează statusul raportului)
+  // ======================================================
+  router.patch('/reports/:reportId', [verifyToken, verifyManager], async (req, res) => {
+    const { reportId } = req.params;
+    const { status } = req.body; // 'reviewed' sau 'dismissed'
+
+    if (!['reviewed', 'dismissed'].includes(status)) {
+      return res.status(400).json({ error: 'Status invalid. Folosește: reviewed, dismissed.' });
+    }
+
+    try {
+      const result = await pool.query(
+        `UPDATE comment_reports SET status = $1 WHERE id = $2 RETURNING *`,
+        [status, reportId]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
+      }
+
+      await logAction(pool, req.user.userId, 'REPORT_UPDATE', 'comment_report', parseInt(reportId), { new_status: status });
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Eroare la actualizarea raportului:', error);
+      res.status(500).json({ error: 'Eroare server la actualizarea raportului.' });
+    }
+  });
+
+  // ======================================================
+  // ## POST /users/:userId/block (Blochează un utilizator)
+  // ======================================================
+  router.post('/users/:userId/block', verifyToken, async (req, res) => {
+    const blockerId = req.user.userId;
+    const blockedId = parseInt(req.params.userId);
+
+    if (blockerId === blockedId) {
+      return res.status(400).json({ error: 'Nu te poți bloca pe tine.' });
+    }
+
+    try {
+      await pool.query(
+        `INSERT INTO user_blocks (blocker_id, blocked_id)
+         VALUES ($1, $2)
+         ON CONFLICT (blocker_id, blocked_id) DO NOTHING`,
+        [blockerId, blockedId]
+      );
+      res.status(201).json({ message: 'Utilizatorul a fost blocat.' });
+    } catch (error) {
+      console.error('Eroare la blocarea utilizatorului:', error);
+      res.status(500).json({ error: 'Eroare server la blocare.' });
+    }
+  });
+
+  // ======================================================
+  // ## DELETE /users/:userId/block (Deblochează un utilizator)
+  // ======================================================
+  router.delete('/users/:userId/block', verifyToken, async (req, res) => {
+    const blockerId = req.user.userId;
+    const blockedId = parseInt(req.params.userId);
+
+    try {
+      await pool.query(
+        `DELETE FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2`,
+        [blockerId, blockedId]
+      );
+      res.status(200).json({ message: 'Utilizatorul a fost deblocat.' });
+    } catch (error) {
+      console.error('Eroare la deblocarea utilizatorului:', error);
+      res.status(500).json({ error: 'Eroare server la deblocare.' });
+    }
+  });
+
+  // ======================================================
+  // ## GET /blocked-users (Lista utilizatorilor blocați)
+  // ======================================================
+  router.get('/blocked-users', verifyToken, async (req, res) => {
+    const currentUserId = req.user.userId;
+
+    try {
+      const result = await pool.query(`
+        SELECT
+          ub.id AS block_id,
+          ub.created_at AS blocked_at,
+          u.id AS user_id,
+          u.display_name,
+          u.avatar_url
+        FROM user_blocks ub
+        JOIN users u ON ub.blocked_id = u.id
+        WHERE ub.blocker_id = $1
+        ORDER BY ub.created_at DESC
+      `, [currentUserId]);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Eroare la preluarea utilizatorilor blocați:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
   // ======================================================
   // ## GET / (Listează toate postările) - MODIFICAT
   // ======================================================
