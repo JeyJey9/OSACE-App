@@ -14,7 +14,7 @@
     },
     "ios": {
       "bundleIdentifier": "ro.osace.app",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
           {

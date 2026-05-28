@@ -4,7 +4,7 @@ export default ({ config }) => {
     ios: {
       ...config.ios,
       bundleIdentifier: "ro.osace.app",
-      supportsTablet: true,
+      supportsTablet: false,
     },
     android: {
       ...config.android,
