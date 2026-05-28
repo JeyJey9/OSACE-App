@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
 });
 
 // Middleware pentru upload de ARRAY de fișiere (max 10)
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 }
 });
@@ -36,56 +36,56 @@ module.exports = (pool, verifyToken, verifyManager) => {
   // ## POST / (Creează o postare nouă cu multiple imagini) - CORECTAT
   // ======================================================
   router.post('/', [verifyToken, verifyManager, uploadPostImages.array('images', 10)], async (req, res) => {
-    
+
     const { description, created_at } = req.body;
     const creatorId = req.user.userId;
     const postDate = created_at ? new Date(created_at) : new Date();
 
     if (!req.files || req.files.length === 0) {
-        return res.status(400).json({ error: 'Postarea trebuie să conțină cel puțin o imagine.' });
+      return res.status(400).json({ error: 'Postarea trebuie să conțină cel puțin o imagine.' });
     }
 
     const client = await pool.connect();
     try {
-        await client.query('BEGIN');
+      await client.query('BEGIN');
 
-        // 1. Inserăm postarea principală
-        const newPostResult = await client.query(
-            `INSERT INTO posts (creator_id, description, created_at) 
+      // 1. Inserăm postarea principală
+      const newPostResult = await client.query(
+        `INSERT INTO posts (creator_id, description, created_at) 
              VALUES ($1, $2, $3) 
              RETURNING id`,
-            [creatorId, description, postDate]
-        );
-        const postId = newPostResult.rows[0].id;
+        [creatorId, description, postDate]
+      );
+      const postId = newPostResult.rows[0].id;
 
-        // 2. Inserăm URL-urile imaginilor
-        const imageInsertPromises = req.files.map((file, index) => {
-            const imageUrl = `${API_DOMAIN}/uploads/${file.filename}`;
-            return client.query(
-                `INSERT INTO post_images (post_id, image_url, sort_order) 
+      // 2. Inserăm URL-urile imaginilor
+      const imageInsertPromises = req.files.map((file, index) => {
+        const imageUrl = `${API_DOMAIN}/uploads/${file.filename}`;
+        return client.query(
+          `INSERT INTO post_images (post_id, image_url, sort_order) 
                  VALUES ($1, $2, $3)`,
-                [postId, imageUrl, index]
-            );
-        });
+          [postId, imageUrl, index]
+        );
+      });
 
-        await Promise.all(imageInsertPromises);
+      await Promise.all(imageInsertPromises);
 
-        await client.query('COMMIT');
-        checkBadgesOnPostCreate(creatorId, pool);
-        await logAction(pool, creatorId, 'POST_CREATE', 'post', postId, { image_count: req.files.length });
-        res.status(201).json({ 
-            id: postId,
-            description,
-            created_at: postDate,
-            message: `Postare creată cu ${req.files.length} imagini.`
-        });
+      await client.query('COMMIT');
+      checkBadgesOnPostCreate(creatorId, pool);
+      await logAction(pool, creatorId, 'POST_CREATE', 'post', postId, { image_count: req.files.length });
+      res.status(201).json({
+        id: postId,
+        description,
+        created_at: postDate,
+        message: `Postare creată cu ${req.files.length} imagini.`
+      });
 
     } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Eroare la crearea postării cu multiple imagini:', error);
-        res.status(500).json({ error: 'Eroare server la crearea postării.' });
+      await client.query('ROLLBACK');
+      console.error('Eroare la crearea postării cu multiple imagini:', error);
+      res.status(500).json({ error: 'Eroare server la crearea postării.' });
     } finally {
-        client.release();
+      client.release();
     }
   });
 
@@ -117,7 +117,7 @@ module.exports = (pool, verifyToken, verifyManager) => {
       `;
       const result = await pool.query(commentsQuery, [id, currentUserId]);
       res.json(result.rows);
-      
+
     } catch (error) {
       console.error(`Eroare la preluarea comentariilor pentru postul ${id}:`, error);
       res.status(500).json({ error: 'Eroare server la preluarea comentariilor.' });
@@ -141,10 +141,10 @@ module.exports = (pool, verifyToken, verifyManager) => {
         RETURNING *;
       `;
       const newCommentResult = await pool.query(newCommentQuery, [id, userId, content.trim()]);
-      
+
       // Pentru a returna un comentariu complet (cu datele utilizatorului),
       // facem o interogare suplimentară.
-      
+
       const commentId = newCommentResult.rows[0].id;
 
       const fullCommentQuery = `
@@ -403,7 +403,7 @@ module.exports = (pool, verifyToken, verifyManager) => {
       res.status(500).json({ error: 'Eroare server la preluarea postărilor.' });
     }
   });
-  
+
   // ======================================================
   // ## POST /:id/like (Dă like la o postare)
   // ======================================================
@@ -439,24 +439,24 @@ module.exports = (pool, verifyToken, verifyManager) => {
     try {
       let query;
       let params;
-      
+
       // NOTĂ: Nu permitem schimbarea imaginii aici.
       const baseQuery = `UPDATE posts SET description = $1, created_at = $2 WHERE id = $3`;
       // CORECTAT: Am scos 'image_url' din RETURN, deoarece nu mai există în tabela 'posts'
       const returning = ` RETURNING id, description, created_at, creator_id`;
-      
+
       if (role === 'admin') {
-          query = baseQuery + returning;
-          params = [description, created_at, postId];
+        query = baseQuery + returning;
+        params = [description, created_at, postId];
       } else { // Coordonator
-          query = baseQuery + ` AND creator_id = $4` + returning;
-          params = [description, created_at, postId, userId];
+        query = baseQuery + ` AND creator_id = $4` + returning;
+        params = [description, created_at, postId, userId];
       }
 
       const updateResult = await pool.query(query, params);
 
       if (updateResult.rows.length === 0) {
-          return res.status(403).json({ error: 'Postarea nu a fost găsită sau nu ai permisiunea de a o edita.' });
+        return res.status(403).json({ error: 'Postarea nu a fost găsită sau nu ai permisiunea de a o edita.' });
       }
 
       res.status(200).json(updateResult.rows[0]);
@@ -485,7 +485,7 @@ module.exports = (pool, verifyToken, verifyManager) => {
       res.status(500).json({ error: 'Eroare server.' });
     }
   });
-  
+
   // =RECTIFICAT: Acum ștergem și imaginile fizice și din DB
   // ======================================================
   // ## DELETE /:id (Șterge o postare)
@@ -493,42 +493,88 @@ module.exports = (pool, verifyToken, verifyManager) => {
   router.delete('/:id', [verifyToken, verifyManager], async (req, res) => {
     const postId = req.params.id;
     const UPLOADS_DIR = '/var/www/osace-uploads/'; // Directorul de upload
-    
+
     try {
-        // 1. Preluăm URL-urile imaginilor (pentru a le șterge fizic)
-        const imagesResult = await pool.query('SELECT image_url FROM post_images WHERE post_id = $1', [postId]);
-        
-        // 2. Ștergem postarea (și imaginile din post_images via CASCADE)
-        const deleteResult = await pool.query(`DELETE FROM posts WHERE id = $1 RETURNING id`, [postId]);
+      // 1. Preluăm URL-urile imaginilor (pentru a le șterge fizic)
+      const imagesResult = await pool.query('SELECT image_url FROM post_images WHERE post_id = $1', [postId]);
 
-        if (deleteResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Postarea nu a fost găsită.' });
-        }
+      // 2. Ștergem postarea (și imaginile din post_images via CASCADE)
+      const deleteResult = await pool.query(`DELETE FROM posts WHERE id = $1 RETURNING id`, [postId]);
 
-        // 3. Ștergem fișierele fizice (ne sincronizăm cu Nginx)
-        const deleteFilePromises = imagesResult.rows.map(row => {
-            // Extragem numele fișierului din URL
-            const filename = row.image_url.split('/').pop();
-            const filePath = path.join(UPLOADS_DIR, filename);
+      if (deleteResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Postarea nu a fost găsită.' });
+      }
 
-            // Folosim fs.unlink pentru ștergere
-            return fs.unlink(filePath).catch(err => {
-                // Dacă fișierul nu există, continuăm (logăm doar eroarea)
-                if (err.code !== 'ENOENT') {
-                    console.error(`Eroare la ștergerea fișierului ${filename}:`, err);
-                }
-            });
+      // 3. Ștergem fișierele fizice (ne sincronizăm cu Nginx)
+      const deleteFilePromises = imagesResult.rows.map(row => {
+        // Extragem numele fișierului din URL
+        const filename = row.image_url.split('/').pop();
+        const filePath = path.join(UPLOADS_DIR, filename);
+
+        // Folosim fs.unlink pentru ștergere
+        return fs.unlink(filePath).catch(err => {
+          // Dacă fișierul nu există, continuăm (logăm doar eroarea)
+          if (err.code !== 'ENOENT') {
+            console.error(`Eroare la ștergerea fișierului ${filename}:`, err);
+          }
         });
+      });
 
-        await Promise.all(deleteFilePromises);
-        
-        await logAction(pool, req.user.userId, 'POST_DELETE', 'post', parseInt(postId), {});
-        res.status(200).json({ message: 'Postarea și imaginile asociate au fost șterse.' });
+      await Promise.all(deleteFilePromises);
+
+      await logAction(pool, req.user.userId, 'POST_DELETE', 'post', parseInt(postId), {});
+      res.status(200).json({ message: 'Postarea și imaginile asociate au fost șterse.' });
     } catch (error) {
-        console.error('Eroare la ștergerea postării:', error);
-        res.status(500).json({ error: 'Eroare server la ștergere.' });
+      console.error('Eroare la ștergerea postării:', error);
+      res.status(500).json({ error: 'Eroare server la ștergere.' });
     }
   });
 
   return router;
+}; permalink: item.permalink,
+  is_instagram: true
+      }));
+
+res.json(formattedPosts.length > 0 ? formattedPosts : MOCK_INSTAGRAM_POSTS);
+    } catch (error) {
+  console.error('Eroare la preluarea datelor din Instagram API, se folosește mockup:', error.message);
+  res.json(MOCK_INSTAGRAM_POSTS);
+}
+  });
+
+// ======================================================
+// ## POST /instagram/token (Salvează noul token Instagram în BD)
+// ======================================================
+router.post('/instagram/token', [verifyToken, verifyManager], async (req, res) => {
+  const { token } = req.body;
+  if (!token) {
+    return res.status(400).json({ error: 'Token-ul este obligatoriu.' });
+  }
+
+  try {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS app_settings (
+          key VARCHAR(255) PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+    await pool.query(
+      `INSERT INTO app_settings (key, value, updated_at) 
+         VALUES ('instagram_access_token', $1, NOW()) 
+         ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+      [token]
+    );
+
+    res.status(200).json({
+      message: 'Token-ul Instagram a fost salvat cu succes în baza de date! Auto-refresh-ul de 60 de zile este acum activat.'
+    });
+  } catch (error) {
+    console.error('Eroare la salvarea token-ului Instagram:', error);
+    res.status(500).json({ error: 'Eroare server la salvarea token-ului.' });
+  }
+});
+
+return router;
 };
