@@ -9,6 +9,7 @@ import { useThemeColor } from '../../../../constants/useThemeColor';
 import { useAuth } from '../../../Auth/AuthContext';
 import UserPermissionsModal from '../components/UserPermissionsModal'; 
 import UserBadgesModal from '../components/UserBadgesModal'; // NOU
+import ProfileHeader from '../../../Profile/components/ProfileHeader';
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -26,6 +27,15 @@ const StatCard = ({ icon, title, value, color, colors, isDark }) => (
     <Text style={[styles.statTitle, { color: colors.textSecondary }]}>{title}</Text>
   </View>
 );
+
+const displayRole = (role) => {
+  switch (role) {
+    case 'admin': return 'Administrator';
+    case 'coordonator': return 'Coordonator';
+    case 'user': return 'Membru';
+    default: return 'Utilizator';
+  }
+};
 
 export default function UserDetailsScreen() {
   const route = useRoute();
@@ -149,14 +159,11 @@ export default function UserDetailsScreen() {
         keyExtractor={(item) => item.id.toString()}
         ListHeaderComponent={
           <>
-            <View style={localStyles.userHeader}>
-              <Ionicons name="person-circle-outline" size={80} color={colors.primary} />
-              <Text style={localStyles.userName}>{user_info.first_name} {user_info.last_name}</Text>
-              <Text style={localStyles.userEmail}>{user_info.email}</Text>
-              <View style={[localStyles.rolePill, { backgroundColor: colors.primary + '20' }]}>
-                <Text style={[localStyles.rolePillText, { color: colors.primary }]}>{user_info.role.toUpperCase()}</Text>
-              </View>
-            </View>
+            <ProfileHeader 
+              user={user_info}
+              roleText={displayRole(user_info.role)}
+              email={user_info.email}
+            />
 
             <View style={localStyles.statCardRow}>
               <StatCard icon="hourglass-outline" title="Ore Totale" value={parseFloat(total_hours || 0).toFixed(1)} color={colors.primary} colors={colors} isDark={isDark} />

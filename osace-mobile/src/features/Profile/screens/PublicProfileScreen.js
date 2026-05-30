@@ -76,6 +76,15 @@ export default function PublicProfileScreen() {
     return <ProfileSkeleton />;
   }
 
+  const displayRole = (role) => {
+    switch (role) {
+      case 'admin': return 'Administrator';
+      case 'coordonator': return 'Coordonator';
+      case 'user': return 'Membru';
+      default: return 'Utilizator';
+    }
+  };
+
   const memberSince = format(new Date(profile.created_at.replace(' ', 'T')), 'dd MMMM yyyy', { locale: ro });
 
   const styles = createStyles(colors, isDark);
@@ -84,7 +93,7 @@ export default function PublicProfileScreen() {
     <ScreenContainer scrollable={true}>
       <ProfileHeader 
         user={profile}
-        roleText="Membru Voluntar" 
+        roleText={displayRole(profile.role)} 
       />
 
       {/* Hours Toggle -> Dropdown */}

@@ -452,7 +452,7 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
       if (isAllTime) {
         profileQuery = `
           SELECT
-            u.id, u.display_name, u.first_name, u.last_name, u.avatar_url, u.created_at,
+            u.id, u.display_name, u.first_name, u.last_name, u.avatar_url, u.role, u.created_at,
             (
               (SELECT COALESCE(SUM(ea.awarded_hours), 0) FROM event_attendance ea WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended') +
               (SELECT COALESCE(SUM(sc.awarded_hours), 0) FROM special_contributions sc WHERE sc.user_id = u.id AND sc.status = 'approved')
@@ -464,7 +464,7 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
       } else {
         profileQuery = `
           SELECT
-            u.id, u.display_name, u.first_name, u.last_name, u.avatar_url, u.created_at,
+            u.id, u.display_name, u.first_name, u.last_name, u.avatar_url, u.role, u.created_at,
             (
               (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
                FROM event_attendance ea 

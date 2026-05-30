@@ -154,7 +154,7 @@ const USER_DETAILS_QUERY = `
   ),
 
   UserInfo AS (
-    SELECT id, display_name, first_name, last_name, email, role 
+    SELECT id, display_name, first_name, last_name, email, role, avatar_url 
     FROM users 
     WHERE id = $1
   ),

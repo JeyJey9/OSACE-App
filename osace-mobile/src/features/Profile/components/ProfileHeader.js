@@ -5,7 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../../../services/api';
 import { useThemeColor } from '../../../constants/useThemeColor';
 
-export default function ProfileHeader({ user, roleText, avatarLoading = false, onAvatarPress }) {
+export default function ProfileHeader({ user, roleText, avatarLoading = false, onAvatarPress, email }) {
   const { colors, isDark } = useThemeColor();
   const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
   const styles = createStyles(colors, isDark, STANDARD_BLUE);
@@ -44,6 +44,16 @@ export default function ProfileHeader({ user, roleText, avatarLoading = false, o
       </TouchableOpacity>
 
       <Text style={styles.profileName} numberOfLines={1}>{user.display_name}</Text>
+      {(user.first_name || user.last_name) && (
+        <Text style={styles.profileFullName} numberOfLines={1}>
+          {user.first_name || ''} {user.last_name || ''}
+        </Text>
+      )}
+      {email && (
+        <Text style={styles.profileEmail} numberOfLines={1}>
+          {email}
+        </Text>
+      )}
       
       <View style={styles.roleBadge}>
         <Text style={styles.roleText}>{roleText.toUpperCase()}</Text>
@@ -105,6 +115,19 @@ const createStyles = (colors, isDark, STANDARD_BLUE) => StyleSheet.create({
     color: colors.textPrimary,
     textAlign: 'center',
     letterSpacing: -0.5,
+  },
+  profileFullName: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginTop: 4,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 2,
+    textAlign: 'center',
   },
   roleBadge: {
     marginTop: 8,
