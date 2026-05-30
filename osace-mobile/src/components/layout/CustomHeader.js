@@ -41,7 +41,6 @@ const getGreeting = () => {
       // Deep night
       msgs = [
         'Noapte Alba?',
-        'Ia o pauza... te roaga userul care face UI-ul...',
         'E târziu...',
         'Încă o cafea?',
         'Doomscrolling?',
