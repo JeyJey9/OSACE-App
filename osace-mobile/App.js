@@ -23,6 +23,10 @@ import ResetPasswordScreen from './src/features/Auth/screens/ResetPasswordScreen
 import OnboardingScreen from './src/features/Auth/screens/OnboardingScreen';
 import { PermissionProvider } from './src/features/Auth/PermissionContext';
 import NetworkBanner from './src/components/NetworkBanner';
+import { Platform } from 'react-native';
+import { APP_VERSION } from './src/constants/Version';
+import UpdateModal from './src/components/layout/UpdateModal';
+import api from './src/services/api';
 
 import { ThemeProvider, useThemeColor } from './src/constants/useThemeColor';
 
@@ -186,6 +190,43 @@ function AppNavigator() {
 function ThemeWrapper() {
   const { colors, isDark } = useThemeColor();
 
+  // State pentru verificarea versiunii aplicației
+  const [updateInfo, setUpdateInfo] = useState({
+    visible: false,
+    isRequired: false,
+    updateUrl: '',
+    latestVersion: ''
+  });
+
+  useEffect(() => {
+    const checkVersion = async () => {
+      try {
+        const response = await api.get('/api/config/version-check', {
+          params: {
+            platform: Platform.OS,
+            version: APP_VERSION
+          }
+        });
+        
+        const { updateRequired, updateAvailable, updateUrl, latestVersion } = response.data;
+        
+        if (updateRequired || updateAvailable) {
+          setUpdateInfo({
+            visible: true,
+            isRequired: updateRequired,
+            updateUrl,
+            latestVersion
+          });
+        }
+      } catch (error) {
+        // Eșuează silențios în caz de offline/eroare de conexiune, pentru siguranță
+        console.log('Eroare silențioasă la verificarea versiunii:', error.message);
+      }
+    };
+
+    checkVersion();
+  }, []);
+
   const MyTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),
     colors: {
@@ -202,6 +243,13 @@ function ThemeWrapper() {
     <NavigationContainer theme={MyTheme}>
       <AppNavigator />
       <GlassAlert ref={setCustomAlertRef} />
+      <UpdateModal 
+        visible={updateInfo.visible}
+        isRequired={updateInfo.isRequired}
+        updateUrl={updateInfo.updateUrl}
+        latestVersion={updateInfo.latestVersion}
+        onClose={() => setUpdateInfo(prev => ({ ...prev, visible: false }))}
+      />
     </NavigationContainer>
   );
 }

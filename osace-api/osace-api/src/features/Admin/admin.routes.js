@@ -411,7 +411,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
     try {
       const year = getCurrentAcademicYear();
       const usersResult = await pool.query(
-       `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.avatar_url, u.created_at,
+       `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.avatar_url, u.created_at, u.student_verification_status,
                (
                  (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
                   FROM event_attendance ea 
@@ -439,7 +439,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
     try {
       const year = getCurrentAcademicYear();
       const usersResult = await pool.query(
-       `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.avatar_url, u.created_at,
+       `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.avatar_url, u.created_at, u.student_verification_status,
                (
                  (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
                   FROM event_attendance ea 

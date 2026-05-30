@@ -27,7 +27,7 @@ const MapScreen = ({ navigation }) => {
         {
           text: "Stresează",
           onPress: () => {
-            Alert.alert("Succes!", "Petiția ta a fost înregistrată. Berbece a primit o notificare mentală să deschidă Figma! 🎨🚀");
+            Alert.alert("Succes!", "Mâna lui Berbece a fost ghidată misterios către pictograma Adobe Illustrator. Harta se desenează deja cu 5 minute mai repede.");
           }
         }
       ]

@@ -133,9 +133,19 @@ export default function UserListScreen() {
         })}
       >
         <View style={styles.infoContainer}>
-          <Text style={styles.userName}>
-            {displayName || fullName || item.email}
-          </Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.userName}>
+              {displayName || fullName || item.email}
+            </Text>
+            {item.student_verification_status === 'verified' && (
+              <Ionicons 
+                name="checkmark-circle" 
+                size={16} 
+                color={colors.primary} 
+                style={styles.verifiedIcon} 
+              />
+            )}
+          </View>
 
           {hasBoth && (
             <Text style={styles.userFullName}>
@@ -297,7 +307,17 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     borderColor: colors.border 
   },
   infoContainer: { flex: 1, paddingRight: 10 },
-  userName: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 2 },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+    flexWrap: 'wrap',
+  },
+  verifiedIcon: {
+    marginLeft: 6,
+    alignSelf: 'center',
+  },
+  userName: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
   userFullName: { fontSize: 13, color: colors.textSecondary, marginBottom: 4, fontWeight: '500' },
   userEmail: { fontSize: 13, color: colors.textSecondary, marginBottom: 8 },
   roleTag: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },

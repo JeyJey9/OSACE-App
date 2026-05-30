@@ -8,6 +8,7 @@ import api from '../../services/api';
 
 import { useThemeColor } from '../../constants/useThemeColor';
 import ThemeToggleSwitch from '../../components/ThemeToggleSwitch';
+import { APP_VERSION } from '../../constants/Version';
 
 export default function CustomDrawerContent(props) {
   const { user, logout } = useAuth();
@@ -191,7 +192,7 @@ export default function CustomDrawerContent(props) {
             fontWeight: '500',
             letterSpacing: 0.5
           }}>
-            Versiune: 1.0.0
+            Versiune: {APP_VERSION}
           </Text>
         </TouchableOpacity>
       </View>
@@ -215,7 +216,7 @@ export default function CustomDrawerContent(props) {
               Developed out of passion for- hai că crecă...{'\n'}
               Sper să vă placă.{'\n\n'}
               <Text style={{ fontWeight: 'bold' }}>@george_1613</Text>{'\n'}
-              Versiune: V1.0.0
+              Versiune: V{APP_VERSION}
             </Text>
             <TouchableOpacity
               style={styles.modalCloseButton}
