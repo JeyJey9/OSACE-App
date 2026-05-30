@@ -26,7 +26,16 @@ export default function NotificationPreferencesScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 8, padding: 4 }}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          activeOpacity={0.7}
+          style={{ 
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       ),

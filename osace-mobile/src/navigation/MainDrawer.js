@@ -1,6 +1,6 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 // Hook-ul pentru temă
@@ -22,6 +22,62 @@ import MapScreen from '../features/Map/screens/MapScreen';
 import CustomHeader from '../components/layout/CustomHeader';
 
 const Drawer = createDrawerNavigator();
+const ProfileStack = createNativeStackNavigator();
+
+function ProfileStackNavigator() {
+  const { colors, isDark } = useThemeColor();
+
+  return (
+    <ProfileStack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.card, 
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+        },
+        headerTintColor: colors.textPrimary,
+        headerTitleStyle: {
+          fontSize: 18,
+          fontWeight: '800',
+          color: colors.textPrimary,
+        },
+        headerBackTitle: '', // Ensures clean back button arrow on iOS
+      }}
+    >
+      <ProfileStack.Screen 
+        name="ProfileMain" 
+        component={ProfileScreen} 
+        options={{ 
+          title: 'Profilul Meu',
+          header: ({ options }) => <CustomHeader title={options.title} />,
+          headerShown: true
+        }} 
+      />
+      <ProfileStack.Screen 
+        name="EditProfile" 
+        component={EditProfileScreen} 
+        options={{ title: 'Setări Cont' }} 
+      />
+      <ProfileStack.Screen 
+        name="DataExport" 
+        component={DataExportScreen} 
+        options={{ title: 'Export Date Personale' }} 
+      />
+      <ProfileStack.Screen 
+        name="NotificationPreferences" 
+        component={NotificationPreferencesScreen} 
+        options={{ title: 'Preferințe Notificări' }} 
+      />
+      <ProfileStack.Screen 
+        name="BlockedUsers" 
+        component={BlockedUsersScreen} 
+        options={{ title: 'Utilizatori Blocați' }} 
+      />
+    </ProfileStack.Navigator>
+  );
+}
 
 export default function MainDrawer() {
   const { colors } = useThemeColor();
@@ -58,31 +114,21 @@ export default function MainDrawer() {
         }} 
       />
 
-      {/* 2. Profilul Meu */}
+      {/* 2. Profilul Meu (Folosește acum Stack-ul de Profil cu swipe dezactivat) */}
       <Drawer.Screen 
         name="Profile" 
-        component={ProfileScreen} 
+        component={ProfileStackNavigator} 
         options={{ 
           title: 'Profilul Meu', 
-          headerShown: true,
+          headerShown: false, // Stack navigator desenează propriul antet / ascundem antetul Drawer-ului
+          swipeEnabled: false, // Dezactivează deschiderea meniului prin glisare pe ecranele de profil pentru a permite swipe-back pe iOS
           drawerIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           )
         }} 
       />
-      
-      {/* 3. Editează Profil - Ascuns din listă */}
-      <Drawer.Screen 
-        name="EditProfile" 
-        component={EditProfileScreen} 
-        options={{ 
-          title: 'Setări Cont', 
-          headerShown: true,
-          drawerItemStyle: { height: 0 } 
-        }} 
-      />
 
-      {/* 4. Clasament */}
+      {/* 3. Clasament */}
       <Drawer.Screen 
         name="Leaderboard" 
         component={LeaderboardScreen} 
@@ -95,7 +141,7 @@ export default function MainDrawer() {
         }} 
       />
 
-      {/* 5. Catalog Realizări */}
+      {/* 4. Catalog Realizări */}
       <Drawer.Screen 
         name="BadgeCatalog" 
         component={BadgeCatalogScreen} 
@@ -108,7 +154,7 @@ export default function MainDrawer() {
         }} 
       />
 
-      {/* 6. Harta Facultății */}
+      {/* 5. Harta Facultății */}
       <Drawer.Screen 
         name="Map" 
         component={MapScreen} 
@@ -121,7 +167,7 @@ export default function MainDrawer() {
         }}
       />
 
-      {/* 7. Statistici - Ascuns din listă */}
+      {/* 6. Statistici - Ascuns din listă */}
       <Drawer.Screen 
         name="Statistics" 
         component={StatisticsScreen} 
@@ -132,7 +178,7 @@ export default function MainDrawer() {
         }} 
       />
       
-      {/* 8. Navigator Admin - Ascuns din listă */}
+      {/* 7. Navigator Admin - Ascuns din listă */}
       <Drawer.Screen 
         name="Management" 
         component={ManagementNavigator} 
@@ -141,39 +187,6 @@ export default function MainDrawer() {
           headerShown: false,
           drawerItemStyle: { height: 0 }
         }} 
-      />
-
-      {/* 9. Export Date (RGPD) - Ascuns din listă */}
-      <Drawer.Screen
-        name="DataExport"
-        component={DataExportScreen}
-        options={{
-          title: 'Export Date Personale',
-          headerShown: true,
-          drawerItemStyle: { height: 0 }
-        }}
-      />
-
-      {/* 10. Preferințe Notificări - Ascuns din listă */}
-      <Drawer.Screen
-        name="NotificationPreferences"
-        component={NotificationPreferencesScreen}
-        options={{
-          title: 'Preferințe Notificări',
-          headerShown: true,
-          drawerItemStyle: { height: 0 }
-        }}
-      />
-
-      {/* 11. Utilizatori Blocați - Ascuns din listă */}
-      <Drawer.Screen
-        name="BlockedUsers"
-        component={BlockedUsersScreen}
-        options={{
-          title: 'Utilizatori Blocați',
-          headerShown: true,
-          drawerItemStyle: { height: 0 }
-        }}
       />
     </Drawer.Navigator>
   );
