@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  SafeAreaView,
   TouchableOpacity,
   RefreshControl,
   Image
@@ -177,7 +176,7 @@ export default function HomeScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <CustomHeader />
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -211,7 +210,7 @@ export default function HomeScreen({ navigation }) {
           )}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

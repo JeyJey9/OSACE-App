@@ -1,7 +1,5 @@
-// src/components/layout/ScreenContainer.js
 import React from 'react';
 import { 
-  SafeAreaView, 
   ScrollView, 
   StyleSheet, 
   ActivityIndicator, 
@@ -31,7 +29,7 @@ export default function ScreenContainer({
   ];
   
   return (
-    <SafeAreaView style={containerStyles}>
+    <View style={containerStyles}>
       {loading ? (
         <LoadingState colors={colors} />
       ) : scrollable ? (
@@ -44,7 +42,7 @@ export default function ScreenContainer({
           {children}
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

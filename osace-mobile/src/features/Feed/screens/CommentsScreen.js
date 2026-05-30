@@ -23,6 +23,7 @@ import { useAuth } from '../../Auth/AuthContext';
 
 import { useThemeColor } from '../../../constants/useThemeColor';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CommentsScreen() {
   const route = useRoute();
@@ -31,6 +32,7 @@ export default function CommentsScreen() {
   const { user } = useAuth();
 
   const { colors, isDark } = useThemeColor();
+  const insets = useSafeAreaInsets();
 
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -144,7 +146,7 @@ export default function CommentsScreen() {
     );
   };
 
-  const styles = createStyles(colors, isDark);
+  const styles = createStyles(colors, isDark, insets);
   const isOwnComment = selectedComment?.user_id === (user?.userId || user?.id);
 
   const CommentItem = ({ item }) => {
@@ -308,7 +310,7 @@ export default function CommentsScreen() {
   );
 }
 
-const createStyles = (colors, isDark) => StyleSheet.create({
+const createStyles = (colors, isDark, insets) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: colors.background },
   listContainer: { paddingHorizontal: 20, paddingTop: 15, paddingBottom: 30, flexGrow: 1 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 80 },
@@ -332,7 +334,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   inputBar: {
     paddingHorizontal: 15,
     paddingVertical: 10,
-    paddingBottom: Platform.OS === 'ios' ? 25 : 10,
+    paddingBottom: Platform.OS === 'ios' ? Math.max(insets?.bottom || 0, 10) : 10,
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border

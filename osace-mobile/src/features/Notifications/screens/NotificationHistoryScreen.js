@@ -91,10 +91,20 @@ export default function NotificationHistoryScreen() {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity onPress={markAllAsRead} style={{ marginRight: 15 }}>
+        <TouchableOpacity 
+          onPress={markAllAsRead} 
+          activeOpacity={0.7}
+          style={{ 
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 5,
+          }}
+        >
           <Ionicons 
-            name="checkmark-done-circle-outline" 
-            size={26} 
+            name="checkmark-done" 
+            size={24} 
             color={colors.textPrimary} 
           />
         </TouchableOpacity>

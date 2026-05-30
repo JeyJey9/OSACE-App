@@ -38,7 +38,7 @@ export default function CoreAppNavigator() {
           fontWeight: '800',
           color: colors.textPrimary,
         },
-        headerBackTitleVisible: false,
+        headerBackTitle: '',
       }}
     >
       {/* Ecranul principal este setul tău de Tab-uri */}
@@ -75,7 +75,6 @@ export default function CoreAppNavigator() {
         options={{ 
           title: 'Comentarii',
           headerShown: true,
-          headerBackTitle: 'Înapoi' // Opțional, pentru iOS
         }} 
       />
       {/* ▲▲▲ SFÂRȘIT BLOC NOU ▲▲▲ */}
@@ -86,7 +85,6 @@ export default function CoreAppNavigator() {
         options={{ 
           title: 'Profil Utilizator',
           headerShown: true,
-          headerBackTitle: 'Înapoi'
         }} 
       />
 

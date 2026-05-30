@@ -50,8 +50,18 @@ export default function ManageBadgesScreen() {
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity onPress={() => navigation.navigate('BadgeForm', { onGoBack: fetchBadges })}>
-          <Ionicons name="add" size={28} color={colors.primary} style={{ marginRight: 15 }} />
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('BadgeForm', { onGoBack: fetchBadges })}
+          activeOpacity={0.7}
+          style={{ 
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 5,
+          }}
+        >
+          <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
       ),
     });
