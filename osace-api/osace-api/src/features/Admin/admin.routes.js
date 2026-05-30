@@ -11,6 +11,48 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
   // ▼▼▼ RUTE NOI PENTRU APROBĂRI ORE (OVERTIME / UITUCI) ▼▼▼
   // ==========================================
 
+  // GET /api/admin/pending-counts - Get consolidated counts of pending requests for badges (Admin/Coordinator)
+  router.get('/pending-counts', [verifyToken, verifyManager], async (req, res) => {
+    const { role } = req.user;
+    
+    try {
+      // 1. Hour requests (coordinators only count pending_coordinator; admins count both pending_coordinator and pending_admin)
+      const hourRequestQuery = role === 'coordonator' 
+        ? "SELECT COUNT(*)::int FROM hour_requests WHERE status = 'pending_coordinator'" 
+        : "SELECT COUNT(*)::int FROM hour_requests WHERE status IN ('pending_coordinator', 'pending_admin')";
+      
+      // 2. Reported comments (visible to both roles)
+      const reportsQuery = "SELECT COUNT(*)::int FROM comment_reports WHERE status = 'pending'";
+      
+      // 3. Contribution requests (visible to Admins only)
+      const contribQuery = role === 'admin'
+        ? "SELECT COUNT(*)::int FROM special_contributions WHERE status = 'pending'"
+        : "SELECT 0::int";
+        
+      // 4. Student verifications (visible to Admins only)
+      const verifQuery = role === 'admin'
+        ? "SELECT COUNT(*)::int FROM student_id_verifications WHERE status = 'pending'"
+        : "SELECT 0::int";
+
+      const [hourRes, reportsRes, contribRes, verifRes] = await Promise.all([
+        pool.query(hourRequestQuery),
+        pool.query(reportsQuery),
+        pool.query(contribQuery),
+        pool.query(verifQuery)
+      ]);
+
+      res.json({
+        hourRequests: parseInt(hourRes.rows[0].count, 10) || 0,
+        reportedComments: parseInt(reportsRes.rows[0].count, 10) || 0,
+        contributionRequests: parseInt(contribRes.rows[0].count, 10) || 0,
+        studentVerifications: parseInt(verifRes.rows[0].count, 10) || 0
+      });
+    } catch (error) {
+      console.error('Eroare la preluarea numerelor de cereri pending:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
   // 1. GET /api/admin/hour-requests - Preluăm cererile (Protejat de verifyManager - Admin/Coordonator)
   router.get('/hour-requests', [verifyToken, verifyManager], async (req, res) => {
     const { userId, role } = req.user;

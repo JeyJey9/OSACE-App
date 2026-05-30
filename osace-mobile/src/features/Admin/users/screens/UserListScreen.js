@@ -13,6 +13,8 @@ export default function UserListScreen() {
   const [loading, setLoading] = useState(true);
   const { user: loggedInAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRole, setSelectedRole] = useState('all');
+  const [sortBy, setSortBy] = useState('name'); // 'name', 'hours_desc', 'hours_asc'
 
   const navigation = useNavigation();
   const { colors, isDark } = useThemeColor();
@@ -31,22 +33,96 @@ export default function UserListScreen() {
 
   useFocusEffect(useCallback(() => { fetchUsers(); }, []));
 
-  const filteredUsers = useMemo(() => {
-    if (!searchQuery) return users;
-    const query = searchQuery.toLowerCase();
-    return users.filter(user =>
-    (user.first_name?.toLowerCase().includes(query) ||
-      user.last_name?.toLowerCase().includes(query) ||
-      user.display_name?.toLowerCase().includes(query) ||
-      user.email?.toLowerCase().includes(query))
-    );
-  }, [users, searchQuery]);
+  const filteredAndSortedUsers = useMemo(() => {
+    let result = users;
+
+    // 1. Filtrare după căutare
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(user =>
+        (user.first_name?.toLowerCase().includes(query) ||
+         user.last_name?.toLowerCase().includes(query) ||
+         user.display_name?.toLowerCase().includes(query) ||
+         user.email?.toLowerCase().includes(query))
+      );
+    }
+
+    // 2. Filtrare după rol
+    if (selectedRole !== 'all') {
+      result = result.filter(user => user.role === selectedRole);
+    }
+
+    // 3. Sortare
+    return [...result].sort((a, b) => {
+      if (sortBy === 'hours_desc') {
+        return b.total_hours - a.total_hours;
+      }
+      if (sortBy === 'hours_asc') {
+        return a.total_hours - b.total_hours;
+      }
+      // Implicit: A-Z după nume complet
+      const nameA = `${a.last_name || ''} ${a.first_name || ''}`.trim().toLowerCase();
+      const nameB = `${b.last_name || ''} ${b.first_name || ''}`.trim().toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+  }, [users, searchQuery, selectedRole, sortBy]);
+
+  const roles = [
+    { key: 'all', label: 'Toți' },
+    { key: 'user', label: 'Voluntari' },
+    { key: 'coordonator', label: 'Coordonatori' },
+    { key: 'admin', label: 'Admini' },
+  ];
+
+  const getSortIconAndLabel = () => {
+    switch (sortBy) {
+      case 'hours_desc':
+        return { icon: 'trending-down-outline', label: 'Ore: Max → Min' };
+      case 'hours_asc':
+        return { icon: 'trending-up-outline', label: 'Ore: Min → Max' };
+      default:
+        return { icon: 'swap-vertical-outline', label: 'Nume: A-Z' };
+    }
+  };
+
+  const cycleSort = () => {
+    if (sortBy === 'name') setSortBy('hours_desc');
+    else if (sortBy === 'hours_desc') setSortBy('hours_asc');
+    else setSortBy('name');
+  };
 
   const styles = createStyles(colors, isDark);
+
+  const renderFilterTabs = () => (
+    <View style={styles.filterContainer}>
+      {roles.map(r => {
+        const isActive = selectedRole === r.key;
+        return (
+          <TouchableOpacity
+            key={r.key}
+            activeOpacity={0.7}
+            onPress={() => setSelectedRole(r.key)}
+            style={[
+              styles.filterTab,
+              isActive && { backgroundColor: colors.primary, borderColor: colors.primary }
+            ]}
+          >
+            <Text style={[styles.filterTabText, isActive && { color: '#ffffff', fontWeight: 'bold' }]}>
+              {r.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
 
   const renderUserItem = ({ item }) => {
     const isSelf = item.id === loggedInAdmin.userId;
     const roleColor = item.role === 'admin' ? '#e74c3c' : item.role === 'coordonator' ? '#f39c12' : colors.primary;
+
+    const displayName = item.display_name ? item.display_name.trim() : '';
+    const fullName = `${item.first_name || ''} ${item.last_name || ''}`.trim();
+    const hasBoth = displayName && fullName && (displayName.toLowerCase() !== fullName.toLowerCase());
 
     return (
       <TouchableOpacity
@@ -57,7 +133,16 @@ export default function UserListScreen() {
         })}
       >
         <View style={styles.infoContainer}>
-          <Text style={styles.userName}>{item.last_name} {item.first_name}</Text>
+          <Text style={styles.userName}>
+            {displayName || fullName || item.email}
+          </Text>
+
+          {hasBoth && (
+            <Text style={styles.userFullName}>
+              {fullName}
+            </Text>
+          )}
+
           <Text style={styles.userEmail}>{item.email}</Text>
           <View style={[styles.roleTag, { backgroundColor: roleColor + '20' }]}>
             <Text style={[styles.roleTagText, { color: roleColor }]}>
@@ -92,22 +177,37 @@ export default function UserListScreen() {
         />
       </View>
 
+      {renderFilterTabs()}
+
       {loading ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
       ) : (
         <FlatList
-          data={filteredUsers}
+          data={filteredAndSortedUsers}
           renderItem={renderUserItem}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContent}
-          ListHeaderComponent={() => (
-            <Text style={styles.listHeader}>Lista Utilizatorilor ({filteredUsers.length})</Text>
-          )}
+          ListHeaderComponent={() => {
+            const { icon, label } = getSortIconAndLabel();
+            return (
+              <View style={styles.listHeaderRow}>
+                <Text style={styles.listHeader}>Utilizatori ({filteredAndSortedUsers.length})</Text>
+                <TouchableOpacity
+                  style={styles.sortButton}
+                  onPress={cycleSort}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name={icon} size={16} color={colors.primary} style={{ marginRight: 6 }} />
+                  <Text style={styles.sortButtonText}>{label}</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }}
           ListEmptyComponent={() => (
             <EmptyState
               illustration="no_users"
-              title={searchQuery.length > 0 ? 'Niciun rezultat' : 'Niciun utilizator'}
-              subtitle={searchQuery.length > 0 ? `Nu am găsit utilizatori pentru "${searchQuery}".` : 'Nu există utilizatori înregistraţi.'}
+              title={searchQuery.length > 0 || selectedRole !== 'all' ? 'Niciun rezultat' : 'Niciun utilizator'}
+              subtitle={searchQuery.length > 0 || selectedRole !== 'all' ? 'Nu am găsit utilizatori cu criteriile selectate.' : 'Nu există utilizatori înregistraţi.'}
             />
           )}
         />
@@ -117,14 +217,88 @@ export default function UserListScreen() {
 }
 
 const createStyles = (colors, isDark) => StyleSheet.create({
-  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 8, borderWidth: 1, borderColor: colors.border, marginHorizontal: 20, marginTop: 15, marginBottom: 5, paddingHorizontal: 10 },
+  searchContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: colors.card, 
+    borderRadius: 8, 
+    borderWidth: 1, 
+    borderColor: colors.border, 
+    marginHorizontal: 20, 
+    marginTop: 15, 
+    marginBottom: 5, 
+    paddingHorizontal: 10 
+  },
   searchIcon: { marginRight: 10 },
   searchInput: { flex: 1, height: 45, fontSize: 16, color: colors.textPrimary },
-  listHeader: { fontSize: 18, fontWeight: 'bold', paddingHorizontal: 20, marginTop: 15, marginBottom: 10, color: colors.textPrimary },
+  
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 8,
+    justifyContent: 'space-between',
+  },
+  filterTab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  filterTabText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+
+  listHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  listHeader: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: colors.textPrimary 
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDark ? 'rgba(52, 152, 219, 0.15)' : '#eaf4fc',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  sortButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+
   listContent: { paddingBottom: 110, paddingTop: 5 },
-  userItem: { backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 12, padding: 15, marginHorizontal: 20, marginBottom: 12, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, borderWidth: isDark ? 1 : 0, borderColor: colors.border },
+  userItem: { 
+    backgroundColor: colors.card, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    borderRadius: 12, 
+    padding: 15, 
+    marginHorizontal: 20, 
+    marginBottom: 12, 
+    elevation: 2, 
+    shadowColor: '#000', 
+    shadowOpacity: 0.1, 
+    shadowRadius: 2, 
+    borderWidth: isDark ? 1 : 0, 
+    borderColor: colors.border 
+  },
   infoContainer: { flex: 1, paddingRight: 10 },
   userName: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 2 },
+  userFullName: { fontSize: 13, color: colors.textSecondary, marginBottom: 4, fontWeight: '500' },
   userEmail: { fontSize: 13, color: colors.textSecondary, marginBottom: 8 },
   roleTag: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   roleTagText: { fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
