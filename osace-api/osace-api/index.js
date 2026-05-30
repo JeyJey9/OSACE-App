@@ -69,8 +69,8 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // !origin permite cererile de pe dispozitive mobile (Expo Go) sau Postman
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    // !origin sau 'null' permite cererile de pe dispozitive mobile (Expo Go/WebViews) sau Postman
+    if (!origin || origin === 'null' || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       console.error("CORS blocat pentru origin-ul:", origin);
