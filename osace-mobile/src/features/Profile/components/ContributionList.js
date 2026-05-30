@@ -134,6 +134,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     marginLeft: 4,
-    flexShrink: 1,
+    flexShrink: 0,
+    minWidth: 100,
   },
 });

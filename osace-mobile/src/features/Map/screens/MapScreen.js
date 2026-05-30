@@ -23,9 +23,9 @@ const MapScreen = ({ navigation }) => {
       "✉️ Misiune: Stresează-l pe Berbece",
       "Ești pe cale să ceri stadiul hărții. Vrei să-i trimiți un feedback direct designerului nostru pentru a grăbi procesul?",
       [
-        { text: "Mai târziu", style: "cancel" },
+        { text: "Anulează", style: "cancel" },
         {
-          text: "Da, stresează-l!",
+          text: "Stresează",
           onPress: () => {
             Alert.alert("Succes!", "Petiția ta a fost înregistrată. Berbece a primit o notificare mentală să deschidă Figma! 🎨🚀");
           }

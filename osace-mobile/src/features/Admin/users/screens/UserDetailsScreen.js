@@ -97,7 +97,7 @@ export default function UserDetailsScreen() {
       "Schimbă Rolul",
       `Selectează noul rol pentru ${userName}`,
       [
-        { text: "User (Voluntar)", onPress: () => updateRoleOnServer('user') },
+        { text: "Voluntar", onPress: () => updateRoleOnServer('user') },
         { text: "Coordonator", onPress: () => updateRoleOnServer('coordonator') },
         { text: "Admin", onPress: () => updateRoleOnServer('admin') },
         { text: "Anulează", style: "cancel" }
