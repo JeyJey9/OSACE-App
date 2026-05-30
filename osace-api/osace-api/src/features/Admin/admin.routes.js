@@ -3,6 +3,7 @@ const router = express.Router();
 const { STATS_QUERY, USER_DETAILS_QUERY } = require('./admin.queries');
 const { logAction } = require('../../utils/auditLog');
 const { getCurrentAcademicYear } = require('../../utils/academicYear');
+const { invalidateUserBadgeCache } = require('../Badge/badge.service');
 
 // Primește 'pool', 'axios' și middleware-urile
 module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
@@ -677,6 +678,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
         'INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
         [id, badge_id]
       );
+      invalidateUserBadgeCache(id); // Invalidează cache-ul local pentru acest utilizator
       await logAction(pool, req.user.userId, 'BADGE_AWARD_MANUAL', 'user', parseInt(id), { badge_id });
       res.json({ message: 'Badge acordat cu succes.' });
     } catch (error) {
@@ -692,6 +694,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
         'DELETE FROM user_badges WHERE user_id = $1 AND badge_id = $2',
         [id, badgeId]
       );
+      invalidateUserBadgeCache(id); // Invalidează cache-ul local pentru acest utilizator
       await logAction(pool, req.user.userId, 'BADGE_REVOKE_MANUAL', 'user', parseInt(id), { badge_id: badgeId });
       res.json({ message: 'Badge revocat cu succes.' });
     } catch (error) {

@@ -19,5 +19,18 @@ module.exports = (pool, verifyToken) => {
     }
   });
 
+  // POST /api/badges/claim-easter-egg - Claim the easter egg badge
+  router.post('/claim-easter-egg', verifyToken, async (req, res) => {
+    const userId = req.user.userId;
+    try {
+      const { awardBadge } = require('./badge.service');
+      await awardBadge(userId, 'FOUND_EASTER_EGG', pool);
+      res.json({ success: true, message: 'Felicitări! Ai deblocat badge-ul de Easter Egg!' });
+    } catch (error) {
+      console.error('Eroare la deblocarea badge-ului de Easter Egg:', error);
+      res.status(500).json({ error: 'Eroare server la deblocarea badge-ului.' });
+    }
+  });
+
   return router;
 };

@@ -31,12 +31,21 @@ export default function CustomDrawerContent(props) {
 
   const [showDevNotes, setShowDevNotes] = React.useState(false);
 
+  const claimEasterEggBadge = async () => {
+    try {
+      await api.post('/api/badges/claim-easter-egg');
+    } catch (error) {
+      console.error('Eroare la deblocarea badge-ului de Easter Egg:', error);
+    }
+  };
+
   const handleVersionTap = () => {
     setTapCount((prev) => {
       const newCount = prev + 1;
 
       if (newCount >= 7) {
         setShowDevNotes(true);
+        claimEasterEggBadge();
         return 0; // Reset after showing
       }
 

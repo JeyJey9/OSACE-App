@@ -2,17 +2,48 @@
 // Funcție ajutătoare (neschimbată)
 const { authenticator } = require('otplib');
 
+const earnedBadgesCache = new Map(); // Map<userId, Set<badgeKey>>
+
+const loadUserBadgesToCache = async (userId, pool) => {
+  const uid = parseInt(userId, 10);
+  if (earnedBadgesCache.has(uid)) return earnedBadgesCache.get(uid);
+  
+  try {
+    const res = await pool.query(`
+      SELECT b.key FROM user_badges ub
+      JOIN badges b ON ub.badge_id = b.id
+      WHERE ub.user_id = $1
+    `, [uid]);
+    const badgeSet = new Set(res.rows.map(r => r.key));
+    earnedBadgesCache.set(uid, badgeSet);
+    return badgeSet;
+  } catch (err) {
+    console.error(`[BadgeService] Error loading user badges to cache for user ${uid}:`, err);
+    return new Set();
+  }
+};
+
+const invalidateUserBadgeCache = (userId) => {
+  earnedBadgesCache.delete(parseInt(userId, 10));
+};
+
 const awardBadge = async (userId, badgeKey, pool) => {
   try {
+    const cache = await loadUserBadgesToCache(userId, pool);
+    if (cache.has(badgeKey)) {
+      return; // Deja deblocat (0 interogări suplimentare la baza de date)
+    }
+
     const query = `
       INSERT INTO user_badges (user_id, badge_id)
       SELECT $1, id FROM badges WHERE key = $2
       ON CONFLICT (user_id, badge_id) DO NOTHING;
     `;
     await pool.query(query, [userId, badgeKey]);
+    cache.add(badgeKey);
     console.log(`[BadgeService] Verificat/Acordat ${badgeKey} pentru user ${userId}.`);
   } catch (err) {
-  	console.error(`[BadgeService] Eroare la acordarea badge-ului ${badgeKey} pentru user ${userId}:`, err);
+    console.error(`[BadgeService] Eroare la acordarea badge-ului ${badgeKey} pentru user ${userId}:`, err);
   }
 };
 
@@ -293,20 +324,34 @@ const checkBadgesOnConfirmation = async (userId, eventId, pool) => {
 };
 
 // --- Alte funcții de verificare (păstrate statice pentru acțiuni unice) ---
-const checkBadgesOnLike = (userId, pool) => {
-  checkCountAndAward(userId, pool, 'post_likes', 'user_id', [
-    { key: 'FIRST_LIKE',    threshold: 1   },
-    { key: '25_LIKES',      threshold: 25  },
-    { key: '100_LIKES',     threshold: 100 },
-  ]);
+const checkBadgesOnLike = async (userId, pool) => {
+  try {
+    const cache = await loadUserBadgesToCache(userId, pool);
+    if (cache.has('100_LIKES')) return; // Short-circuit!
+
+    checkCountAndAward(userId, pool, 'post_likes', 'user_id', [
+      { key: 'FIRST_LIKE',    threshold: 1   },
+      { key: '25_LIKES',      threshold: 25  },
+      { key: '100_LIKES',     threshold: 100 },
+    ]);
+  } catch (err) {
+    console.error(`[BadgeService] Eroare la checkBadgesOnLike pentru user ${userId}:`, err);
+  }
 };
 
-const checkBadgesOnComment = (userId, pool) => {
-  checkCountAndAward(userId, pool, 'post_comments', 'user_id', [
-    { key: 'FIRST_COMMENT', threshold: 1   },
-    { key: '25_COMMENTS',   threshold: 25  },
-    { key: '100_COMMENTS',  threshold: 100 },
-  ]);
+const checkBadgesOnComment = async (userId, pool) => {
+  try {
+    const cache = await loadUserBadgesToCache(userId, pool);
+    if (cache.has('100_COMMENTS')) return; // Short-circuit!
+
+    checkCountAndAward(userId, pool, 'post_comments', 'user_id', [
+      { key: 'FIRST_COMMENT', threshold: 1   },
+      { key: '25_COMMENTS',   threshold: 25  },
+      { key: '100_COMMENTS',  threshold: 100 },
+    ]);
+  } catch (err) {
+    console.error(`[BadgeService] Eroare la checkBadgesOnComment pentru user ${userId}:`, err);
+  }
 };
 
 const checkBadgesOnProfileView = async (userId, pool) => {
@@ -327,12 +372,19 @@ const checkBadgesOnProfileEdit = async (userId, pool) => {
   } catch (err) {}
 };
 
-const checkBadgesOnEventCreate = (userId, pool) => {
-  checkCountAndAward(userId, pool, 'events', 'created_by', [
-    { key: 'FIRST_EVENT_CREATED', threshold: 1  },
-    { key: '5_EVENTS_CREATED',    threshold: 5  },
-    { key: '10_EVENTS_CREATED',   threshold: 10 },
-  ]);
+const checkBadgesOnEventCreate = async (userId, pool) => {
+  try {
+    const cache = await loadUserBadgesToCache(userId, pool);
+    if (cache.has('10_EVENTS_CREATED')) return; // Short-circuit!
+
+    checkCountAndAward(userId, pool, 'events', 'created_by', [
+      { key: 'FIRST_EVENT_CREATED', threshold: 1  },
+      { key: '5_EVENTS_CREATED',    threshold: 5  },
+      { key: '10_EVENTS_CREATED',   threshold: 10 },
+    ]);
+  } catch (err) {
+    console.error(`[BadgeService] Eroare la checkBadgesOnEventCreate pentru user ${userId}:`, err);
+  }
 };
 
 const checkBadgesOnRoleChange = async (userId, newRole, pool) => {
@@ -351,6 +403,7 @@ const checkBadgesOnUnattend = async (userId, pool) => {
 
 module.exports = {
   awardBadge,
+  invalidateUserBadgeCache,
   checkBadgesOnConfirmation,
   checkBadgesOnLike,
   checkBadgesOnComment,
