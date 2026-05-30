@@ -271,12 +271,16 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     letterSpacing: -0.3,
+    paddingHorizontal: 4,
+    alignSelf: 'stretch',
   },
   subtitle: {
     fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+    paddingHorizontal: 4,
+    alignSelf: 'stretch',
   },
   actionButton: {
     marginTop: 20,

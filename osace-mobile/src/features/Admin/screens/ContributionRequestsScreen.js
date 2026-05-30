@@ -192,6 +192,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     marginLeft: 6,
+    flex: 1,
   },
   bold: {
     fontWeight: 'bold',
@@ -235,5 +236,6 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
+    alignSelf: 'stretch',
   },
 });

@@ -73,7 +73,7 @@ export default function MyEventsScreen() {
     const isAttended = item.confirmation_status === 'attended';
     const isCheckedIn = item.confirmation_status === 'checked_in';
 
-    const startTime = new Date(item.start_time);
+    const startTime = new Date(item.start_time.replace(' ', 'T'));
     const isOngoing = new Date() >= startTime;
     const tag = CATEGORY_TAGS[item.category] || CATEGORY_TAGS.default;
 
@@ -109,7 +109,7 @@ export default function MyEventsScreen() {
             <View style={styles.dateRow}>
               <View style={[styles.dateDot, { backgroundColor: '#e74c3c' }]} />
               <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
-                {item.end_time ? new Date(item.end_time).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
+                {item.end_time ? new Date(item.end_time.replace(' ', 'T')).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
               </Text>
             </View>
           </View>

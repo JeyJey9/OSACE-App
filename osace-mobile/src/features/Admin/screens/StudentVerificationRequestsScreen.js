@@ -83,7 +83,7 @@ export default function StudentVerificationRequestsScreen() {
   const s = createStyles(colors, isDark, insets, BLUE);
 
   const renderItem = ({ item }) => {
-    const submittedAt = format(new Date(item.created_at), 'dd MMM yyyy, HH:mm', { locale: ro });
+    const submittedAt = format(new Date(item.created_at.replace(' ', 'T')), 'dd MMM yyyy, HH:mm', { locale: ro });
     const imageUri = `${api.defaults.baseURL}${item.image_url}`;
     const fullName = `${item.first_name} ${item.last_name}`;
 
@@ -204,8 +204,8 @@ const createStyles = (colors, isDark, insets, BLUE) => StyleSheet.create({
   approveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, paddingVertical: 12 },
   approveBtnText: { color: 'white', fontWeight: '700', fontSize: 14 },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, gap: 12 },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: colors.textPrimary, textAlign: 'center', flexShrink: 1 },
-  emptySub: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', flexShrink: 1 },
+  emptyTitle: { fontSize: 20, fontWeight: '800', color: colors.textPrimary, textAlign: 'center', flexShrink: 1, alignSelf: 'stretch' },
+  emptySub: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', flexShrink: 1, alignSelf: 'stretch' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 },
   modalTitle: { fontSize: 20, fontWeight: '900', color: colors.textPrimary, marginBottom: 8 },

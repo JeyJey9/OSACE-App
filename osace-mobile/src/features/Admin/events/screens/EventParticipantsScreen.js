@@ -58,7 +58,7 @@ export default function EventParticipantsScreen() {
     const timeText = status === 'attended' && item.awarded_hours 
       ? `${parseFloat(item.awarded_hours).toFixed(1)} ore primite`
       : status === 'checked_in' && item.check_in_time 
-        ? `A sosit la: ${format(new Date(item.check_in_time), 'HH:mm')}`
+        ? `A sosit la: ${format(new Date(item.check_in_time.replace(' ', 'T')), 'HH:mm')}`
         : 'Nu a sosit încă';
 
     return (

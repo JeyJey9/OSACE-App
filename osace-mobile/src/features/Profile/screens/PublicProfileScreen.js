@@ -76,7 +76,7 @@ export default function PublicProfileScreen() {
     return <ProfileSkeleton />;
   }
 
-  const memberSince = format(new Date(profile.created_at), 'dd MMMM yyyy', { locale: ro });
+  const memberSince = format(new Date(profile.created_at.replace(' ', 'T')), 'dd MMMM yyyy', { locale: ro });
 
   const styles = createStyles(colors, isDark);
 

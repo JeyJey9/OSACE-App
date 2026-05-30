@@ -169,12 +169,14 @@ export default function CommentsScreen() {
 
         <View style={styles.commentContentWrapper}>
           <View style={styles.commentHeader}>
-            <TouchableOpacity onPress={goToProfile} style={{ flex: 1 }}>
-              <Text style={styles.commentName} numberOfLines={1}>{item.display_name}</Text>
-            </TouchableOpacity>
-            <Text style={styles.commentTime}>
-              • {formatDistanceToNow(new Date(item.created_at), { addSuffix: false, locale: ro })}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+              <TouchableOpacity onPress={goToProfile} style={{ flexShrink: 1, marginRight: 6 }}>
+                <Text style={styles.commentName} numberOfLines={1}>{item.display_name}</Text>
+              </TouchableOpacity>
+              <Text style={styles.commentTime} numberOfLines={1}>
+                • {item.created_at ? formatDistanceToNow(new Date(item.created_at.replace(' ', 'T')), { addSuffix: true, locale: ro }) : 'acum'}
+              </Text>
+            </View>
             <TouchableOpacity 
               onPress={() => openMenu(item)} 
               style={styles.menuDotsButton}
@@ -323,7 +325,7 @@ const createStyles = (colors, isDark, insets) => StyleSheet.create({
   commentContentWrapper: { flex: 1, justifyContent: 'center' },
   commentHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   commentName: { fontWeight: '700', fontSize: 14, color: colors.textPrimary },
-  commentTime: { fontSize: 12, color: colors.textSecondary, marginLeft: 4 },
+  commentTime: { fontSize: 12, color: colors.textSecondary, marginLeft: 4, flexShrink: 0, minWidth: 100 },
   commentContent: { fontSize: 15, color: colors.textPrimary, lineHeight: 22 },
 
   menuDotsButton: {

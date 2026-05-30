@@ -78,7 +78,7 @@ export default function UserBadgesModal({ isVisible, onClose, userId, userName }
       <View style={{ flex: 1 }}>
         <Text style={styles.badgeName}>{item.name}</Text>
         <Text style={styles.badgeDate}>
-          Acordat la: {new Date(item.earned_at).toLocaleDateString('ro-RO')}
+          Acordat la: {new Date(item.earned_at.replace(' ', 'T')).toLocaleDateString('ro-RO')}
         </Text>
       </View>
       <TouchableOpacity onPress={() => handleRevokeBadge(item.id, item.name)} style={styles.revokeBtn}>

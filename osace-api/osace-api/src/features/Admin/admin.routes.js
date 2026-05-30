@@ -16,9 +16,11 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
     const { userId, role } = req.user;
     
     try {
-      // Coordonatorii văd cererile abia sosite. Adminii văd cererile care au trecut de coordonatori.
-      let statusFilter = role === 'coordonator' ? 'pending_coordinator' : 'pending_admin';
-
+      // Coordonatorii văd cererile abia sosite. Adminii văd toate cererile nesoluționate final (și cele ce așteaptă coordonatorii, și cele ce sunt la admini).
+      const statusFilterSQL = role === 'coordonator' 
+        ? "hr.status = 'pending_coordinator'" 
+        : "hr.status IN ('pending_coordinator', 'pending_admin')";
+      
       const query = `
         SELECT 
           hr.id, hr.request_type, hr.requested_hours, hr.status, hr.created_at,
@@ -28,12 +30,12 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
         FROM hour_requests hr
         JOIN users u ON hr.user_id = u.id
         JOIN events e ON hr.event_id = e.id
-        JOIN event_attendance ea ON hr.user_id = ea.user_id AND hr.event_id = ea.event_id
-        WHERE hr.status = $1
+        LEFT JOIN event_attendance ea ON hr.user_id = ea.user_id AND hr.event_id = ea.event_id
+        WHERE ${statusFilterSQL}
         ORDER BY hr.created_at ASC
       `;
       
-      const result = await pool.query(query, [statusFilter]);
+      const result = await pool.query(query);
       res.json(result.rows);
     } catch (error) {
       console.error('Eroare la preluarea cererilor de ore:', error);
@@ -69,8 +71,8 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
         return res.json({ message: 'Aprobat! Trimis către Admin pentru validarea finală.' });
       }
 
-      // Dacă este Admin -> Aprobă final și adaugă orele în pontaj
-      if (role === 'admin' && request.status === 'pending_admin') {
+      // Dacă este Admin -> Aprobă final (indiferent dacă e în pending_coordinator sau pending_admin) și adaugă orele în pontaj
+      if (role === 'admin' && (request.status === 'pending_admin' || request.status === 'pending_coordinator')) {
         await pool.query('BEGIN'); // Deschidem o tranzacție pentru siguranță
 
         await pool.query(
@@ -81,10 +83,14 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
         );
 
         await pool.query(
-          `UPDATE event_attendance 
-           SET awarded_hours = awarded_hours + $1
-           WHERE user_id = $2 AND event_id = $3`,
-          [approved_hours, request.user_id, request.event_id]
+          `INSERT INTO event_attendance (user_id, event_id, confirmation_status, awarded_hours, confirmed_at)
+           VALUES ($1, $2, 'attended', $3, NOW())
+           ON CONFLICT (user_id, event_id) 
+           DO UPDATE SET 
+             confirmation_status = 'attended', 
+             awarded_hours = event_attendance.awarded_hours + EXCLUDED.awarded_hours,
+             confirmed_at = NOW()`,
+          [request.user_id, request.event_id, approved_hours]
         );
 
         await pool.query('COMMIT'); // Salvăm tranzacția

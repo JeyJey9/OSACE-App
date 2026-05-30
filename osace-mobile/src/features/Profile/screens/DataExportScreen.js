@@ -56,8 +56,8 @@ export default function DataExportScreen() {
 
       const { data } = await api.get('/api/profile/my-data');
 
-      const exportDate = format(new Date(data.exported_at), 'dd MMMM yyyy, HH:mm', { locale: ro });
-      const joinDate = format(new Date(data.user.created_at), 'dd MMMM yyyy', { locale: ro });
+      const exportDate = format(new Date(data.exported_at.replace(' ', 'T')), 'dd MMMM yyyy, HH:mm', { locale: ro });
+      const joinDate = format(new Date(data.user.created_at.replace(' ', 'T')), 'dd MMMM yyyy', { locale: ro });
 
       const totalHours = [
         ...data.events_attended.filter(e => e.confirmation_status === 'attended'),
@@ -70,7 +70,7 @@ export default function DataExportScreen() {
         <tr>
           <td>${e.title}</td>
           <td style="text-transform:capitalize">${e.category || '—'}</td>
-          <td>${e.start_time ? format(new Date(e.start_time), 'dd.MM.yyyy') : '—'}</td>
+          <td>${e.start_time ? format(new Date(e.start_time.replace(' ', 'T')), 'dd.MM.yyyy') : '—'}</td>
           <td style="text-align:center">${e.confirmation_status === 'attended'
           ? `<span class="pill green">+${parseFloat(e.awarded_hours || 0).toFixed(1)}h</span>`
           : `<span class="pill gray">${e.confirmation_status}</span>`
@@ -82,7 +82,7 @@ export default function DataExportScreen() {
         <tr>
           <td>${c.title}</td>
           <td>${c.description || '—'}</td>
-          <td>${format(new Date(c.created_at), 'dd.MM.yyyy')}</td>
+          <td>${format(new Date(c.created_at.replace(' ', 'T')), 'dd.MM.yyyy')}</td>
           <td style="text-align:center"><span class="pill green">+${parseFloat(c.awarded_hours || 0).toFixed(1)}h</span></td>
         </tr>
       `).join('');
@@ -91,7 +91,7 @@ export default function DataExportScreen() {
         <tr>
           <td><strong>${b.name}</strong></td>
           <td>${b.description || '—'}</td>
-          <td>${format(new Date(b.earned_at), 'dd.MM.yyyy')}</td>
+          <td>${format(new Date(b.earned_at.replace(' ', 'T')), 'dd.MM.yyyy')}</td>
         </tr>
       `).join('');
 

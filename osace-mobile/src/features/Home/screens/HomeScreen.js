@@ -122,7 +122,7 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
             </View>
             <Text style={styles.eventDetails}>
-              {new Date(item.start_time).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}
+              {new Date(item.start_time.replace(' ', 'T')).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}
             </Text>
           </View>
           <View style={styles.infoRow}>

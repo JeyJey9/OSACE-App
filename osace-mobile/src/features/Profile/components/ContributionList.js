@@ -36,7 +36,7 @@ export default function ContributionList({ contributions }) {
             <View style={styles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
               <Text style={styles.dateText} maxFontSizeMultiplier={1}>
-                {new Date(item.created_at).toLocaleDateString('ro-RO')}
+                {new Date(item.created_at.replace(' ', 'T')).toLocaleDateString('ro-RO')}
               </Text>
             </View>
           </View>

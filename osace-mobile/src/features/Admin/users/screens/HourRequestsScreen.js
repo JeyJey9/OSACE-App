@@ -132,11 +132,11 @@ export default function HourRequestsScreen() {
 
     const formatSafe = (dateString) => {
       if (!dateString) return 'Necunoscut';
-      return format(new Date(dateString), 'dd MMM, HH:mm', { locale: ro });
+      return format(new Date(dateString.replace(' ', 'T')), 'dd MMM, HH:mm', { locale: ro });
     };
     const formatTimeOnly = (dateString) => {
       if (!dateString) return '--:--';
-      return format(new Date(dateString), 'HH:mm', { locale: ro });
+      return format(new Date(dateString.replace(' ', 'T')), 'HH:mm', { locale: ro });
     };
 
     const eventStart = formatTimeOnly(item.start_time);
@@ -153,7 +153,7 @@ export default function HourRequestsScreen() {
     if (isManual) {
       mathExplanation = "Cerere introdusă manual din sistem de către un coordonator/admin.";
     } else if (isOvertime && item.check_out_time) {
-      const diffHours = (new Date(item.check_out_time) - new Date(item.end_time)) / (1000 * 60 * 60);
+      const diffHours = (new Date(item.check_out_time.replace(' ', 'T')) - new Date(item.end_time.replace(' ', 'T'))) / (1000 * 60 * 60);
       if (diffHours > 4) {
         isAnomaly = true;
         anomalyMessage = `⚠️ Atenție: Scanat la ${diffHours.toFixed(1)} ore după eveniment!`;
@@ -169,7 +169,7 @@ export default function HourRequestsScreen() {
           <View style={[styles.tag, { backgroundColor: tagColor + '20' }]}>
             <Text style={[styles.tagText, { color: tagColor }]}>{tagLabel}</Text>
           </View>
-          <Text style={styles.dateText}>Cerută pe: {format(new Date(item.created_at), 'dd MMM', { locale: ro })}</Text>
+          <Text style={styles.dateText}>Cerută pe: {format(new Date(item.created_at.replace(' ', 'T')), 'dd MMM', { locale: ro })}</Text>
         </View>
 
         <View style={styles.userInfo}>

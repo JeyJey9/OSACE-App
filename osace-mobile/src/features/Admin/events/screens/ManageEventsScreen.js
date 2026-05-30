@@ -114,10 +114,10 @@ export default function ManageEventsScreen({ navigation }) {
     const filteredEvents = events.filter(event => activeFilters[event.category || 'social']);
 
     filteredEvents.forEach(event => {
-      if (new Date(event.end_time) >= now) futureEvents.push(event);
+      if (new Date(event.end_time.replace(' ', 'T')) >= now) futureEvents.push(event);
       else pastEvents.push(event);
     });
-    futureEvents.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    futureEvents.sort((a, b) => new Date(a.start_time.replace(' ', 'T')) - new Date(b.start_time.replace(' ', 'T')));
     return {
       futureSections: groupEvents(futureEvents),
       pastSections: groupEvents(pastEvents),

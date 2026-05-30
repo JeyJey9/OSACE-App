@@ -169,7 +169,7 @@ export default function AuditLogScreen() {
   const renderItem = ({ item }) => {
     const meta = getActionMeta(item.action);
     const details = formatDetails(item.details);
-    const timeAgo = formatDistanceToNowStrict(new Date(item.created_at), { addSuffix: true, locale: ro });
+    const timeAgo = formatDistanceToNowStrict(new Date(item.created_at.replace(' ', 'T')), { addSuffix: true, locale: ro });
     const friendlyTarget = getHumanReadableTarget(item);
 
     return (

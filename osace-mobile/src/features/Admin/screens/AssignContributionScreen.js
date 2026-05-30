@@ -256,7 +256,7 @@ export default function AssignContributionScreen() {
                 >
                   <Text style={{ color: colors.textPrimary }}>{item.title}</Text>
                   <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                    {new Date(item.start_time).toLocaleDateString('ro-RO')}
+                    {new Date(item.start_time.replace(' ', 'T')).toLocaleDateString('ro-RO')}
                   </Text>
                 </TouchableOpacity>
               )}

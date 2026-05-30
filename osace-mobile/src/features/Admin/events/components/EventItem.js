@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { PERMISSIONS } from '../../../../constants/permissions';
 
 const EventItem = memo(({ item, can, navigation, openQrModal, openTeamModal, handleDelete, colors, styles, isDark }) => {
-  const eventEndTime = new Date(item.end_time);
+  const eventEndTime = new Date(item.end_time.replace(' ', 'T'));
   const deadline = new Date(eventEndTime.getTime() + 48 * 60 * 60 * 1000);
   const isEventOver = new Date() > deadline;
 
@@ -28,14 +28,14 @@ const EventItem = memo(({ item, can, navigation, openQrModal, openTeamModal, han
         <View style={styles.dateRow}>
           <View style={[styles.dateDot, { backgroundColor: '#2ecc71' }]} />
           <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
-            {new Date(item.start_time).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}
+            {new Date(item.start_time.replace(' ', 'T')).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}
           </Text>
         </View>
         <View style={styles.dateDivider} />
         <View style={styles.dateRow}>
           <View style={[styles.dateDot, { backgroundColor: '#e74c3c' }]} />
           <Text style={[styles.eventDetails, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
-            {item.end_time ? new Date(item.end_time).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
+            {item.end_time ? new Date(item.end_time.replace(' ', 'T')).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
           </Text>
         </View>
       </View>

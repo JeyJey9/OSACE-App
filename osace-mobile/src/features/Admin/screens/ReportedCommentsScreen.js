@@ -124,7 +124,7 @@ export default function ReportedCommentsScreen() {
           <Ionicons name="time-outline" size={15} color={colors.textSecondary} />
           <Text style={styles.infoLabel}>Data:</Text>
           <Text style={styles.infoValue}>
-            {formatDistanceToNow(new Date(item.reported_at), { addSuffix: true, locale: ro })}
+            {formatDistanceToNow(new Date(item.reported_at.replace(' ', 'T')), { addSuffix: true, locale: ro })}
           </Text>
         </View>
 

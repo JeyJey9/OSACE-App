@@ -44,7 +44,7 @@ export default function HistoryScreen() {
 
   const formatData = (isoString) => {
     if (!isoString) return 'N/A';
-    return new Date(isoString).toLocaleString('ro-RO', {
+    return new Date(isoString.replace(' ', 'T')).toLocaleString('ro-RO', {
       dateStyle: 'medium',
       timeStyle: 'short'
     });
@@ -119,7 +119,8 @@ export default function HistoryScreen() {
     const isCheckedIn = item.confirmation_status === 'checked_in';
     const isAbsent = item.confirmation_status === 'absent'; // set by auto-checkout worker
 
-    const endTime = new Date(item.end_time || item.start_time);
+    const timeStr = item.end_time || item.start_time;
+    const endTime = new Date(timeStr ? timeStr.replace(' ', 'T') : new Date());
     const now = new Date();
     const hoursSinceEnd = (now - endTime) / (1000 * 60 * 60);
     const canStillCheckout = isCheckedIn && (hoursSinceEnd <= 24); // 24h grace period

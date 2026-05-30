@@ -20,7 +20,7 @@ import ScreenContainer from '../../../components/layout/ScreenContainer';
 import EmptyState from '../../../components/EmptyState';
 
 const formatTimestamp = (isoString) => {
-  const date = new Date(isoString);
+  const date = new Date(isoString.replace(' ', 'T'));
   const now = new Date();
   const diffMs = now - date;
   const diffMins = Math.floor(diffMs / 60000);

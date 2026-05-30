@@ -84,7 +84,7 @@ export default function BlockedUsersScreen() {
           <View style={styles.userTextContainer}>
             <Text style={styles.userName}>{item.display_name}</Text>
             <Text style={styles.blockedDate}>
-              Blocat {formatDistanceToNow(new Date(item.blocked_at), { addSuffix: true, locale: ro })}
+              Blocat {formatDistanceToNow(new Date(item.blocked_at.replace(' ', 'T')), { addSuffix: true, locale: ro })}
             </Text>
           </View>
         </View>

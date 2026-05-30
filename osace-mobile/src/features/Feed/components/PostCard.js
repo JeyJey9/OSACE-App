@@ -33,7 +33,7 @@ import { ro } from 'date-fns/locale';
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const formatRelativeDate = (dateString) => {
-  const date = new Date(dateString);
+  const date = new Date(dateString ? dateString.replace(' ', 'T') : new Date());
   const diffHours = differenceInHours(new Date(), date);
 
   if (diffHours < 1) return 'Acum câteva minute';
@@ -52,7 +52,7 @@ const formatRelativeDate = (dateString) => {
 };
 
 const isNewPost = (dateString) => {
-  return differenceInHours(new Date(), new Date(dateString)) < 24;
+  return differenceInHours(new Date(), new Date(dateString ? dateString.replace(' ', 'T') : new Date())) < 24;
 };
 
 const MAX_DESCRIPTION_LENGTH = 120;
