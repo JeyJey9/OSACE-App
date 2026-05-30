@@ -154,9 +154,15 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
 
   const handleShare = async () => {
     try {
-      await Share.share({ message: `Uite ce a postat OSACE: ${item.image_urls?.[0] ?? 'o postare'}` });
+      const descriptionSnippet = item.description
+        ? (item.description.length > 100 ? `${item.description.substring(0, 100)}...` : item.description)
+        : '';
+
+      const shareMessage = `Uite o noutate din comunitatea de voluntari OSACE:${descriptionSnippet ? `\n\n"${descriptionSnippet}"` : ''} 🚀\n\nDescarcă și tu aplicația OSACE Voluntariat! ➡️ https://osace.ro/app`;
+
+      await Share.share({ message: shareMessage });
     } catch (error) {
-      Alert.alert(error.message);
+      Alert.alert('Eroare', 'Nu s-a putut partaja postarea.');
     }
   };
 
