@@ -90,13 +90,30 @@ export default function NotificationHistoryScreen() {
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          activeOpacity={0.7}
+          style={{ 
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginLeft: 5,
+          }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
       headerRight: () => (
         <TouchableOpacity 
           onPress={markAllAsRead} 
           activeOpacity={0.7}
           style={{ 
-            paddingHorizontal: 8,
-            paddingVertical: 4,
+            width: 40,
+            height: 40,
+            borderRadius: 20,
             justifyContent: 'center',
             alignItems: 'center',
             marginRight: 5,

@@ -141,7 +141,7 @@ function AppNavigator() {
           fontSize: 18,
           fontWeight: '800',
         },
-        headerBackTitleVisible: false,
+        headerBackTitle: ' ',
       }}
     >
       {user ? (
