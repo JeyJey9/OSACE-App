@@ -49,6 +49,15 @@ export default function ManageBadgesScreen() {
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 8, paddingVertical: 4, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
       headerRight: () => (
         <TouchableOpacity 
           onPress={() => navigation.navigate('BadgeForm', { onGoBack: fetchBadges })}
@@ -65,7 +74,7 @@ export default function ManageBadgesScreen() {
         </TouchableOpacity>
       ),
     });
-  }, [navigation, colors.primary]);
+  }, [navigation, colors.primary, colors.textPrimary]);
 
   const handleDelete = (id, name) => {
     Alert.alert(

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { 
   View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, TextInput, Modal, SafeAreaView, FlatList
 } from 'react-native';
@@ -13,6 +13,20 @@ export default function EditContributionScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { colors, isDark } = useThemeColor();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 8, paddingVertical: 4, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
 
   const contribution = route.params?.contribution;
 

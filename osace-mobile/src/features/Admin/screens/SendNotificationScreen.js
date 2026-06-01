@@ -1,5 +1,5 @@
 // src/features/Admin/screens/SendNotificationScreen.js
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -27,6 +27,20 @@ export default function SendNotificationScreen({ navigation }) {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState([...ALL_ROLES]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 8, paddingVertical: 4, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
 
   const styles = createStyles(colors, isDark);
 

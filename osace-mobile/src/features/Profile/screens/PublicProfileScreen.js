@@ -1,7 +1,8 @@
 // src/features/Profile/screens/PublicProfileScreen.js
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
 import { StyleSheet, Alert, View, TouchableOpacity, Text } from 'react-native';
-import { useRoute, useFocusEffect } from '@react-navigation/native';
+import { useRoute, useFocusEffect, useNavigation } from '@react-navigation/native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../../../services/api';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
@@ -20,8 +21,23 @@ import { useThemeColor } from '../../../constants/useThemeColor';
 
 export default function PublicProfileScreen() {
   const route = useRoute();
+  const navigation = useNavigation();
   const { userId } = route.params;
   const { colors, isDark } = useThemeColor();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 8, paddingVertical: 4, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
 
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);

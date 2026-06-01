@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { Alert, StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../../../../services/api';
@@ -34,6 +34,20 @@ export default function BadgeFormScreen({ route, navigation }) {
   const { badge, onGoBack } = route.params || {};
   const isEditing = !!badge;
   const { colors } = useThemeColor();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 8, paddingVertical: 4, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
 
   const [name, setName] = useState(badge?.name || '');
   const [description, setDescription] = useState(badge?.description || '');

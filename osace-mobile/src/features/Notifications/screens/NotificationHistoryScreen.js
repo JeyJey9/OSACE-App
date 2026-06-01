@@ -90,17 +90,28 @@ export default function NotificationHistoryScreen() {
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
+      headerStyle: {
+        backgroundColor: colors.card,
+        elevation: 0,
+        shadowOpacity: 0,
+        borderBottomWidth: 1,
+        borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+      },
+      headerTitleStyle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: colors.textPrimary,
+      },
+      headerTintColor: colors.textPrimary,
       headerLeft: () => (
         <TouchableOpacity 
           onPress={() => navigation.goBack()} 
           activeOpacity={0.7}
           style={{ 
-            width: 40,
-            height: 40,
-            borderRadius: 20,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
             justifyContent: 'center',
             alignItems: 'center',
-            marginLeft: 5,
           }}
         >
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
@@ -111,23 +122,21 @@ export default function NotificationHistoryScreen() {
           onPress={markAllAsRead} 
           activeOpacity={0.7}
           style={{ 
-            width: 40,
-            height: 40,
-            borderRadius: 20,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
             justifyContent: 'center',
             alignItems: 'center',
-            marginRight: 5,
           }}
         >
           <Ionicons 
-            name="checkmark-done" 
+            name="checkmark" 
             size={24} 
             color={colors.textPrimary} 
           />
         </TouchableOpacity>
       ),
     });
-  }, [navigation, markAllAsRead, colors.textPrimary]);
+  }, [navigation, markAllAsRead, colors.textPrimary, colors.card, colors.textPrimary, isDark]);
 
   const unreadNotifications = useMemo(() => {
     return allNotifications.filter(n => !n.is_read);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useThemeColor } from '../constants/useThemeColor';
 
 // Ecrane generale Admin
 import AdminMenuScreen from '../features/Admin/screens/AdminMenuScreen';
@@ -41,9 +42,27 @@ import ReportedCommentsScreen from '../features/Admin/screens/ReportedCommentsSc
 const Stack = createNativeStackNavigator();
 
 export default function ManagementNavigator() {
+  const { colors, isDark } = useThemeColor();
+
   return (
     <Stack.Navigator
-      initialRouteName="AdminMenu" 
+      initialRouteName="AdminMenu"
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.card,
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+        },
+        headerTintColor: colors.textPrimary,
+        headerTitleStyle: {
+          fontSize: 18,
+          fontWeight: '800',
+          color: colors.textPrimary,
+        },
+        headerBackTitle: ' ',
+      }}
     >
       {/* --- ECRANE PARTAJATE (Admin & Coordonator) --- */}
       <Stack.Screen name="AdminMenu" component={AdminMenuScreen} options={{ headerShown: false }} />

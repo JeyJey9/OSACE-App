@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -28,6 +28,20 @@ export default function PostFormScreen() {
   const { colors, isDark } = useThemeColor();
   const styles = createStyles(colors, isDark);
 
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 8, paddingVertical: 4, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
+
   const postToEdit = route.params?.postToEdit;
   const isEditMode = !!postToEdit?.id;
 
@@ -46,7 +60,7 @@ export default function PostFormScreen() {
     setExistingImageUrls(null); 
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const handleGoBack = () => {
       navigation.goBack();
       setTimeout(() => {
@@ -54,30 +68,29 @@ export default function PostFormScreen() {
       }, 10);
     };
 
-    const renderBackButton = () => (
-      <TouchableOpacity
-        onPress={handleGoBack}
-        style={{ marginLeft: 10, padding: 5 }} 
-      >
-        <Ionicons name="arrow-back" size={24} color="#1C748C" />
-      </TouchableOpacity>
-    );
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={handleGoBack}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 8, paddingVertical: 4, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
 
+  useEffect(() => {
     if (isEditMode) {
-      navigation.setOptions({ 
-        title: 'Editează Postare',
-        headerLeft: () => renderBackButton(),
-      });
+      navigation.setOptions({ title: 'Editează Postare' });
       setDescription(postToEdit.description);
       setPostDate(new Date(postToEdit.created_at)); 
       if (postToEdit.image_urls && postToEdit.image_urls.length > 0) {
         setExistingImageUrls(postToEdit.image_urls[0]);
       }
     } else {
-      navigation.setOptions({ 
-        title: 'Postare Nouă',
-        headerLeft: () => renderBackButton(),
-      });
+      navigation.setOptions({ title: 'Postare Nouă' });
     }
   }, [isEditMode, postToEdit, navigation]);
 

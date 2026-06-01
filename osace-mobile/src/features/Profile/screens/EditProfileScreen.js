@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { Alert } from 'react-native';
+import React, { useState, useLayoutEffect } from 'react';
+import { Alert, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useThemeColor } from '../../../constants/useThemeColor';
 import { useAuth } from '../../../features/Auth/AuthContext';
 import api from '../../../services/api';
 import Toast from 'react-native-toast-message';
@@ -10,7 +13,23 @@ import FormInput from '../../../components/forms/FormInput';
 import FormButton from '../../../components/forms/FormButton';
 
 export default function EditProfileScreen() {
-  const { user, updateUser } = useAuth(); 
+  const { user, updateUser } = useAuth();
+  const navigation = useNavigation();
+  const { colors } = useThemeColor();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 8, paddingVertical: 4, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
 
   // --- Stările sparte în 3 ---
   const [displayName, setDisplayName] = useState(user.display_name || '');

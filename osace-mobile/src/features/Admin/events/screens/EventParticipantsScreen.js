@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import api from '../../../../services/api';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { format } from 'date-fns';
@@ -11,10 +11,25 @@ import { useThemeColor } from '../../../../constants/useThemeColor';
 
 export default function EventParticipantsScreen() {
   const route = useRoute();
+  const navigation = useNavigation();
   const { eventId, eventTitle } = route.params;
   const { colors, isDark } = useThemeColor();
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 8, paddingVertical: 4, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
 
   useEffect(() => {
     const fetchParticipants = async () => {

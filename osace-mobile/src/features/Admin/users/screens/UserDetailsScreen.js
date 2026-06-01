@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Dimensions, Alert, FlatList, TouchableOpacity } from 'react-native';
 import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
 import { PieChart } from 'react-native-chart-kit';
@@ -43,6 +43,20 @@ export default function UserDetailsScreen() {
   const { userId, userName } = route.params;
   const { colors, isDark } = useThemeColor();
   const { user: loggedInAdmin } = useAuth();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 8, paddingVertical: 4, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
 
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);

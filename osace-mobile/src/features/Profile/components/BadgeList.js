@@ -1,6 +1,6 @@
 // src/features/Profile/components/BadgeList.js
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Modal, StyleSheet, Pressable } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet, Pressable } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useThemeColor } from '../../../constants/useThemeColor';
 
@@ -15,30 +15,31 @@ export default function BadgeList({ badges }) {
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>REALIZĂRI ({badges?.length || 0})</Text>
       <View style={styles.badgesContainer}>
-        <FlatList
-          horizontal
-          data={badges}
-          keyExtractor={(item) => item.id.toString()}
-          showsHorizontalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.badgeItem}
-              onPress={() => setSelectedBadge(item)}
-            >
-              <View style={styles.badgeIconContainer}>
-                <Ionicons name={item.icon_name} size={32} color={colors.primary} />
-              </View>
-              <Text style={styles.badgeName} numberOfLines={2}>{item.name}</Text>
-            </TouchableOpacity>
-          )}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="ribbon-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8, opacity: 0.5 }} />
-              <Text style={styles.emptyBadgesText}>Nu ai câștigat niciun badge încă.</Text>
-            </View>
-          }
-          contentContainerStyle={styles.badgeListContent}
-        />
+        {(!badges || badges.length === 0) ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="ribbon-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8, opacity: 0.5 }} />
+            <Text style={styles.emptyBadgesText}>Nu ai câștigat niciun badge încă.</Text>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.badgeListContent}
+          >
+            {badges.map((item) => (
+              <TouchableOpacity
+                key={item.id.toString()}
+                style={styles.badgeItem}
+                onPress={() => setSelectedBadge(item)}
+              >
+                <View style={styles.badgeIconContainer}>
+                  <Ionicons name={item.icon_name} size={32} color={colors.primary} />
+                </View>
+                <Text style={styles.badgeName} numberOfLines={2}>{item.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       {/* Custom Glass Modal pentru Badge-uri */}
@@ -125,11 +126,11 @@ const createStyles = (colors, isDark, STANDARD_BLUE) => StyleSheet.create({
     lineHeight: 14,
   },
   emptyContainer: {
-    flex: 1,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 10,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
   },
   emptyBadgesText: {
     fontSize: 13,

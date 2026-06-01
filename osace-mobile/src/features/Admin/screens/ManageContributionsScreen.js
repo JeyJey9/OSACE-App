@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useLayoutEffect } from 'react';
 import { 
   View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, TextInput 
 } from 'react-native';
@@ -17,6 +17,20 @@ export default function ManageContributionsScreen() {
 
   const navigation = useNavigation();
   const { colors, isDark } = useThemeColor();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 8, paddingVertical: 4, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
 
   const fetchContributions = async () => {
     setLoading(true);
