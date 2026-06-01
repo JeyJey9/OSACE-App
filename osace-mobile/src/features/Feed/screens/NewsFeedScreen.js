@@ -22,7 +22,6 @@ import FeedSkeleton from '../components/FeedSkeleton';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import EmptyState from '../../../components/EmptyState';
-import CustomHeader from '../../../components/layout/CustomHeader';
 
 export default function NewsFeedScreen() {
   const navigation = useNavigation();
@@ -139,7 +138,6 @@ export default function NewsFeedScreen() {
   return (
     <View style={{ flex: 1 }} {...rightZonePanResponder.panHandlers}>
       <ScreenContainer scrollable={false}>
-        <CustomHeader />
         {loading ? (
           <FeedSkeleton />
         ) : (

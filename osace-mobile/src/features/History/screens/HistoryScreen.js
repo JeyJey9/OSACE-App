@@ -16,7 +16,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import HistorySkeleton from '../components/HistorySkeleton';
 import EmptyState from '../../../components/EmptyState';
 import { useThemeColor } from '../../../constants/useThemeColor';
-import CustomHeader from '../../../components/layout/CustomHeader';
 import DropdownPicker from '../../../components/DropdownPicker';
 
 import { useAuth } from '../../Auth/AuthContext';
@@ -268,7 +267,6 @@ export default function HistoryScreen() {
 
   return (
     <ScreenContainer scrollable={false}>
-        <CustomHeader />
 
         <View style={styles.toggleContainer}>
           <TouchableOpacity

@@ -13,6 +13,7 @@ import NewsFeedScreen from '../features/Feed/screens/NewsFeedScreen';
 import ManagementNavigator from './ManagementNavigator';
 
 import { useThemeColor } from '../constants/useThemeColor';
+import CustomHeader from '../components/layout/CustomHeader';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -151,51 +152,56 @@ export default function AppTabs() {
   }, [user]);
 
   return (
-    <Tab.Navigator
-      tabBarPosition="bottom"
-      tabBar={(props) => <FloatingTabBar {...props} colors={colors} isDark={isDark} />}
-      screenOptions={({ route }) => ({
-        lazy: false,
-        // Pe iOS: dezactivăm pager-ul pe Noutăți ca să nu conflictuieze cu Drawer gesture.
-        // Pe Android: pager-ul coexistă fin cu Drawer-ul nativ, lăsăm activ.
-        swipeEnabled: Platform.OS === 'android' || route.name !== 'Noutăți',
-        animationEnabled: true,
-      })}
-    >
-      <Tab.Screen
-        name="Noutăți"
-        component={NewsFeedScreen}
-      />
+    <View style={{ flex: 1 }}>
+      {/* Header-ul stă fix în afara pager-ului — nu se mișcă la swipe între tab-uri */}
+      <CustomHeader />
 
-      <Tab.Screen
-        name="Activități"
-        component={HomeScreen}
-      />
-
-      <Tab.Screen
-        name="Activitățile Mele"
-        component={MyEventsScreen}
-      />
-
-      <Tab.Screen
-        name="Istoric"
-        component={HistoryScreen}
-      />
-
-      {user && user.role === 'coordonator' && (
+      <Tab.Navigator
+        tabBarPosition="bottom"
+        tabBar={(props) => <FloatingTabBar {...props} colors={colors} isDark={isDark} />}
+        screenOptions={({ route }) => ({
+          lazy: false,
+          // Pe iOS: dezactivăm pager-ul pe Noutăți ca să nu conflictuieze cu Drawer gesture.
+          // Pe Android: pager-ul coexistă fin cu Drawer-ul nativ, lăsăm activ.
+          swipeEnabled: Platform.OS === 'android' || route.name !== 'Noutăți',
+          animationEnabled: true,
+        })}
+      >
         <Tab.Screen
-          name="Coordonare"
-          component={ManagementNavigator}
+          name="Noutăți"
+          component={NewsFeedScreen}
         />
-      )}
 
-      {user && user.role === 'admin' && (
         <Tab.Screen
-          name="Admin"
-          component={ManagementNavigator}
+          name="Activități"
+          component={HomeScreen}
         />
-      )}
-    </Tab.Navigator>
+
+        <Tab.Screen
+          name="Activitățile Mele"
+          component={MyEventsScreen}
+        />
+
+        <Tab.Screen
+          name="Istoric"
+          component={HistoryScreen}
+        />
+
+        {user && user.role === 'coordonator' && (
+          <Tab.Screen
+            name="Coordonare"
+            component={ManagementNavigator}
+          />
+        )}
+
+        {user && user.role === 'admin' && (
+          <Tab.Screen
+            name="Admin"
+            component={ManagementNavigator}
+          />
+        )}
+      </Tab.Navigator>
+    </View>
   );
 }
 

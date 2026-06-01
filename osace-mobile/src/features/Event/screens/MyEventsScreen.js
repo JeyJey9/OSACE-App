@@ -15,7 +15,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import EmptyState from '../../../components/EmptyState';
-import CustomHeader from '../../../components/layout/CustomHeader';
 
 import { useAuth } from '../../Auth/AuthContext';
 
@@ -159,7 +158,6 @@ export default function MyEventsScreen() {
 
   return (
     <ScreenContainer scrollable={false}>
-      <CustomHeader />
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />

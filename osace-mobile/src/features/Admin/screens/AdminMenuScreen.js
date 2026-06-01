@@ -5,7 +5,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../Auth/AuthContext';
 import api from '../../../services/api';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
-import CustomHeader from '../../../components/layout/CustomHeader';
 import { useThemeColor } from '../../../constants/useThemeColor';
 
 export default function AdminMenuScreen({ navigation }) { 
@@ -70,8 +69,6 @@ export default function AdminMenuScreen({ navigation }) {
 
   return (
     <ScreenContainer scrollable={true}>
-      <CustomHeader />
-      
       <View style={styles.menuList}>
         {/* --- VIZIBIL PENTRU TOȚI (Admin + Coordonator) --- */}
         {renderMenuItem("Activități", "calendar-outline", "AdminManageEvents")}

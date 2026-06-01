@@ -197,13 +197,8 @@ export default function CustomHeader({ title, showRole = true }) {
         </View>
       </BlurView>
 
-      {/* ── Bottom separator: role-colored accent line + fade ── */}
+      {/* ── Bottom separator: role-colored accent line only ── */}
       <View style={styles.separatorStack}>
-        {/* Soft fade layer */}
-        <View style={[styles.separatorFade, {
-          backgroundColor: isDark ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.06)',
-        }]} />
-        {/* Colored accent line */}
         <View style={[styles.separatorAccent, { backgroundColor: roleColor }]} />
       </View>
     </Animated.View>
@@ -327,22 +322,11 @@ const styles = StyleSheet.create({
 
   // Separator stack at the bottom of the header
   separatorStack: {
-    height: 3,
+    height: 1.5,
     overflow: 'hidden',
   },
-  separatorFade: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 2,
-  },
   separatorAccent: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 1.5,
+    flex: 1,
     opacity: 0.55,
   },
 });

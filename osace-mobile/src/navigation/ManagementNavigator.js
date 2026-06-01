@@ -1,6 +1,9 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { View } from 'react-native';
 import { useThemeColor } from '../constants/useThemeColor';
+import { useNavigationState } from '@react-navigation/native';
+import CustomHeader from '../components/layout/CustomHeader';
 
 // Ecrane generale Admin
 import AdminMenuScreen from '../features/Admin/screens/AdminMenuScreen';
@@ -44,8 +47,18 @@ const Stack = createNativeStackNavigator();
 export default function ManagementNavigator() {
   const { colors, isDark } = useThemeColor();
 
+  // Aflăm ecranul curent din stiva de navigare
+  const currentRoute = useNavigationState(
+    state => state?.routes?.[state.index]?.name
+  );
+  const isOnMenuRoot = !currentRoute || currentRoute === 'AdminMenu';
+
   return (
-    <Stack.Navigator
+    <View style={{ flex: 1 }}>
+      {/* Header-ul apare fix doar pe AdminMenu, nu şi pe sub-ecranele cu header native */}
+      {isOnMenuRoot && <CustomHeader />}
+
+      <Stack.Navigator
       initialRouteName="AdminMenu"
       screenOptions={{
         headerStyle: {
@@ -108,5 +121,6 @@ export default function ManagementNavigator() {
       {/* Rapoarte Comentarii */}
       <Stack.Screen name="ReportedComments" component={ReportedCommentsScreen} options={{ title: 'Comentarii Raportate' }} />
     </Stack.Navigator>
+    </View>
   );
 }

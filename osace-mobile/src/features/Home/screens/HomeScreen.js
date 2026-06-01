@@ -15,7 +15,6 @@ import { useAuth } from '../../../features/Auth/AuthContext';
 import api from '../../../services/api';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import EmptyState from '../../../components/EmptyState';
-import CustomHeader from '../../../components/layout/CustomHeader';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 const SECTION_TITLES = {
@@ -182,7 +181,6 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <CustomHeader />
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
