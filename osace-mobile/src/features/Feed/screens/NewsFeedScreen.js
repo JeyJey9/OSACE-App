@@ -6,7 +6,10 @@ import {
   FlatList,
   Alert,
   TouchableOpacity,
-  RefreshControl // <-- NOU: Import RefreshControl
+  RefreshControl,
+  Platform,
+  PanResponder,
+  Dimensions
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../features/Auth/AuthContext';
@@ -27,6 +30,30 @@ export default function NewsFeedScreen() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // ─── iOS only: PanResponder pentru zona dreaptă 75% → navigate('Activități') ───
+  // Pe iOS pager-ul e dezactivat pe Noutăți (ca Drawer-ul să nu conflictuieze),
+  // deci PanResponder poate prinde gestul fără competiție nativă.
+  // Pe Android pager-ul e activ și el gestionează nativ swipe-ul → ignorăm.
+  const { width } = Dimensions.get('window');
+  const rightZonePanResponder = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        if (Platform.OS !== 'ios') return false;
+        const startX = evt.nativeEvent.pageX - gestureState.dx;
+        const fromRightZone = startX >= width * 0.25;
+        const swipingLeft = gestureState.dx < -12;
+        const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy) + 5;
+        return fromRightZone && swipingLeft && isHorizontal;
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx < -40) {
+          navigation.navigate('Activități');
+        }
+      },
+    })
+  ).current;
 
   // Pulse animation for the verification banner
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
@@ -55,7 +82,6 @@ export default function NewsFeedScreen() {
     }
   };
 
-  // ▼▼▼ NOU: Funcția de refresh ▼▼▼
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
@@ -69,7 +95,23 @@ export default function NewsFeedScreen() {
     useCallback(() => {
       setLoading(true);
       fetchPosts();
-    }, [])
+
+      // Activează Drawer-ul nativ NUMAI pe tab-ul Noutăți (fluid tracking).
+      // swipeEdgeWidth (25%) e definit global în MainDrawer screenOptions.
+      // Pe iOS: fără conflict cu pager (dezactivat pe Noutăți), Drawer câștigă sigur.
+      // Pe Android: Drawer coexistă cu pager nativ, funcționează pe ambele.
+      const drawerNav = navigation.getParent('MainDrawer');
+      if (drawerNav) {
+        drawerNav.setOptions({ swipeEnabled: true });
+      }
+
+      return () => {
+        // Dezactivează swipe-ul Drawer când intrăm pe alt tab principal
+        if (drawerNav) {
+          drawerNav.setOptions({ swipeEnabled: false });
+        }
+      };
+    }, [navigation])
   );
 
   const onPostUpdate = (updatedPost) => {
@@ -88,74 +130,78 @@ export default function NewsFeedScreen() {
   const styles = createStyles(colors);
 
   return (
-    <ScreenContainer scrollable={false}>
-      <CustomHeader />
-      {loading ? (
-        <FeedSkeleton />
-      ) : (
-        <FlatList
-          data={posts}
-          renderItem={({ item }) => (
-            <PostCard
-              item={item}
-              onPostUpdate={onPostUpdate}
-              onPostDelete={onPostDelete}
-              currentUserRole={user?.role}
-            />
-          )}
-          keyExtractor={(item) => item.id.toString()}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-          ListEmptyComponent={() => (
-            <EmptyState
-              illustration="no_feed"
-              title="Nicio noutate încă"
-              subtitle="Nu există postaje în momentul de faţă. Revino mai târziu!"
-            />
-          )}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
+    // Pe iOS: outer View prinde swipe stânga din zona dreaptă 75% → navigate Activități
+    // Pe Android: ignorat de PanResponder (pager-ul nativ se ocupă)
+    <View style={{ flex: 1 }} {...rightZonePanResponder.panHandlers}>
+      <ScreenContainer scrollable={false}>
+        <CustomHeader />
+        {loading ? (
+          <FeedSkeleton />
+        ) : (
+          <FlatList
+            data={posts}
+            renderItem={({ item }) => (
+              <PostCard
+                item={item}
+                onPostUpdate={onPostUpdate}
+                onPostDelete={onPostDelete}
+                currentUserRole={user?.role}
+              />
+            )}
+            keyExtractor={(item) => item.id.toString()}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            }
+            ListEmptyComponent={() => (
+              <EmptyState
+                illustration="no_feed"
+                title="Nicio noutate încă"
+                subtitle="Nu există postaje în momentul de faţă. Revino mai târziu!"
+              />
+            )}
+            contentContainerStyle={styles.listContent}
+          />
+        )}
 
-      {/* Verification banner — for unverified volunteers only */}
-      {isUnverified && (
-        <Animated.View style={[styles.verifyBanner, { transform: [{ scale: pulseAnim }] }]}>
+        {/* Verification banner — for unverified volunteers only */}
+        {isUnverified && (
+          <Animated.View style={[styles.verifyBanner, { transform: [{ scale: pulseAnim }] }]}>
+            <TouchableOpacity
+              style={styles.verifyBannerInner}
+              onPress={() => navigation.navigate('StudentVerification')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.verifyBannerIconWrap}>
+                <Ionicons name="shield-half-outline" size={22} color="white" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.verifyBannerTitle}>Verifică-ți contul de student</Text>
+                <Text style={styles.verifyBannerSub}>
+                  {user?.student_verification_status === 'pending'
+                    ? 'Cererea ta este în așteptare — vei fi notificat.'
+                    : 'Necesar pentru a te înscrie la activități.'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="white" />
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {(user?.role === 'admin' || user?.role === 'coordonator') && (
           <TouchableOpacity
-            style={styles.verifyBannerInner}
-            onPress={() => navigation.navigate('StudentVerification')}
-            activeOpacity={0.85}
+            style={styles.fab}
+            onPress={() => navigation.navigate(managementTabName, { screen: 'PostForm' })}
           >
-            <View style={styles.verifyBannerIconWrap}>
-              <Ionicons name="shield-half-outline" size={22} color="white" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.verifyBannerTitle}>Verifică-ți contul de student</Text>
-              <Text style={styles.verifyBannerSub}>
-                {user?.student_verification_status === 'pending'
-                  ? 'Cererea ta este în așteptare — vei fi notificat.'
-                  : 'Necesar pentru a te înscrie la activități.'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="white" />
+            <Ionicons name="add" size={30} color="white" />
           </TouchableOpacity>
-        </Animated.View>
-      )}
-
-      {(user?.role === 'admin' || user?.role === 'coordonator') && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => navigation.navigate(managementTabName, { screen: 'PostForm' })}
-        >
-          <Ionicons name="add" size={30} color="white" />
-        </TouchableOpacity>
-      )}
-    </ScreenContainer>
+        )}
+      </ScreenContainer>
+    </View>
   );
 }
 

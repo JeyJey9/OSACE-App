@@ -85,83 +85,92 @@ export default function MainDrawer() {
 
   return (
     <Drawer.Navigator
-      // Folosim componenta custom pentru a controla header-ul meniului lateral
+      // ID folosit de NewsFeedScreen pentru a activa swipe-ul dinamic via setOptions
+      id="MainDrawer"
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={({ navigation }) => ({
         header: ({ options }) => <CustomHeader title={options.title} />,
-        // Stilul containerului Drawer (meniul lateral propriu-zis)
         drawerStyle: {
           backgroundColor: colors.card,
           width: 280,
         },
-        // Culori pentru rândurile din meniu
         drawerActiveTintColor: colors.primary,
         drawerInactiveTintColor: colors.textSecondary,
-        drawerActiveBackgroundColor: colors.primary + '15', // Fundal transparent colorat pentru item-ul activ
+        drawerActiveBackgroundColor: colors.primary + '15',
         drawerLabelStyle: {
           fontWeight: '600',
-          marginLeft: -10, // Aduce textul mai aproape de iconiță
+          marginLeft: -10,
         },
+        // Dezactivat global — NewsFeedScreen îl activează dinamic cu swipeEdgeWidth 25%
+        // Celelalte ecrane din Drawer (Leaderboard, Map etc.) îl suprascriu cu swipeEnabled: true
+        swipeEnabled: false,
+        // 25% din lățimea ecranului = zona de swipe pentru deschiderea sidebar-ului
+        // Aplicabil pe toate ecranele cu swipeEnabled: true
         swipeEdgeWidth: Dimensions.get('window').width * 0.25,
       })}
     >
-      {/* 1. Ecranul Principal (Tabs) - Ascuns din listă */}
+      {/* 1. Ecranul Principal (Tabs) - swipe dezactivat, gestionat de NewsFeedScreen */}
       <Drawer.Screen 
         name="HomeTabs" 
         component={CoreAppNavigator} 
         options={{ 
           title: 'Acasă', 
           headerShown: false,
+          swipeEnabled: false,
           drawerItemStyle: { height: 0 } 
         }} 
       />
 
-      {/* 2. Profilul Meu (Folosește acum Stack-ul de Profil cu swipe dezactivat) */}
+      {/* 2. Profilul Meu - swipe activat, fluid tracking nativ */}
       <Drawer.Screen 
         name="Profile" 
         component={ProfileStackNavigator} 
         options={{ 
           title: 'Profilul Meu', 
-          headerShown: false, // Stack navigator desenează propriul antet / ascundem antetul Drawer-ului
+          headerShown: false,
+          swipeEnabled: true,
           drawerIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           )
         }} 
       />
 
-      {/* 3. Clasament */}
+      {/* 3. Clasament - swipe activat, fluid tracking nativ */}
       <Drawer.Screen 
         name="Leaderboard" 
         component={LeaderboardScreen} 
         options={{ 
           title: 'Clasament', 
           headerShown: true,
+          swipeEnabled: true,
           drawerIcon: ({ color, size }) => (
             <Ionicons name="trophy-outline" size={size} color={color} />
           )
         }} 
       />
 
-      {/* 4. Catalog Realizări */}
+      {/* 4. Catalog Realizări - swipe activat */}
       <Drawer.Screen 
         name="BadgeCatalog" 
         component={BadgeCatalogScreen} 
         options={{ 
           title: 'Catalog Realizări', 
           headerShown: true,
+          swipeEnabled: true,
           drawerIcon: ({ color, size }) => (
             <Ionicons name="ribbon-outline" size={size} color={color} />
           )
         }} 
       />
 
-      {/* 5. Harta Facultății */}
+      {/* 5. Harta Facultății - swipe activat */}
       <Drawer.Screen 
         name="Map" 
         component={MapScreen} 
         options={{
           title: 'Harta Facultății',
           headerShown: true,
+          swipeEnabled: true,
           drawerIcon: ({color, size}) => (
             <Ionicons name="map-outline" size={size} color={color} />
           )
@@ -175,6 +184,7 @@ export default function MainDrawer() {
         options={{ 
           title: 'Statistici', 
           headerShown: true,
+          swipeEnabled: true,
           drawerItemStyle: { height: 0 }
         }} 
       />
@@ -186,6 +196,7 @@ export default function MainDrawer() {
         options={{ 
           title: 'Management',
           headerShown: false,
+          swipeEnabled: true,
           drawerItemStyle: { height: 0 }
         }} 
       />

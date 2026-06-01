@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Platform, TouchableOpacity, View, StyleSheet, Text } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../features/Auth/AuthContext';
 import * as Notifications from 'expo-notifications';
@@ -11,12 +11,10 @@ import MyEventsScreen from '../features/Event/screens/MyEventsScreen';
 import HistoryScreen from '../features/History/screens/HistoryScreen';
 import NewsFeedScreen from '../features/Feed/screens/NewsFeedScreen';
 import ManagementNavigator from './ManagementNavigator';
-import AssignHoursScreen from '../features/Admin/users/screens/AssignHoursScreen';
 
-// ▼▼▼ NOU: Importăm hook-ul nostru de culori ▼▼▼
 import { useThemeColor } from '../constants/useThemeColor';
 
-const Tab = createBottomTabNavigator();
+const Tab = createMaterialTopTabNavigator();
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -60,10 +58,77 @@ async function registerForPushNotificationsAsync() {
   return token;
 }
 
+function FloatingTabBar({ state, descriptors, navigation, colors, isDark }) {
+  return (
+    <View style={[styles.tabBarContainer, {
+      backgroundColor: isDark ? 'rgba(25, 30, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+      borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)',
+      shadowColor: '#000',
+      shadowOpacity: isDark ? 0.4 : 0.15,
+    }]}>
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const isFocused = state.index === index;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate({ name: route.name, merge: true });
+          }
+        };
+
+        const onLongPress = () => {
+          navigation.emit({ type: 'tabLongPress', target: route.key });
+        };
+
+        let iconName;
+        if (route.name === 'Activități') {
+          iconName = isFocused ? 'list-circle' : 'list-circle-outline';
+        } else if (route.name === 'Activitățile Mele') {
+          iconName = isFocused ? 'person-circle' : 'person-circle-outline';
+        } else if (route.name === 'Istoric') {
+          iconName = isFocused ? 'archive' : 'archive-outline';
+        } else if (route.name === 'Coordonare') {
+          iconName = isFocused ? 'build' : 'build-outline';
+        } else if (route.name === 'Admin') {
+          iconName = isFocused ? 'shield' : 'shield-outline';
+        } else if (route.name === 'Noutăți') {
+          iconName = isFocused ? 'newspaper' : 'newspaper-outline';
+        }
+
+        const color = isFocused
+          ? (isDark ? '#4A90E2' : '#1566B9')
+          : colors.textSecondary;
+
+        return (
+          <TouchableOpacity
+            key={route.key}
+            accessibilityRole="button"
+            accessibilityState={isFocused ? { selected: true } : {}}
+            accessibilityLabel={options.tabBarAccessibilityLabel}
+            testID={options.tabBarTestID}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            style={styles.tabItem}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={iconName} size={24} color={color} />
+            <Text style={[styles.tabLabel, { color }]}>
+              {route.name}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function AppTabs() {
   const { user } = useAuth();
-
-  // ▼▼▼ NOU: Obținem culorile și schema curentă ▼▼▼
   const { colors, theme } = useThemeColor();
   const isDark = theme === 'dark';
 
@@ -72,7 +137,6 @@ export default function AppTabs() {
       if (user) {
         console.log('[Push Setup] Utilizator logat, se obține token-ul push...');
         const pushToken = await registerForPushNotificationsAsync();
-
         if (pushToken) {
           try {
             await api.post('/api/profile/push-token', { token: pushToken });
@@ -83,99 +147,45 @@ export default function AppTabs() {
         }
       }
     };
-
     setupPushNotifications();
   }, [user]);
 
-
-
   return (
     <Tab.Navigator
+      tabBarPosition="bottom"
+      tabBar={(props) => <FloatingTabBar {...props} colors={colors} isDark={isDark} />}
       screenOptions={({ route }) => ({
-        tabBarStyle: {
-          position: 'absolute',
-          bottom: Platform.OS === 'ios' ? 25 : 15,
-          left: 20,
-          right: 20,
-          elevation: 5,
-          backgroundColor: isDark ? 'rgba(25, 30, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-          borderRadius: 35,
-          height: 70,
-          borderWidth: 3.5,// Increased thickness slightly
-          borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', // Much more visible border
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: isDark ? 0.4 : 0.15, // Increased shadow for better separation
-          shadowRadius: 20,
-          paddingBottom: 0,
-        },
-        tabBarItemStyle: {
-          paddingTop: 12,
-          paddingBottom: 12,
-        },
-        headerStyle: {
-          backgroundColor: colors.card,
-          shadowColor: 'transparent',
-          elevation: 0,
-          borderBottomWidth: 0,
-        },
-        tabBarShowLabel: true,
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '800',
-          marginTop: 4,
-        },
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'Activități') {
-            iconName = focused ? 'list-circle' : 'list-circle-outline';
-          } else if (route.name === 'Activitățile Mele') {
-            iconName = focused ? 'person-circle' : 'person-circle-outline';
-          } else if (route.name === 'Istoric') {
-            iconName = focused ? 'archive' : 'archive-outline';
-          } else if (route.name === 'Coordonare') {
-            iconName = focused ? 'build' : 'build-outline';
-          } else if (route.name === 'Admin') {
-            iconName = focused ? 'shield' : 'shield-outline';
-          } else if (route.name === 'Noutăți') {
-            iconName = focused ? 'newspaper' : 'newspaper-outline';
-          }
-
-          return <Ionicons name={iconName} size={size + 2} color={color} />;
-        },
-        tabBarActiveTintColor: isDark ? '#4A90E2' : '#1566B9',
-        tabBarInactiveTintColor: colors.textSecondary,
+        lazy: false,
+        // Pe iOS: dezactivăm pager-ul pe Noutăți ca să nu conflictuieze cu Drawer gesture.
+        // Pe Android: pager-ul coexistă fin cu Drawer-ul nativ, lăsăm activ.
+        swipeEnabled: Platform.OS === 'android' || route.name !== 'Noutăți',
+        animationEnabled: true,
       })}
     >
       <Tab.Screen
         name="Noutăți"
         component={NewsFeedScreen}
-        options={{ headerShown: false }}
       />
 
       <Tab.Screen
         name="Activități"
         component={HomeScreen}
-        options={{ headerShown: false }}
       />
 
       <Tab.Screen
         name="Activitățile Mele"
         component={MyEventsScreen}
-        options={{ headerShown: false }}
       />
 
       <Tab.Screen
         name="Istoric"
         component={HistoryScreen}
-        options={{ headerShown: false }}
       />
 
       {user && user.role === 'coordonator' && (
         <Tab.Screen
           name="Coordonare"
           component={ManagementNavigator}
-          options={{ headerShown: false }}
         />
       )}
 
@@ -183,10 +193,41 @@ export default function AppTabs() {
         <Tab.Screen
           name="Admin"
           component={ManagementNavigator}
-          options={{ headerShown: false }}
         />
       )}
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBarContainer: {
+    flexDirection: 'row',
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 25 : 15,
+    left: 20,
+    right: 20,
+    elevation: 5,
+    borderRadius: 35,
+    height: 70,
+    borderWidth: 3.5,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 10,
+  },
+  tabItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    height: '100%',
+    paddingVertical: 8,
+  },
+  tabLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+});
 
