@@ -180,8 +180,15 @@ export default function UserDetailsScreen() {
             />
 
             <View style={localStyles.statCardRow}>
-              <StatCard icon="hourglass-outline" title="Ore Totale" value={parseFloat(total_hours || 0).toFixed(1)} color={colors.primary} colors={colors} isDark={isDark} />
-              <StatCard icon="checkmark-done-outline" title="Participări" value={parseInt(total_attended_events || 0)} color="#27ae60" colors={colors} isDark={isDark} />
+              {(() => {
+                const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
+                return (
+                  <>
+                    <StatCard icon="hourglass-outline" title="Ore Totale" value={parseFloat(total_hours || 0).toFixed(1)} color={colors.primary} colors={colors} isDark={isDark} />
+                    <StatCard icon="checkmark-done-outline" title="Participări" value={parseInt(total_attended_events || 0)} color={STANDARD_BLUE} colors={colors} isDark={isDark} />
+                  </>
+                );
+              })()}
             </View>
 
             {/* --- ADMIN CONTROLS --- */}

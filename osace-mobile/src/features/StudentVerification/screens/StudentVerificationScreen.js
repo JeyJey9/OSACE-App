@@ -164,10 +164,10 @@ export default function StudentVerificationScreen({ navigation }) {
         </View>
 
         <TouchableOpacity
-          style={[s.checkRow, confirmed && { borderColor: '#27ae60', backgroundColor: '#27ae6012' }]}
+          style={[s.checkRow, confirmed && { borderColor: BLUE, backgroundColor: BLUE + '12' }]}
           onPress={() => setConfirmed(!confirmed)} activeOpacity={0.8}
         >
-          <View style={[s.checkbox, confirmed && { backgroundColor: '#27ae60', borderColor: '#27ae60' }]}>
+          <View style={[s.checkbox, confirmed && { backgroundColor: BLUE, borderColor: BLUE }]}>
             {confirmed && <Ionicons name="checkmark" size={14} color="white" />}
           </View>
           <Text style={s.checkText}>

@@ -82,7 +82,7 @@ export default function CustomHeader({ title, showRole = true }) {
   const isCoordonator = user?.role === 'coordonator';
 
   let roleText = 'Voluntar';
-  let roleColor = '#27ae60';
+  let roleColor = STANDARD_BLUE;
   if (isAdmin) { roleText = 'Admin'; roleColor = '#E74C3C'; }
   else if (isCoordonator) { roleText = 'Coordonator'; roleColor = '#F39C12'; }
 

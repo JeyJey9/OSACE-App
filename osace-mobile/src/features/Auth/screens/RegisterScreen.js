@@ -224,11 +224,11 @@ export default function RegisterScreen({ navigation }) {
 
             {/* T&C Checkbox */}
             <TouchableOpacity
-              style={[s.termsRow, termsAccepted && { borderColor: '#27ae60', backgroundColor: '#27ae6010' }]}
+              style={[s.termsRow, termsAccepted && { borderColor: STANDARD_BLUE, backgroundColor: STANDARD_BLUE + '10' }]}
               onPress={() => setTermsAccepted(!termsAccepted)}
               activeOpacity={0.8}
             >
-              <View style={[s.termsCb, termsAccepted && { backgroundColor: '#27ae60', borderColor: '#27ae60' }]}>
+              <View style={[s.termsCb, termsAccepted && { backgroundColor: STANDARD_BLUE, borderColor: STANDARD_BLUE }]}>
                 {termsAccepted && <Ionicons name="checkmark" size={13} color="white" />}
               </View>
               <Text style={s.termsText}>

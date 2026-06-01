@@ -80,8 +80,8 @@ export default function BadgeCatalogScreen() {
           <Ionicons 
             name={item.icon_name} 
             size={36} 
-            // Iconița e albastră OSACE dacă e blocat, verde/text dacă e deblocat
-            color={isEarned ? (isDark ? '#2ecc71' : '#0E3035') : colors.primary} 
+            // Iconița e albastră OSACE (STANDARD_BLUE) dacă e deblocat
+            color={isEarned ? (isDark ? '#4A90E2' : '#1566B9') : colors.primary} 
           />
         </View>
         <Text style={styles.badgeName}>{item.name}</Text>
@@ -157,9 +157,9 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     borderColor: 'transparent',
   },
   badgeItemEarned: {
-    // Pe Dark Mode folosim un verde foarte închis/opac pentru fundal
-    backgroundColor: isDark ? 'rgba(46, 204, 113, 0.1)' : '#eafaf1',
-    borderColor: isDark ? '#27ae60' : '#27ae60',
+    // Folosim nuanțe de albastru (reprezentativ O.S.A.C.E.)
+    backgroundColor: isDark ? 'rgba(74, 144, 226, 0.1)' : '#eaf4fc',
+    borderColor: isDark ? '#4A90E2' : '#1566B9',
   },
   badgeIconContainer: {
     width: 65,
@@ -171,7 +171,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     marginBottom: 12,
   },
   badgeIconContainerEarned: {
-    backgroundColor: isDark ? 'rgba(46, 204, 113, 0.2)' : '#d4f3e2',
+    backgroundColor: isDark ? 'rgba(74, 144, 226, 0.2)' : '#d4e6f7',
   },
   badgeName: {
     fontSize: 15,
@@ -189,7 +189,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   earnedTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#27ae60',
+    backgroundColor: isDark ? '#4A90E2' : '#1566B9',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,

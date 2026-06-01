@@ -9,11 +9,10 @@ export default function ProfileHeader({ user, roleText, avatarLoading = false, o
   const { colors, isDark } = useThemeColor();
   const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
   
-  // Verde pentru Voluntar, albastru pentru Admin/Coordonator
-  const ROLE_GREEN = '#27ae60';
   const getRoleColor = (role) => {
-    if (role === 'user') return ROLE_GREEN;
-    return STANDARD_BLUE;
+    if (role === 'admin') return '#E74C3C';
+    if (role === 'coordonator') return '#F39C12';
+    return STANDARD_BLUE; // Voluntar
   };
   const roleColor = getRoleColor(user?.role);
   

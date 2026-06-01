@@ -208,16 +208,23 @@ export default function StatisticsScreen() {
         </View>
 
         {/* KPI Row 1 */}
-        <View style={{ flexDirection: 'row', paddingHorizontal: 11, marginBottom: 10 }}>
-          <KpiCard icon="time-outline"     label="Ore Totale"  value={totalHours.toFixed(1)}  color="#1566B9" colors={colors} isDark={isDark} />
-          <KpiCard icon="calendar-outline" label="Evenimente" value={totalEvents}              color="#8e44ad" colors={colors} isDark={isDark} />
-        </View>
+        {(() => {
+          const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
+          return (
+            <>
+              <View style={{ flexDirection: 'row', paddingHorizontal: 11, marginBottom: 10 }}>
+                <KpiCard icon="time-outline"     label="Ore Totale"  value={totalHours.toFixed(1)}  color={STANDARD_BLUE} colors={colors} isDark={isDark} />
+                <KpiCard icon="calendar-outline" label="Evenimente" value={totalEvents}              color="#8e44ad" colors={colors} isDark={isDark} />
+              </View>
 
-        {/* KPI Row 2 */}
-        <View style={{ flexDirection: 'row', paddingHorizontal: 11, marginBottom: 18 }}>
-          <KpiCard icon="people-outline"   label="Voluntari Unici"      value={uniqueVolunteers} color="#27ae60" colors={colors} isDark={isDark} />
-          <KpiCard icon="stats-chart-outline" label="Medie/Activitate" value={avgAttendees + ' pers'} color="#f39c12" colors={colors} isDark={isDark} />
-        </View>
+              {/* KPI Row 2 */}
+              <View style={{ flexDirection: 'row', paddingHorizontal: 11, marginBottom: 18 }}>
+                <KpiCard icon="people-outline"   label="Voluntari Unici"      value={uniqueVolunteers} color={STANDARD_BLUE} colors={colors} isDark={isDark} />
+                <KpiCard icon="stats-chart-outline" label="Medie/Activitate" value={avgAttendees + ' pers'} color="#f39c12" colors={colors} isDark={isDark} />
+              </View>
+            </>
+          );
+        })()}
 
         {/* Category Breakdown */}
         <SectionCard title="Ore pe Categorie" icon="pie-chart-outline" colors={colors} isDark={isDark}>

@@ -338,6 +338,6 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   roleTagText: { fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
   rightContainer: { flexDirection: 'row', alignItems: 'center' },
   hoursContainer: { alignItems: 'center', minWidth: 40 },
-  hoursValue: { fontSize: 18, fontWeight: 'bold', color: '#27ae60' },
+  hoursValue: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
   hoursLabel: { fontSize: 10, color: colors.textSecondary, textTransform: 'uppercase', fontWeight: '600' },
 });

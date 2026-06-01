@@ -16,14 +16,13 @@ export default function CustomDrawerContent(props) {
 
   const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
 
-  // Same role mapping as CustomHeader for consistency
   const ROLE_MAP = {
     admin: { label: 'Admin', color: '#E74C3C' },
     coordonator: { label: 'Coordonator', color: '#F39C12' },
-    voluntar: { label: 'Voluntar', color: '#27ae60' },
-    user: { label: 'Voluntar', color: '#27ae60' }, // "user" is the raw DB value for regular members
+    voluntar: { label: 'Voluntar', color: STANDARD_BLUE },
+    user: { label: 'Voluntar', color: STANDARD_BLUE }, // "user" is the raw DB value for regular members
   };
-  const roleInfo = ROLE_MAP[user?.role] || { label: 'Voluntar', color: '#27ae60' };
+  const roleInfo = ROLE_MAP[user?.role] || { label: 'Voluntar', color: STANDARD_BLUE };
 
   const styles = createStyles(colors, isDark, STANDARD_BLUE);
 

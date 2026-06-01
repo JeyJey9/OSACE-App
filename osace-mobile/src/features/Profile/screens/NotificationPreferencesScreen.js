@@ -124,7 +124,6 @@ export default function NotificationPreferencesScreen() {
               title="Status verificare student"
               subtitle="Notificări la aprobarea sau respingerea cererii de verificare"
               prefKey="verification_updates"
-              color="#27ae60"
             />
           </View>
 
