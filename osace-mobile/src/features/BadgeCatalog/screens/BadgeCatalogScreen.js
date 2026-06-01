@@ -111,7 +111,9 @@ export default function BadgeCatalogScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
         ListHeaderComponent={
-          <Text style={styles.headerText}>Realizările Tale</Text>
+          <Text style={styles.headerText}>
+            Descopeă realizările pe care le-ai deblocat și ce te mai așteaptă
+          </Text>
         }
         ListEmptyComponent={
           <EmptyState
@@ -131,12 +133,13 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     paddingBottom: 30,
   },
   headerText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textSecondary,
     paddingHorizontal: 10,
     marginBottom: 15,
-    marginTop: 10,
+    marginTop: 8,
+    lineHeight: 19,
   },
   badgeItem: {
     flex: 1,

@@ -8,7 +8,16 @@ import { useThemeColor } from '../../../constants/useThemeColor';
 export default function ProfileHeader({ user, roleText, avatarLoading = false, onAvatarPress, email }) {
   const { colors, isDark } = useThemeColor();
   const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
-  const styles = createStyles(colors, isDark, STANDARD_BLUE);
+  
+  // Verde pentru Voluntar, albastru pentru Admin/Coordonator
+  const ROLE_GREEN = '#27ae60';
+  const getRoleColor = (role) => {
+    if (role === 'user') return ROLE_GREEN;
+    return STANDARD_BLUE;
+  };
+  const roleColor = getRoleColor(user?.role);
+  
+  const styles = createStyles(colors, isDark, STANDARD_BLUE, roleColor);
   
   const canEdit = typeof onAvatarPress === 'function';
 
@@ -62,7 +71,7 @@ export default function ProfileHeader({ user, roleText, avatarLoading = false, o
   );
 }
 
-const createStyles = (colors, isDark, STANDARD_BLUE) => StyleSheet.create({
+const createStyles = (colors, isDark, STANDARD_BLUE, roleColor) => StyleSheet.create({
   profileHeader: {
     alignItems: 'center',
     paddingVertical: 40,
@@ -131,14 +140,16 @@ const createStyles = (colors, isDark, STANDARD_BLUE) => StyleSheet.create({
   },
   roleBadge: {
     marginTop: 8,
-    backgroundColor: STANDARD_BLUE + '15',
+    backgroundColor: roleColor + '18',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: roleColor + '30',
   },
   roleText: {
     fontSize: 11,
-    color: STANDARD_BLUE,
+    color: roleColor,
     fontWeight: '800',
     letterSpacing: 1.5,
   },

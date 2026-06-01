@@ -123,7 +123,7 @@ export default function ProfileScreen() {
     switch (role) {
       case 'admin': return 'Administrator';
       case 'coordonator': return 'Coordonator';
-      case 'user': return 'Membru';
+      case 'user': return 'Voluntar';
       default: return 'Utilizator';
     }
   };

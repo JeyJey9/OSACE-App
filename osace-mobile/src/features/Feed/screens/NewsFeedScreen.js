@@ -9,7 +9,9 @@ import {
   RefreshControl,
   Platform,
   PanResponder,
-  Dimensions
+  Dimensions,
+  Animated,
+  Easing
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../features/Auth/AuthContext';
@@ -21,7 +23,6 @@ import ScreenContainer from '../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import EmptyState from '../../../components/EmptyState';
 import CustomHeader from '../../../components/layout/CustomHeader';
-import { Animated, Easing } from 'react-native';
 
 export default function NewsFeedScreen() {
   const navigation = useNavigation();
@@ -38,7 +39,8 @@ export default function NewsFeedScreen() {
   // deci PanResponder poate prinde gestul fără competiție nativă.
   // Pe Android pager-ul e activ și el gestionează nativ swipe-ul → ignorăm.
   const { width } = Dimensions.get('window');
-  const rightZonePanResponder = React.useRef(
+
+  const rightZonePanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -135,8 +137,6 @@ export default function NewsFeedScreen() {
   const styles = createStyles(colors);
 
   return (
-    // Pe iOS: outer View prinde swipe stânga din zona dreaptă 75% → navigate Activități
-    // Pe Android: ignorat de PanResponder (pager-ul nativ se ocupă)
     <View style={{ flex: 1 }} {...rightZonePanResponder.panHandlers}>
       <ScreenContainer scrollable={false}>
         <CustomHeader />

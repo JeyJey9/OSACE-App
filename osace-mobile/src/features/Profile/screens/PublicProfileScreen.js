@@ -96,7 +96,7 @@ export default function PublicProfileScreen() {
     switch (role) {
       case 'admin': return 'Administrator';
       case 'coordonator': return 'Coordonator';
-      case 'user': return 'Membru';
+      case 'user': return 'Voluntar';
       default: return 'Utilizator';
     }
   };
@@ -124,7 +124,7 @@ export default function PublicProfileScreen() {
       
       <ProfileStats 
         totalHours={parseFloat(profile.total_hours) || 0}
-        infoTitle="Membru din"
+        infoTitle="Voluntar din"
         infoValue={memberSince}
       />
       
