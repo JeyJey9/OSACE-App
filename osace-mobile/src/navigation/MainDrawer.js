@@ -2,6 +2,7 @@ import React from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Dimensions } from 'react-native';
 
 // Hook-ul pentru temă
 import { useThemeColor } from '../constants/useThemeColor';
@@ -101,6 +102,7 @@ export default function MainDrawer() {
           fontWeight: '600',
           marginLeft: -10, // Aduce textul mai aproape de iconiță
         },
+        swipeEdgeWidth: Dimensions.get('window').width * 0.25,
       })}
     >
       {/* 1. Ecranul Principal (Tabs) - Ascuns din listă */}
@@ -121,7 +123,6 @@ export default function MainDrawer() {
         options={{ 
           title: 'Profilul Meu', 
           headerShown: false, // Stack navigator desenează propriul antet / ascundem antetul Drawer-ului
-          swipeEnabled: false, // Dezactivează deschiderea meniului prin glisare pe ecranele de profil pentru a permite swipe-back pe iOS
           drawerIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           )

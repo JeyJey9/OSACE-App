@@ -3,8 +3,11 @@ import {
   ScrollView, 
   StyleSheet, 
   ActivityIndicator, 
-  View 
+  View,
+  PanResponder,
+  Dimensions
 } from 'react-native';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 // ▼▼▼ NOU: Importăm hook-ul de culori ▼▼▼
 import { useThemeColor } from '../../constants/useThemeColor';
 
@@ -21,6 +24,35 @@ export default function ScreenContainer({
 }) {
   // ▼▼▼ NOU: Preluăm culorile ▼▼▼
   const { colors } = useThemeColor();
+  const navigation = useNavigation();
+
+  // Implementăm manual swipe-ul pentru Drawer ca să nu fie blocat de ScrollView
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        const { width } = Dimensions.get('window');
+        // Capturăm gestul doar dacă începe din primele 25% din stânga
+        // Și dacă mișcarea orizontală este mai mare decât cea verticală
+        if (
+          evt.nativeEvent.pageX < width * 0.25 &&
+          gestureState.dx > 15 &&
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy)
+        ) {
+          return true;
+        }
+        return false;
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx > 30) {
+          try {
+            navigation.dispatch(DrawerActions.openDrawer());
+          } catch (e) {
+            console.log("Eroare la deschiderea drawer-ului din swipe", e);
+          }
+        }
+      }
+    })
+  ).current;
 
   const containerStyles = [
     styles.container,
@@ -29,7 +61,7 @@ export default function ScreenContainer({
   ];
   
   return (
-    <View style={containerStyles}>
+    <View style={containerStyles} {...panResponder.panHandlers}>
       {loading ? (
         <LoadingState colors={colors} />
       ) : scrollable ? (
