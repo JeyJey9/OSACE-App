@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,8 @@ export default function HomeScreen({ navigation }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Marchează dacă prima încărcare a avut loc — skeleton apare o singură dată
+  const hasLoadedOnce = useRef(false);
 
   const { colors, isDark } = useThemeColor();
 
@@ -50,6 +52,7 @@ export default function HomeScreen({ navigation }) {
       Alert.alert("Eroare", "Nu s-au putut încărca activitățile.");
     } finally {
       setLoading(false);
+      hasLoadedOnce.current = true;
     }
   };
 
@@ -64,7 +67,9 @@ export default function HomeScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
+      // Prima vizită: arată skeleton + fetch
+      // Vizitele ulterioare: fetch silentios în background (conținutul rămâne vizibil)
+      if (!hasLoadedOnce.current) setLoading(true);
       fetchEvents();
     }, [])
   );

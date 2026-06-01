@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,9 +24,9 @@ export default function MyEventsScreen() {
   const [myEvents, setMyEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const { colors, isDark } = useThemeColor();
-
   const { reloadUser } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+  const hasLoadedOnce = useRef(false);
 
   const CATEGORY_TAGS = {
     sedinta: { label: 'Ședință', color: '#3498db' },
@@ -46,6 +46,7 @@ export default function MyEventsScreen() {
       Alert.alert("Eroare", "Nu am putut prelua evenimentele.");
     } finally {
       setLoading(false);
+      hasLoadedOnce.current = true;
     }
   };
 
@@ -62,7 +63,7 @@ export default function MyEventsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
+      if (!hasLoadedOnce.current) setLoading(true);
       fetchMyEvents();
     }, [])
   );

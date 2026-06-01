@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -28,10 +28,12 @@ export default function HistoryScreen() {
   const [pastEvents, setPastEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [viewMode, setViewMode] = useState('mine'); // 'mine' | 'all'
+  const [viewMode, setViewMode] = useState('mine');
   const [availableYears, setAvailableYears] = useState([]);
-  const [selectedYear, setSelectedYear] = useState(null); // null = current year (default)
+  const [selectedYear, setSelectedYear] = useState(null);
   const { colors, isDark } = useThemeColor();
+  // Skeleton apare doar la prima încărcare; schimbarea filtrelor arată skeleton (intenționat)
+  const hasLoadedOnce = useRef(false);
 
   const CATEGORY_TAGS = {
     sedinta: { label: 'Ședință', color: '#3498db' },
@@ -61,6 +63,7 @@ export default function HistoryScreen() {
       Alert.alert("Eroare", "Nu am putut prelua istoricul activităților.");
     } finally {
       setLoading(false);
+      hasLoadedOnce.current = true;
     }
   };
 
@@ -85,7 +88,10 @@ export default function HistoryScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
+      // La prima încărcare arată skeleton.
+      // La revenirea pe tab (fără schimbare de filtru): fetch silentios.
+      // La schimbarea viewMode/selectedYear: loading=true e setat direct de butoanele UI.
+      if (!hasLoadedOnce.current) setLoading(true);
       fetchAvailableYears();
       fetchPastEvents(viewMode, selectedYear);
     }, [viewMode, selectedYear])

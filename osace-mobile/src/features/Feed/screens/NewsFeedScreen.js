@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,8 @@ export default function NewsFeedScreen() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Skeleton apare o singură dată la prima încărcare a sesiunii
+  const hasLoadedOnce = useRef(false);
 
   // ─── iOS only: PanResponder pentru zona dreaptă 75% → navigate('Activități') ───
   // Pe iOS pager-ul e dezactivat pe Noutăți (ca Drawer-ul să nu conflictuieze),
@@ -79,6 +81,7 @@ export default function NewsFeedScreen() {
       Alert.alert("Eroare", "Nu s-au putut încărca noutățile.");
     } finally {
       setLoading(false);
+      hasLoadedOnce.current = true;
     }
   };
 
@@ -93,7 +96,9 @@ export default function NewsFeedScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
+      // Prima vizită: arată FeedSkeleton + fetch
+      // Vizitele ulterioare (swipe între tab-uri): fetch silentios, postele rămân vizibile
+      if (!hasLoadedOnce.current) setLoading(true);
       fetchPosts();
 
       // Activează Drawer-ul nativ NUMAI pe tab-ul Noutăți (fluid tracking).
