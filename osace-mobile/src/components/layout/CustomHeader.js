@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import NetInfo from '@react-native-community/netinfo';
 import { useAuth } from '../../features/Auth/AuthContext';
 import { useThemeColor } from '../../constants/useThemeColor';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
@@ -66,8 +67,8 @@ const getGreeting = () => {
 const getTimeIcon = () => {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return 'sunny-outline';
-  if (hour >= 12 && hour < 18) return 'partly-sunny-outline';
-  if (hour >= 18 && hour < 21) return 'sunset-outline';
+  if (hour >= 12 && hour < 18) return 'sunny-outline';
+  if (hour >= 18 && hour < 21) return 'partly-sunny-outline';
   return 'moon-outline';
 };
 
@@ -86,6 +87,9 @@ export default function CustomHeader({ title, showRole = true }) {
   if (isAdmin) { roleText = 'Admin'; roleColor = '#E74C3C'; }
   else if (isCoordonator) { roleText = 'Coordonator'; roleColor = '#F39C12'; }
 
+  // Track network connectivity
+  const [isConnected, setIsConnected] = useState(true);
+
   // Subtle entrance animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-6)).current;
@@ -95,6 +99,15 @@ export default function CustomHeader({ title, showRole = true }) {
       Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
       Animated.spring(slideAnim, { toValue: 0, tension: 90, friction: 12, useNativeDriver: true }),
     ]).start();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      // Connects if isConnected is true and internetReachable is not false
+      const online = state.isConnected !== false && state.isInternetReachable !== false;
+      setIsConnected(online);
+    });
+    return () => unsubscribe();
   }, []);
 
   const avatarUri = user?.avatar_url
@@ -191,7 +204,15 @@ export default function CustomHeader({ title, showRole = true }) {
                   </Text>
                 </View>
               )}
-              <View style={[styles.onlineDot, { borderColor: isDark ? '#111' : '#fff' }]} />
+              <View 
+                style={[
+                  styles.onlineDot, 
+                  { 
+                    backgroundColor: isConnected ? '#2ecc71' : '#e74c3c',
+                    borderColor: isDark ? '#111' : '#fff' 
+                  }
+                ]} 
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -316,7 +337,6 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#2ecc71',
     borderWidth: 2.5,
   },
 
