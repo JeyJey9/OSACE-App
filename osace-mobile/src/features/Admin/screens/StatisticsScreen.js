@@ -1,11 +1,10 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Dimensions, Alert, Image, TouchableOpacity, RefreshControl } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import api from '../../../services/api';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../constants/useThemeColor';
-import CustomHeader from '../../../components/layout/CustomHeader';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -155,6 +154,7 @@ export default function StatisticsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { colors, isDark } = useThemeColor();
+  const navigation = useNavigation();
 
   const fetchStats = async () => {
     try {
@@ -201,10 +201,9 @@ export default function StatisticsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
       >
-        {/* Page Title */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 }}>
-          <Text style={{ fontSize: 26, fontWeight: '900', color: colors.textPrimary }}>Statistici</Text>
-          <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Bazate pe activitățile finalizate</Text>
+        {/* Info label */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10 }}>
+          <Text style={{ fontSize: 13, color: colors.textSecondary }}>Bazat pe activitățile finalizate din sistem</Text>
         </View>
 
         {/* KPI Row 1 */}

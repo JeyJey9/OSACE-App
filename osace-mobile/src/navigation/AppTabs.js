@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { Platform, TouchableOpacity, View, StyleSheet, Text } from 'react-native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { useNavigationState } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../features/Auth/AuthContext';
 import * as Notifications from 'expo-notifications';
@@ -128,10 +130,51 @@ function FloatingTabBar({ state, descriptors, navigation, colors, isDark }) {
   );
 }
 
+function useIsInsideAdminSubScreen() {
+  const activePath = useNavigationState(state => {
+    function getActiveRouteNames(navState, names = []) {
+      if (!navState) return names;
+      const route = navState.routes[navState.index];
+      if (!route) return names;
+      names.push(route.name);
+      if (route.state) {
+        return getActiveRouteNames(route.state, names);
+      }
+      return names;
+    }
+    return getActiveRouteNames(state);
+  });
+
+  if (!activePath || activePath.length === 0) return false;
+  const hasAdmin = activePath.includes('Admin') || activePath.includes('Coordonare');
+  if (!hasAdmin) return false;
+
+  // Ascunde header-ul doar în submeniuri (când ecranul activ nu este meniul principal)
+  const activeLeaf = activePath[activePath.length - 1];
+  return activeLeaf !== 'AdminMenu' && activeLeaf !== 'Admin' && activeLeaf !== 'Coordonare';
+}
+
+const withHeaderOffset = (Component) => {
+  return (props) => {
+    const insets = useSafeAreaInsets();
+    const headerPaddingTop = Platform.OS === 'android'
+      ? (insets?.top || 25) + 12
+      : Math.max(insets?.top || 0, 12);
+    const paddingTop = headerPaddingTop + 105;
+
+    return (
+      <View style={{ flex: 1, paddingTop }}>
+        <Component {...props} />
+      </View>
+    );
+  };
+};
+
 export default function AppTabs() {
   const { user } = useAuth();
   const { colors, theme } = useThemeColor();
   const isDark = theme === 'dark';
+  const hideHeader = useIsInsideAdminSubScreen();
 
   useEffect(() => {
     const setupPushNotifications = async () => {
@@ -153,38 +196,38 @@ export default function AppTabs() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Header-ul stă fix în afara pager-ului — nu se mișcă la swipe între tab-uri */}
-      <CustomHeader />
+      {/* Header-ul stă fix absolut în afara pager-ului — se ascunde cu tranziție nativă de transformare */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
+        <CustomHeader isHidden={hideHeader} />
+      </View>
 
       <Tab.Navigator
         tabBarPosition="bottom"
         tabBar={(props) => <FloatingTabBar {...props} colors={colors} isDark={isDark} />}
         screenOptions={({ route }) => ({
           lazy: false,
-          // Pe iOS: dezactivăm pager-ul pe Noutăți ca să nu conflictuieze cu Drawer gesture.
-          // Pe Android: pager-ul coexistă fin cu Drawer-ul nativ, lăsăm activ.
           swipeEnabled: Platform.OS === 'android' || route.name !== 'Noutăți',
           animationEnabled: true,
         })}
       >
         <Tab.Screen
           name="Noutăți"
-          component={NewsFeedScreen}
+          component={withHeaderOffset(NewsFeedScreen)}
         />
 
         <Tab.Screen
           name="Activități"
-          component={HomeScreen}
+          component={withHeaderOffset(HomeScreen)}
         />
 
         <Tab.Screen
           name="Activitățile Mele"
-          component={MyEventsScreen}
+          component={withHeaderOffset(MyEventsScreen)}
         />
 
         <Tab.Screen
           name="Istoric"
-          component={HistoryScreen}
+          component={withHeaderOffset(HistoryScreen)}
         />
 
         {user && user.role === 'coordonator' && (

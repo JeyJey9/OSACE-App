@@ -1,9 +1,24 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColor } from '../constants/useThemeColor';
-import { useNavigationState } from '@react-navigation/native';
-import CustomHeader from '../components/layout/CustomHeader';
+
+const withHeaderOffset = (Component) => {
+  return (props) => {
+    const insets = useSafeAreaInsets();
+    const headerPaddingTop = Platform.OS === 'android'
+      ? (insets?.top || 25) + 12
+      : Math.max(insets?.top || 0, 12);
+    const paddingTop = headerPaddingTop + 105;
+
+    return (
+      <View style={{ flex: 1, paddingTop }}>
+        <Component {...props} />
+      </View>
+    );
+  };
+};
 
 // Ecrane generale Admin
 import AdminMenuScreen from '../features/Admin/screens/AdminMenuScreen';
@@ -47,80 +62,61 @@ const Stack = createNativeStackNavigator();
 export default function ManagementNavigator() {
   const { colors, isDark } = useThemeColor();
 
-  // Aflăm ecranul curent din stiva de navigare
-  const currentRoute = useNavigationState(
-    state => state?.routes?.[state.index]?.name
-  );
-  const isOnMenuRoot = !currentRoute || currentRoute === 'AdminMenu';
-
   return (
     <View style={{ flex: 1 }}>
-      {/* Header-ul apare fix doar pe AdminMenu, nu şi pe sub-ecranele cu header native */}
-      {isOnMenuRoot && <CustomHeader />}
-
       <Stack.Navigator
-      initialRouteName="AdminMenu"
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.card,
-          elevation: 0,
-          shadowOpacity: 0,
-          borderBottomWidth: 1,
-          borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-        },
-        headerTintColor: colors.textPrimary,
-        headerTitleStyle: {
-          fontSize: 18,
-          fontWeight: '800',
-          color: colors.textPrimary,
-        },
-        headerBackTitle: ' ',
-      }}
-    >
-      {/* --- ECRANE PARTAJATE (Admin & Coordonator) --- */}
-      <Stack.Screen name="AdminMenu" component={AdminMenuScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="AdminManageEvents" component={ManageEventsScreen} options={{ title: 'Gestionează Activități' }} />
-      <Stack.Screen name="EventForm" component={EventFormScreen} options={{ title: 'Formular Activitate' }} />
-      <Stack.Screen name="EventParticipants" component={EventParticipantsScreen} options={({ route }) => ({ title: route.params?.eventTitle || 'Participanți' })} />
-      <Stack.Screen name="Statistics" component={StatisticsScreen} options={{ title: 'Statistici' }} />
-      
-      {/* ▼▼▼ NOU: Adăugăm ecranul pentru Cereri Ore ▼▼▼ */}
-      <Stack.Screen name="HourRequests" component={HourRequestsScreen} options={{ title: 'Aprobări Ore' }} />
-      <Stack.Screen name="AssignHours" component={AssignHoursScreen} options={{ title: 'Acordare Ore Manuală' }} />
-      
-      {/* NOU: Ecrane Contribuții Speciale */}
-      <Stack.Screen name="AssignContribution" component={AssignContributionScreen} options={{ title: 'Acordare Contribuție' }} />
-      <Stack.Screen name="ContributionRequests" component={ContributionRequestsScreen} options={{ title: 'Aprobări Contribuții' }} />
-      <Stack.Screen name="ManageContributions" component={ManageContributionsScreen} options={{ title: 'Toate Contribuțiile' }} />
-      <Stack.Screen name="EditContribution" component={EditContributionScreen} options={{ title: 'Editare Contribuție' }} />
+        initialRouteName="AdminMenu"
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: colors.card,
+            elevation: 0,
+            shadowOpacity: 0,
+            borderBottomWidth: 1,
+            borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+          },
+          headerTintColor: colors.textPrimary,
+          headerTitleStyle: {
+            fontSize: 16,
+            fontWeight: '800',
+            color: colors.textPrimary,
+          },
+          headerBackTitle: ' ',
+          headerShown: true,
+        }}
+      >
+        {/* --- ECRANE PARTAJATE (Admin & Coordonator) --- */}
+        <Stack.Screen name="AdminMenu" component={withHeaderOffset(AdminMenuScreen)} options={{ headerShown: false }} />
+        <Stack.Screen name="AdminManageEvents" component={ManageEventsScreen} options={{ title: 'Gestionează Activități' }} />
+        <Stack.Screen name="EventForm" component={EventFormScreen} options={{ title: 'Formular Activitate' }} />
+        <Stack.Screen name="EventParticipants" component={EventParticipantsScreen} options={({ route }) => ({ title: route.params?.eventTitle || 'Participanți' })} />
+        <Stack.Screen name="Statistics" component={StatisticsScreen} options={{ title: 'Statistici' }} />
+        
+        <Stack.Screen name="HourRequests" component={HourRequestsScreen} options={{ title: 'Aprobări Ore' }} />
+        <Stack.Screen name="AssignHours" component={AssignHoursScreen} options={{ title: 'Acordare Ore Manuală' }} />
+        
+        {/* Ecrane Contribuții Speciale */}
+        <Stack.Screen name="AssignContribution" component={AssignContributionScreen} options={{ title: 'Acordare Contribuție' }} />
+        <Stack.Screen name="ContributionRequests" component={ContributionRequestsScreen} options={{ title: 'Aprobări Contribuții' }} />
+        <Stack.Screen name="ManageContributions" component={ManageContributionsScreen} options={{ title: 'Toate Contribuțiile' }} />
+        <Stack.Screen name="EditContribution" component={EditContributionScreen} options={{ title: 'Editare Contribuție' }} />
 
-      {/* --- ECRANE DOAR PENTRU ADMIN (Definite întotdeauna) --- */}
-      <Stack.Screen name="AdminUserList" component={UserListScreen} options={{ title: 'Utilizatori' }} />
-      <Stack.Screen name="SendNotification" component={SendNotificationScreen} options={{ title: 'Trimite Notificare' }} />
-      <Stack.Screen name="PostForm" component={PostFormScreen} options={{ title: 'Postare Nouă' }} />
-      <Stack.Screen name="AuditLog" component={AuditLogScreen} options={{ title: 'Jurnal de Audit' }} />
-      <Stack.Screen 
-        name="ManageBadges" 
-        component={ManageBadgesScreen} 
-        options={{ title: 'Gestionează Badge-uri' }} 
-      />
-      <Stack.Screen 
-        name="BadgeForm" 
-        component={BadgeFormScreen} 
-        options={({ route }) => ({ 
-          title: route.params?.badge ? 'Editează Badge' : 'Adaugă Badge' 
-        })} 
-      />
+        {/* --- ECRANE DOAR PENTRU ADMIN --- */}
+        <Stack.Screen name="AdminUserList" component={UserListScreen} options={{ title: 'Utilizatori' }} />
+        <Stack.Screen name="SendNotification" component={SendNotificationScreen} options={{ title: 'Trimite Notificare' }} />
+        <Stack.Screen name="PostForm" component={PostFormScreen} options={{ title: 'Postare Nouă' }} />
+        <Stack.Screen name="AuditLog" component={AuditLogScreen} options={{ title: 'Jurnal de Audit' }} />
+        <Stack.Screen name="ManageBadges" component={ManageBadgesScreen} options={{ title: 'Gestionează Badge-uri' }} />
+        <Stack.Screen name="BadgeForm" component={BadgeFormScreen} options={({ route }) => ({ title: route.params?.badge ? 'Editează Badge' : 'Adaugă Badge' })} />
 
-      <Stack.Screen name="UserDetails" component={UserDetailsScreen} options={({ route }) => ({ title: route.params?.userName || 'Detalii Utilizator' })} />
+        <Stack.Screen name="UserDetails" component={UserDetailsScreen} options={({ route }) => ({ title: route.params?.userName || 'Detalii Utilizator' })} />
 
-      {/* Verificare Studenți */}
-      <Stack.Screen name="StudentVerificationRequests" component={StudentVerificationRequestsScreen} options={{ title: 'Verificări Studenți' }} />
-      <Stack.Screen name="StudentVerification" component={StudentVerificationScreen} options={{ headerShown: false }} />
+        {/* Verificare Studenți */}
+        <Stack.Screen name="StudentVerificationRequests" component={StudentVerificationRequestsScreen} options={{ title: 'Verificări Studenți' }} />
+        <Stack.Screen name="StudentVerification" component={StudentVerificationScreen} options={{ headerShown: false }} />
 
-      {/* Rapoarte Comentarii */}
-      <Stack.Screen name="ReportedComments" component={ReportedCommentsScreen} options={{ title: 'Comentarii Raportate' }} />
-    </Stack.Navigator>
+        {/* Rapoarte Comentarii */}
+        <Stack.Screen name="ReportedComments" component={ReportedCommentsScreen} options={{ title: 'Comentarii Raportate' }} />
+      </Stack.Navigator>
     </View>
   );
 }

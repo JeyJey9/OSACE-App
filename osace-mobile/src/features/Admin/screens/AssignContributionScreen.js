@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useLayoutEffect } from 'react';
-import { 
+import {
   View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, TextInput, Modal, SafeAreaView
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -14,7 +14,7 @@ export default function AssignContributionScreen() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventModalVisible, setEventModalVisible] = useState(false);
@@ -96,15 +96,15 @@ export default function AssignContributionScreen() {
   const filteredUsers = useMemo(() => {
     if (!searchQuery) return users;
     const query = searchQuery.toLowerCase();
-    return users.filter(user => 
-      (user.first_name?.toLowerCase().includes(query) || 
-       user.last_name?.toLowerCase().includes(query) || 
-       user.display_name?.toLowerCase().includes(query))
+    return users.filter(user =>
+    (user.first_name?.toLowerCase().includes(query) ||
+      user.last_name?.toLowerCase().includes(query) ||
+      user.display_name?.toLowerCase().includes(query))
     );
   }, [users, searchQuery]);
 
   const toggleUserSelection = (userId) => {
-    setSelectedUserIds(prev => 
+    setSelectedUserIds(prev =>
       prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
     );
   };
@@ -132,7 +132,7 @@ export default function AssignContributionScreen() {
     const isSelected = selectedUserIds.includes(item.id);
 
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.userCard, isSelected && styles.userCardSelected]}
         onPress={() => toggleUserSelection(item.id)}
         activeOpacity={0.7}
@@ -141,10 +141,10 @@ export default function AssignContributionScreen() {
           <Text style={styles.userName}>{item.first_name} {item.last_name}</Text>
           <Text style={styles.userEmail}>{item.email}</Text>
         </View>
-        <Ionicons 
-          name={isSelected ? "checkmark-circle" : "ellipse-outline"} 
-          size={24} 
-          color={isSelected ? colors.primary : colors.textSecondary} 
+        <Ionicons
+          name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+          size={24}
+          color={isSelected ? colors.primary : colors.textSecondary}
         />
       </TouchableOpacity>
     );
@@ -169,10 +169,10 @@ export default function AssignContributionScreen() {
             onChangeText={setSearchQuery}
           />
           <TouchableOpacity onPress={selectAllFiltered} style={styles.selectBtn}>
-            <Text style={{color: colors.primary, fontWeight: 'bold'}}>Select Toți</Text>
+            <Text style={{ color: colors.primary, fontWeight: 'bold' }}>Select Toți</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={deselectAllFiltered} style={styles.selectBtn}>
-            <Text style={{color: colors.textSecondary}}>Deselect</Text>
+            <Text style={{ color: colors.textSecondary }}>Deselect</Text>
           </TouchableOpacity>
         </View>
 
@@ -180,7 +180,7 @@ export default function AssignContributionScreen() {
           <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
         ) : (
           <View style={styles.listContainer}>
-            <Text style={{color: colors.textSecondary, marginBottom: 8, fontSize: 12}}>
+            <Text style={{ color: colors.textSecondary, marginBottom: 8, fontSize: 12 }}>
               {selectedUserIds.length} voluntari selectați
             </Text>
             <FlatList
@@ -195,8 +195,8 @@ export default function AssignContributionScreen() {
         )}
 
         <View style={styles.formContainer}>
-          <TouchableOpacity 
-            style={styles.eventSelector} 
+          <TouchableOpacity
+            style={styles.eventSelector}
             onPress={() => setEventModalVisible(true)}
           >
             <Text style={{ color: selectedEvent ? colors.textPrimary : colors.textSecondary }}>
@@ -229,8 +229,8 @@ export default function AssignContributionScreen() {
             onChangeText={setHoursToGrant}
             keyboardType="numeric"
           />
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[styles.submitButton, (selectedUserIds.length === 0 || !title || !description || !hoursToGrant) && styles.submitButtonDisabled]}
             onPress={handleSubmit}
             disabled={selectedUserIds.length === 0 || submitLoading}
@@ -254,7 +254,7 @@ export default function AssignContributionScreen() {
                 <Ionicons name="close" size={28} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.modalItem}
               onPress={() => { setSelectedEvent(null); setEventModalVisible(false); }}
             >
@@ -263,8 +263,8 @@ export default function AssignContributionScreen() {
             <FlatList
               data={events}
               keyExtractor={item => item.id.toString()}
-              renderItem={({item}) => (
-                <TouchableOpacity 
+              renderItem={({ item }) => (
+                <TouchableOpacity
                   style={styles.modalItem}
                   onPress={() => { setSelectedEvent(item); setEventModalVisible(false); }}
                 >

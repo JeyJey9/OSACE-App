@@ -12,6 +12,7 @@ import {
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import api from '../../../services/api';
+import screenCache from '../../../services/screenCache';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import HistorySkeleton from '../components/HistorySkeleton';
 import EmptyState from '../../../components/EmptyState';
@@ -24,15 +25,22 @@ export default function HistoryScreen() {
   const navigation = useNavigation();
   const { reloadUser } = useAuth();
 
-  const [pastEvents, setPastEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // ─── Cache: folosim cheie compusă din mod + an pentru fiecare combinație de filtre ───
+  // La revenirea pe tab: date afișate instant din cache.
+  // La schimbarea filtrelor: skeleton intenționat (date noi).
+  const getCacheKey = (mode, year) => `history_${mode}_${year ?? 'all'}`;
+  const initialCacheKey = getCacheKey('mine', null);
+  const initialCached = screenCache.get(initialCacheKey);
+
+  const [pastEvents, setPastEvents] = useState(initialCached ?? []);
+  const [loading, setLoading] = useState(initialCached === null);
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState('mine');
   const [availableYears, setAvailableYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
   const { colors, isDark } = useThemeColor();
   // Skeleton apare doar la prima încărcare; schimbarea filtrelor arată skeleton (intenționat)
-  const hasLoadedOnce = useRef(false);
+  const hasLoadedOnce = useRef(initialCached !== null);
 
   const CATEGORY_TAGS = {
     sedinta: { label: 'Ședință', color: '#3498db' },
@@ -51,15 +59,18 @@ export default function HistoryScreen() {
     });
   };
 
-  const fetchPastEvents = async (mode = viewMode, yearParam = selectedYear) => {
+  const fetchPastEvents = async (mode = viewMode, yearParam = selectedYear, { silent = false } = {}) => {
+    const cacheKey = getCacheKey(mode, yearParam);
+    if (!silent) setLoading(true);
     try {
       const endpoint = mode === 'mine' ? '/api/profile/my-past-events' : '/api/profile/all-past-events';
       const yearQuery = yearParam ? `?year=${yearParam}` : '';
       const response = await api.get(`${endpoint}${yearQuery}`);
+      screenCache.set(cacheKey, response.data);
       setPastEvents(response.data);
     } catch (error) {
       console.error("Eroare la preluarea istoricului:", error);
-      Alert.alert("Eroare", "Nu am putut prelua istoricul activităților.");
+      if (!silent) Alert.alert("Eroare", "Nu am putut prelua istoricul activităților.");
     } finally {
       setLoading(false);
       hasLoadedOnce.current = true;
@@ -77,8 +88,10 @@ export default function HistoryScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    // Invalideză cache-ul pentru combinația curentă de filtre
+    screenCache.invalidate(getCacheKey(viewMode, selectedYear));
     await Promise.all([
-      fetchPastEvents(viewMode, selectedYear),
+      fetchPastEvents(viewMode, selectedYear, { silent: true }),
       fetchAvailableYears(),
       reloadUser()
     ]);
@@ -87,12 +100,17 @@ export default function HistoryScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      // La prima încărcare arată skeleton.
-      // La revenirea pe tab (fără schimbare de filtru): fetch silentios.
-      // La schimbarea viewMode/selectedYear: loading=true e setat direct de butoanele UI.
-      if (!hasLoadedOnce.current) setLoading(true);
+      // La revenirea pe tab: dacă avem cache pentru filtrele curente → fetch silentios
+      // La schimbarea filtrelor (viewMode/selectedYear): loading=true e setat de butoanele UI
+      const cacheKey = getCacheKey(viewMode, selectedYear);
+      const hasCached = screenCache.get(cacheKey) !== null;
+      // La primul focus, actualizăm cu cache-ul deja încărcat în state init
+      if (hasCached && hasLoadedOnce.current) {
+        const cachedData = screenCache.get(cacheKey);
+        if (cachedData) setPastEvents(cachedData);
+      }
       fetchAvailableYears();
-      fetchPastEvents(viewMode, selectedYear);
+      fetchPastEvents(viewMode, selectedYear, { silent: hasCached });
     }, [viewMode, selectedYear])
   );
 

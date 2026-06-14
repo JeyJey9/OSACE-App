@@ -16,6 +16,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../features/Auth/AuthContext';
 import api from '../../../services/api';
+import screenCache from '../../../services/screenCache';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PostCard from '../components/PostCard';
 import FeedSkeleton from '../components/FeedSkeleton';
@@ -27,11 +28,15 @@ export default function NewsFeedScreen() {
   const navigation = useNavigation();
   const { user, reloadUser } = useAuth();
   const managementTabName = user?.role === 'admin' ? 'Admin' : 'Coordonare';
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  // ─── Cache: poștele afișate instant la swipe, fără skeleton ───
+  const CACHE_KEY = 'news_feed';
+  const cached = screenCache.get(CACHE_KEY);
+
+  const [posts, setPosts] = useState(cached ?? []);
+  const [loading, setLoading] = useState(cached === null);
   const [refreshing, setRefreshing] = useState(false);
-  // Skeleton apare o singură dată la prima încărcare a sesiunii
-  const hasLoadedOnce = useRef(false);
+  const hasLoadedOnce = useRef(cached !== null);
 
   // ─── iOS only: PanResponder pentru zona dreaptă 75% → navigate('Activități') ───
   // Pe iOS pager-ul e dezactivat pe Noutăți (ca Drawer-ul să nu conflictuieze),
@@ -73,13 +78,15 @@ export default function NewsFeedScreen() {
 
   const { colors } = useThemeColor();
 
-  const fetchPosts = async () => {
+  const fetchPosts = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const response = await api.get('/api/posts');
+      screenCache.set(CACHE_KEY, response.data);
       setPosts(response.data);
     } catch (error) {
       console.error("Eroare la preluarea postărilor:", error);
-      Alert.alert("Eroare", "Nu s-au putut încărca noutățile.");
+      if (!silent) Alert.alert("Eroare", "Nu s-au putut încărca noutățile.");
     } finally {
       setLoading(false);
       hasLoadedOnce.current = true;
@@ -88,8 +95,9 @@ export default function NewsFeedScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    screenCache.invalidate(CACHE_KEY);
     await Promise.all([
-      fetchPosts(),
+      fetchPosts({ silent: true }),
       reloadUser()
     ]);
     setRefreshing(false);
@@ -97,22 +105,18 @@ export default function NewsFeedScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      // Prima vizită: arată FeedSkeleton + fetch
-      // Vizitele ulterioare (swipe între tab-uri): fetch silentios, postele rămân vizibile
-      if (!hasLoadedOnce.current) setLoading(true);
-      fetchPosts();
+      // Dacă avem poște în cache → fetch silentios (zero skeleton la swipe)
+      // Dacă nu avem cache → arată FeedSkeleton și așteaptă
+      const hasCached = screenCache.get(CACHE_KEY) !== null;
+      fetchPosts({ silent: hasCached });
 
       // Activează Drawer-ul nativ NUMAI pe tab-ul Noutăți (fluid tracking).
-      // swipeEdgeWidth (25%) e definit global în MainDrawer screenOptions.
-      // Pe iOS: fără conflict cu pager (dezactivat pe Noutăți), Drawer câștigă sigur.
-      // Pe Android: Drawer coexistă cu pager nativ, funcționează pe ambele.
       const drawerNav = navigation.getParent('MainDrawer');
       if (drawerNav) {
         drawerNav.setOptions({ swipeEnabled: true });
       }
 
       return () => {
-        // Dezactivează swipe-ul Drawer când intrăm pe alt tab principal
         if (drawerNav) {
           drawerNav.setOptions({ swipeEnabled: false });
         }

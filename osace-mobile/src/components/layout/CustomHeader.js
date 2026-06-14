@@ -7,6 +7,7 @@ import {
   Platform,
   Animated,
   Image,
+  Easing,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -72,7 +73,7 @@ const getTimeIcon = () => {
   return 'moon-outline';
 };
 
-export default function CustomHeader({ title, showRole = true }) {
+export default function CustomHeader({ title, showRole = true, isHidden = false }) {
   const { user } = useAuth();
   const { colors, isDark } = useThemeColor();
   const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
@@ -94,12 +95,34 @@ export default function CustomHeader({ title, showRole = true }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-6)).current;
 
+  // Slide up and fade transitions when transitioning to sub-screens
+  const slideUpAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
       Animated.spring(slideAnim, { toValue: 0, tension: 90, friction: 12, useNativeDriver: true }),
     ]).start();
   }, []);
+
+  useEffect(() => {
+    const duration = isHidden ? 150 : 220;
+    Animated.parallel([
+      Animated.timing(opacityAnim, {
+        toValue: isHidden ? 0 : 1,
+        duration,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideUpAnim, {
+        toValue: isHidden ? -160 : 0,
+        duration,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [isHidden]);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
@@ -118,11 +141,19 @@ export default function CustomHeader({ title, showRole = true }) {
     ? (insets?.top || 25) + 12
     : Math.max(insets?.top || 0, 12);
 
+  const combinedOpacity = Animated.multiply(fadeAnim, opacityAnim);
+
   return (
     <Animated.View
       style={[
         styles.wrapper,
-        { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+        { 
+          opacity: combinedOpacity, 
+          transform: [
+            { translateY: slideAnim },
+            { translateY: slideUpAnim }
+          ]
+        }
       ]}
     >
       {/* ── Blurred frosted glass base ── */}
@@ -143,86 +174,88 @@ export default function CustomHeader({ title, showRole = true }) {
 
         {/* Content row */}
         <View style={styles.contentRow}>
-          {/* Left: greeting + name + role */}
-          <View style={styles.headerLeft}>
-            {title ? (
-              <Text style={[styles.headerTitleBig, { color: colors.textPrimary }]}>{title}</Text>
-            ) : (
-              <>
-                <View style={styles.greetingRow}>
-                  <Ionicons name={getTimeIcon()} size={12} color={roleColor} style={{ marginRight: 5 }} />
-                  <Text style={[styles.greetingText, { color: roleColor }]}>
-                    {getGreeting().toUpperCase()}
+            {/* Left: greeting + name + role */}
+            <View style={styles.headerLeft}>
+              {title ? (
+                <Text style={[styles.headerTitleBig, { color: colors.textPrimary }]}>{title}</Text>
+              ) : (
+                <>
+                  <View style={styles.greetingRow}>
+                    <Ionicons name={getTimeIcon()} size={12} color={roleColor} style={{ marginRight: 5 }} />
+                    <Text style={[styles.greetingText, { color: roleColor }]}>
+                      {getGreeting().toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text style={[styles.headerTitleBig, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {user?.display_name || user?.first_name || 'Utilizator'}
                   </Text>
-                </View>
-                <Text style={[styles.headerTitleBig, { color: colors.textPrimary }]} numberOfLines={1}>
-                  {user?.display_name || user?.first_name || 'Utilizator'}
-                </Text>
-                {showRole && (
-                  <View style={[styles.roleTag, {
-                    backgroundColor: roleColor + '18',
-                    borderColor: roleColor + '35',
+                  {showRole && (
+                    <View style={[styles.roleTag, {
+                      backgroundColor: roleColor + '18',
+                      borderColor: roleColor + '35',
+                    }]}>
+                      <View style={[styles.roleDot, { backgroundColor: roleColor }]} />
+                      <Text style={[styles.roleText, { color: roleColor }]}>{roleText}</Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+
+            {/* Right: notifications + avatar */}
+            <View style={styles.headerRight}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('NotificationHistory')}
+                style={[styles.iconButton, {
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
+                }]}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="notifications-outline" size={20} color={colors.textPrimary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
+                style={styles.avatarButton}
+                activeOpacity={0.8}
+              >
+                {avatarUri ? (
+                  <Image
+                    source={{ uri: avatarUri }}
+                    style={[styles.avatarImg, { borderColor: roleColor + '60' }]}
+                  />
+                ) : (
+                  <View style={[styles.avatarFallback, {
+                    backgroundColor: roleColor + '22',
+                    borderColor: roleColor + '45',
+                    justifyContent: 'center',
+                    alignItems: 'center',
                   }]}>
-                    <View style={[styles.roleDot, { backgroundColor: roleColor }]} />
-                    <Text style={[styles.roleText, { color: roleColor }]}>{roleText}</Text>
+                    <Text style={[styles.avatarInitial, { color: roleColor }]}>
+                      {(user?.display_name || user?.first_name || 'U')[0].toUpperCase()}
+                    </Text>
                   </View>
                 )}
-              </>
-            )}
-          </View>
-
-          {/* Right: notifications + avatar */}
-          <View style={styles.headerRight}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('NotificationHistory')}
-              style={[styles.iconButton, {
-                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
-              }]}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="notifications-outline" size={20} color={colors.textPrimary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
-              style={styles.avatarButton}
-              activeOpacity={0.8}
-            >
-              {avatarUri ? (
-                <Image
-                  source={{ uri: avatarUri }}
-                  style={[styles.avatarImg, { borderColor: roleColor + '60' }]}
+                <View 
+                  style={[
+                    styles.onlineDot, 
+                    { 
+                      backgroundColor: isConnected ? '#2ecc71' : '#e74c3c',
+                      borderColor: isDark ? '#111' : '#fff' 
+                    }
+                  ]} 
                 />
-              ) : (
-                <View style={[styles.avatarFallback, {
-                  backgroundColor: roleColor + '22',
-                  borderColor: roleColor + '45',
-                }]}>
-                  <Text style={[styles.avatarInitial, { color: roleColor }]}>
-                    {(user?.display_name || user?.first_name || 'U')[0].toUpperCase()}
-                  </Text>
-                </View>
-              )}
-              <View 
-                style={[
-                  styles.onlineDot, 
-                  { 
-                    backgroundColor: isConnected ? '#2ecc71' : '#e74c3c',
-                    borderColor: isDark ? '#111' : '#fff' 
-                  }
-                ]} 
-              />
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </BlurView>
+        </BlurView>
 
-      {/* ── Bottom separator: role-colored accent line only ── */}
-      <View style={styles.separatorStack}>
-        <View style={[styles.separatorAccent, { backgroundColor: roleColor }]} />
-      </View>
-    </Animated.View>
+        {/* ── Bottom separator: role-colored accent line only ── */}
+        <View style={styles.separatorStack}>
+          <View style={[styles.separatorAccent, { backgroundColor: roleColor }]} />
+        </View>
+      </Animated.View>
   );
 }
 

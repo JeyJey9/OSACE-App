@@ -13,6 +13,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../../features/Auth/AuthContext';
 import api from '../../../services/api';
+import screenCache from '../../../services/screenCache';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import EmptyState from '../../../components/EmptyState';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -25,11 +26,15 @@ const SECTION_TITLES = {
 
 export default function HomeScreen({ navigation }) {
   const { user, reloadUser } = useAuth();
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  // ─── Cache: date afișate instant la swipe, fără skeleton ───
+  const CACHE_KEY = 'home_events';
+  const cached = screenCache.get(CACHE_KEY);
+
+  const [events, setEvents] = useState(cached ?? []);
+  const [loading, setLoading] = useState(cached === null); // skeleton doar dacă nu avem cache
   const [refreshing, setRefreshing] = useState(false);
-  // Marchează dacă prima încărcare a avut loc — skeleton apare o singură dată
-  const hasLoadedOnce = useRef(false);
+  const hasLoadedOnce = useRef(cached !== null); // dacă avem cache, marcăm ca deja încărcat
 
   const { colors, isDark } = useThemeColor();
 
@@ -42,13 +47,16 @@ export default function HomeScreen({ navigation }) {
 
   const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
 
-  const fetchEvents = async () => {
+  const fetchEvents = async ({ silent = false } = {}) => {
+    // silent = true → nu arată skeleton (date din cache sunt deja vizibile)
+    if (!silent) setLoading(true);
     try {
       const response = await api.get('/api/events');
+      screenCache.set(CACHE_KEY, response.data);
       setEvents(response.data);
     } catch (error) {
       console.error("Eroare la preluarea activităților:", error);
-      Alert.alert("Eroare", "Nu s-au putut încărca activitățile.");
+      if (!silent) Alert.alert("Eroare", "Nu s-au putut încărca activitățile.");
     } finally {
       setLoading(false);
       hasLoadedOnce.current = true;
@@ -57,8 +65,9 @@ export default function HomeScreen({ navigation }) {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    screenCache.invalidate(CACHE_KEY);
     await Promise.all([
-      fetchEvents(),
+      fetchEvents({ silent: true }),
       reloadUser()
     ]);
     setRefreshing(false);
@@ -66,10 +75,10 @@ export default function HomeScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      // Prima vizită: arată skeleton + fetch
-      // Vizitele ulterioare: fetch silentios în background (conținutul rămâne vizibil)
-      if (!hasLoadedOnce.current) setLoading(true);
-      fetchEvents();
+      // Dacă avem date în cache → fetch silentios în background (zero skeleton)
+      // Dacă nu avem cache → arată skeleton și asteaptă
+      const hasCached = screenCache.get(CACHE_KEY) !== null;
+      fetchEvents({ silent: hasCached });
     }, [])
   );
 

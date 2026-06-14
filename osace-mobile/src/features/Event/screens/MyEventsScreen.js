@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import api from '../../../services/api';
+import screenCache from '../../../services/screenCache';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../constants/useThemeColor';
@@ -20,15 +21,20 @@ import { useAuth } from '../../Auth/AuthContext';
 
 export default function MyEventsScreen() {
   const navigation = useNavigation();
-  const [myEvents, setMyEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  // ─── Cache: date afișate instant la swipe, fără skeleton ───
+  const CACHE_KEY = 'my_events';
+  const cached = screenCache.get(CACHE_KEY);
+
+  const [myEvents, setMyEvents] = useState(cached ?? []);
+  const [loading, setLoading] = useState(cached === null);
   const { colors, isDark } = useThemeColor();
   const { reloadUser } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
-  const hasLoadedOnce = useRef(false);
+  const hasLoadedOnce = useRef(cached !== null);
 
   const CATEGORY_TAGS = {
-    sedinta: { label: 'Ședință', color: '#3498db' },
+    sedinta: { label: 'Sedință', color: '#3498db' },
     social: { label: 'Social', color: '#27ae60' },
     proiect: { label: 'Proiect', color: '#f39c12' },
     default: { label: 'Activitate', color: colors.textSecondary }
@@ -36,13 +42,15 @@ export default function MyEventsScreen() {
 
   const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
 
-  const fetchMyEvents = async () => {
+  const fetchMyEvents = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const response = await api.get('/api/profile/my-events');
+      screenCache.set(CACHE_KEY, response.data);
       setMyEvents(response.data);
     } catch (error) {
       console.error("Eroare la preluarea evenimentelor mele:", error);
-      Alert.alert("Eroare", "Nu am putut prelua evenimentele.");
+      if (!silent) Alert.alert("Eroare", "Nu am putut prelua evenimentele.");
     } finally {
       setLoading(false);
       hasLoadedOnce.current = true;
@@ -51,19 +59,18 @@ export default function MyEventsScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-
+    screenCache.invalidate(CACHE_KEY);
     await Promise.all([
-      fetchMyEvents(),
+      fetchMyEvents({ silent: true }),
       reloadUser()
     ]);
-
     setRefreshing(false);
   }, [reloadUser]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!hasLoadedOnce.current) setLoading(true);
-      fetchMyEvents();
+      const hasCached = screenCache.get(CACHE_KEY) !== null;
+      fetchMyEvents({ silent: hasCached });
     }, [])
   );
 

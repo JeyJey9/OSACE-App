@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import api, { setupAxiosInterceptors } from '../../services/api';
 import { Alert } from 'react-native';
+import screenCache from '../../services/screenCache';
 
 const TOKEN_KEY = 'userToken';
 
@@ -22,6 +23,8 @@ export const AuthProvider = ({ children }) => {
     try {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       delete api.defaults.headers.common['Authorization'];
+      // Șterge cache-ul de date al ecranelor la logout — următorul user începe curat
+      screenCache.clear();
     } catch (e) {
       console.error("[AuthContext] Eroare la ștergerea token-ului:", e);
     } finally {
