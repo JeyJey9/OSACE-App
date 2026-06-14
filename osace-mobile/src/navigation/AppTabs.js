@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import { Platform, TouchableOpacity, View, StyleSheet, Text } from 'react-native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { useNavigationState } from '@react-navigation/native';
@@ -61,7 +61,9 @@ async function registerForPushNotificationsAsync() {
   return token;
 }
 
-function FloatingTabBar({ state, descriptors, navigation, colors, isDark }) {
+// ─── FloatingTabBar ─────────────────────────────────────────────────────────
+// React.memo previne re-render-uri inutile când pager-ul se actualizează
+const FloatingTabBar = React.memo(function FloatingTabBar({ state, descriptors, navigation, colors, isDark }) {
   return (
     <View style={[styles.tabBarContainer, {
       backgroundColor: isDark ? 'rgba(25, 30, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
@@ -128,53 +130,80 @@ function FloatingTabBar({ state, descriptors, navigation, colors, isDark }) {
       })}
     </View>
   );
-}
+});
 
+// ─── useIsInsideAdminSubScreen ───────────────────────────────────────────────
+// Selectorul returnează un boolean primitiv — re-render NUMAI când valoarea se schimbă
 function useIsInsideAdminSubScreen() {
-  const activePath = useNavigationState(state => {
-    function getActiveRouteNames(navState, names = []) {
-      if (!navState) return names;
-      const route = navState.routes[navState.index];
-      if (!route) return names;
-      names.push(route.name);
-      if (route.state) {
-        return getActiveRouteNames(route.state, names);
-      }
-      return names;
+  return useNavigationState(state => {
+    if (!state) return false;
+
+    // Traversăm arborele de navigație fără a aloca un array temporar
+    let current = state;
+    let hasAdmin = false;
+    let leafName = '';
+
+    while (current) {
+      const route = current.routes[current.index];
+      if (!route) break;
+      leafName = route.name;
+      if (route.name === 'Admin' || route.name === 'Coordonare') hasAdmin = true;
+      current = route.state ?? null;
     }
-    return getActiveRouteNames(state);
+
+    if (!hasAdmin) return false;
+    return leafName !== 'AdminMenu' && leafName !== 'Admin' && leafName !== 'Coordonare';
   });
-
-  if (!activePath || activePath.length === 0) return false;
-  const hasAdmin = activePath.includes('Admin') || activePath.includes('Coordonare');
-  if (!hasAdmin) return false;
-
-  // Ascunde header-ul doar în submeniuri (când ecranul activ nu este meniul principal)
-  const activeLeaf = activePath[activePath.length - 1];
-  return activeLeaf !== 'AdminMenu' && activeLeaf !== 'Admin' && activeLeaf !== 'Coordonare';
 }
 
-const withHeaderOffset = (Component) => {
-  return (props) => {
-    const insets = useSafeAreaInsets();
-    const headerPaddingTop = Platform.OS === 'android'
-      ? (insets?.top || 25) + 12
-      : Math.max(insets?.top || 0, 12);
-    const paddingTop = headerPaddingTop + 105;
+// ─── Wrapped screens ─────────────────────────────────────────────────────────
+// CRITIC: aceste componente trebuie create UNA SINGURĂ DATĂ, în afara lui AppTabs.
+// Dacă ar fi create în JSX (withHeaderOffset(HomeScreen)), React le-ar trata ca
+// tipuri noi la fiecare render al AppTabs → demontare + remontare completă la swipe = LAG.
+function HeaderOffsetWrapper({ children }) {
+  const insets = useSafeAreaInsets();
+  const headerPaddingTop = Platform.OS === 'android'
+    ? (insets?.top || 25) + 12
+    : Math.max(insets?.top || 0, 12);
+  const paddingTop = headerPaddingTop + 105;
+  return <View style={{ flex: 1, paddingTop }}>{children}</View>;
+}
 
-    return (
-      <View style={{ flex: 1, paddingTop }}>
-        <Component {...props} />
-      </View>
-    );
+function NewsFeedTab(props) {
+  return <HeaderOffsetWrapper><NewsFeedScreen {...props} /></HeaderOffsetWrapper>;
+}
+function HomeTab(props) {
+  return <HeaderOffsetWrapper><HomeScreen {...props} /></HeaderOffsetWrapper>;
+}
+function MyEventsTab(props) {
+  return <HeaderOffsetWrapper><MyEventsScreen {...props} /></HeaderOffsetWrapper>;
+}
+function HistoryTab(props) {
+  return <HeaderOffsetWrapper><HistoryScreen {...props} /></HeaderOffsetWrapper>;
+}
+
+// ─── screenOptions — obiect static, nu funcție inline ───────────────────────
+// Funcția e necesară pentru a diferi swipeEnabled per-route, dar o memoizăm
+function buildScreenOptions({ route }) {
+  return {
+    lazy: false,
+    swipeEnabled: Platform.OS === 'android' || route.name !== 'Noutăți',
+    animationEnabled: true,
   };
-};
+}
 
+// ─── AppTabs ─────────────────────────────────────────────────────────────────
 export default function AppTabs() {
   const { user } = useAuth();
   const { colors, theme } = useThemeColor();
   const isDark = theme === 'dark';
   const hideHeader = useIsInsideAdminSubScreen();
+
+  // tabBar callback stabil — nu recrea FloatingTabBar la fiecare render al AppTabs
+  const renderTabBar = useCallback(
+    (props) => <FloatingTabBar {...props} colors={colors} isDark={isDark} />,
+    [colors, isDark]
+  );
 
   useEffect(() => {
     const setupPushNotifications = async () => {
@@ -196,52 +225,27 @@ export default function AppTabs() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Header-ul stă fix absolut în afara pager-ului — se ascunde cu tranziție nativă de transformare */}
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
+      {/* Header-ul stă fix absolut în afara pager-ului */}
+      <View style={styles.headerContainer}>
         <CustomHeader isHidden={hideHeader} />
       </View>
 
       <Tab.Navigator
         tabBarPosition="bottom"
-        tabBar={(props) => <FloatingTabBar {...props} colors={colors} isDark={isDark} />}
-        screenOptions={({ route }) => ({
-          lazy: false,
-          swipeEnabled: Platform.OS === 'android' || route.name !== 'Noutăți',
-          animationEnabled: true,
-        })}
+        tabBar={renderTabBar}
+        screenOptions={buildScreenOptions}
       >
-        <Tab.Screen
-          name="Noutăți"
-          component={withHeaderOffset(NewsFeedScreen)}
-        />
-
-        <Tab.Screen
-          name="Activități"
-          component={withHeaderOffset(HomeScreen)}
-        />
-
-        <Tab.Screen
-          name="Activitățile Mele"
-          component={withHeaderOffset(MyEventsScreen)}
-        />
-
-        <Tab.Screen
-          name="Istoric"
-          component={withHeaderOffset(HistoryScreen)}
-        />
+        <Tab.Screen name="Noutăți" component={NewsFeedTab} />
+        <Tab.Screen name="Activități" component={HomeTab} />
+        <Tab.Screen name="Activitățile Mele" component={MyEventsTab} />
+        <Tab.Screen name="Istoric" component={HistoryTab} />
 
         {user && user.role === 'coordonator' && (
-          <Tab.Screen
-            name="Coordonare"
-            component={ManagementNavigator}
-          />
+          <Tab.Screen name="Coordonare" component={ManagementNavigator} />
         )}
 
         {user && user.role === 'admin' && (
-          <Tab.Screen
-            name="Admin"
-            component={ManagementNavigator}
-          />
+          <Tab.Screen name="Admin" component={ManagementNavigator} />
         )}
       </Tab.Navigator>
     </View>
@@ -249,6 +253,13 @@ export default function AppTabs() {
 }
 
 const styles = StyleSheet.create({
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
   tabBarContainer: {
     flexDirection: 'row',
     position: 'absolute',
@@ -279,4 +290,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

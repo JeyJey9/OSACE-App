@@ -80,7 +80,7 @@ export default function MyEventsScreen() {
     const isAttended = item.confirmation_status === 'attended';
     const isCheckedIn = item.confirmation_status === 'checked_in';
 
-    const startTime = new Date(item.start_time.replace(' ', 'T'));
+    const startTime = item.start_time ? new Date(item.start_time.replace(' ', 'T')) : null;
     const isOngoing = new Date() >= startTime;
     const tag = CATEGORY_TAGS[item.category] || CATEGORY_TAGS.default;
 

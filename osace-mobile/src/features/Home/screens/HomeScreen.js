@@ -24,6 +24,12 @@ const SECTION_TITLES = {
   proiect: 'Proiecte',
 };
 
+// Formatare dată safe — returnează 'N/A' dacă isoString e null/undefined
+const safeDate = (isoString, opts) => {
+  if (!isoString) return 'N/A';
+  return new Date(isoString.replace(' ', 'T')).toLocaleString('ro-RO', opts);
+};
+
 export default function HomeScreen({ navigation }) {
   const { user, reloadUser } = useAuth();
 
@@ -135,7 +141,7 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
             </View>
             <Text style={styles.eventDetails}>
-              {new Date(item.start_time.replace(' ', 'T')).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' })}
+              {safeDate(item.start_time, { dateStyle: 'medium', timeStyle: 'short' })}
             </Text>
           </View>
           <View style={styles.infoRow}>
