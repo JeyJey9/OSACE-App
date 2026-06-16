@@ -13,6 +13,8 @@
   <img src="https://img.shields.io/badge/Expo_SDK-54-000020?logo=expo&logoColor=white" />
   <img src="https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white" />
   <img src="https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/Version-2.0.0-blue" />
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-green" />
 </p>
 
@@ -39,15 +41,19 @@
 O.S.A.C.E. is a comprehensive volunteer management platform designed for student organisations. It enables coordinators and administrators to create, manage, and track volunteer events while providing volunteers with an engaging, gamified mobile experience.
 
 **Production URL:** `https://osace.ro`  
+**App URL:** `https://app.osace.ro`  
 **API URL:** `https://api.osace.ro`  
-**Android Package:** `com.osace.mobile`
+**Android Package:** `ro.osace.app`  
+**iOS Bundle ID:** `ro.osace.app`  
+**App Version:** `2.0.0`
 
-The platform consists of three modules:
+The platform consists of four modules:
 
 | Module | Description |
 |---|---|
 | **`osace-mobile`** | React Native (Expo) mobile app — the main volunteer-facing frontend |
 | **`osace-api`** | Node.js/Express REST API backend with PostgreSQL |
+| **`osace-web`** | Vue 3 web portal — admin & coordinator dashboard (web browser) |
 | **`osace-map`** | Design assets for the interactive faculty floor plan feature |
 
 ---
@@ -59,14 +65,21 @@ The platform consists of three modules:
 - **One-Tap Registration** — Sign up for events quickly
 - **QR Code Attendance** — Scan dynamic QR codes at events to check-in/check-out
 - **Personal Dashboard** — View enrolled events, participation history, and accumulated volunteer hours
+- **Academic Year Filtering** — View history and hours filtered by academic year
 - **News Feed** — Stay updated with organisation announcements, like and comment on posts
+- **Comment Reporting** — Report inappropriate comments for admin review
 - **Leaderboard** — Compete with fellow volunteers through an hours-based ranking system
 - **Achievement Badges** — Unlock 40+ badges through participation, streaks, and milestones
 - **Profile & Avatar** — Personalise your profile with a photo and view your stats
 - **Public Profiles** — View other volunteers' profiles and achievements
+- **Block Users** — Block other users from interacting with your profile
+- **Data Export** — Download a PDF report of your personal volunteer data (GDPR)
+- **Notification Preferences** — Control which push notifications you receive
 - **Push Notifications** — Receive alerts for new events, announcements, and updates
 - **Dark Mode** — Full light/dark theme support with system preference detection
 - **Faculty Map** — Interactive SVG-based building floor plan
+- **Student ID Verification** — Upload your student ID card photo to verify your student status
+- **Automatic Update Prompts** — In-app modal prompting users to update when a new version is available
 
 ### 🔧 For Coordinators
 - **Event Management** — Create, edit, and delete events with rich detail (location, description, category, duration)
@@ -75,15 +88,21 @@ The platform consists of three modules:
 - **Team Management** — Assign team members to events with specific permissions
 - **Hour Approval** — Review and approve volunteer hour requests (including auto-checkout cases)
 - **Manual Hour Assignment** — Manually assign hours to volunteers when needed
+- **Special Contributions** — Submit and track special one-off volunteer contributions outside regular events
+- **Report Review** — View and moderate reported comments from volunteers
+- **Web Dashboard** — Access the coordinator panel via browser at `https://app.osace.ro`
 
 ### 🛡️ For Administrators
 - **Full Coordinator Access** — Everything coordinators can do, plus:
 - **User Management** — View all users, change roles, manage permissions
 - **Permission System** — Granular permission control per coordinator
-- **Badge Management** — Create, edit, and delete achievement badges
+- **Badge Management** — Create, edit, and delete achievement badges with custom icons
 - **Send Notifications** — Push notifications to all users or specific groups
 - **Create Posts** — Publish rich-content news posts with images
 - **Organisation Statistics** — Dashboard with charts and activity metrics
+- **Special Contribution Approvals** — Approve or reject special contribution requests from coordinators
+- **Student ID Verification** — Review and approve/reject student ID verification photo submissions
+- **Audit Log** — Full audit trail of administrative actions (who did what and when)
 - **Onboarding Flow** — First-launch onboarding screens for new users
 
 ---
@@ -91,57 +110,66 @@ The platform consists of three modules:
 ## 🏗 Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      MOBILE APP                             │
-│              React Native / Expo SDK 54                     │
-│                                                             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────────┐          │
-│  │ ThemeCtx  │  │ AuthCtx  │  │ PermissionCtx    │          │
-│  └────┬─────┘  └────┬─────┘  └────────┬─────────┘          │
-│       └──────────────┼────────────────┘                     │
-│                      ▼                                      │
-│  ┌──────────────────────────────────────┐                   │
-│  │       Navigation Layer               │                   │
-│  │  Stack → Drawer → Tabs → Stacks     │                   │
-│  └──────────────┬───────────────────────┘                   │
-│                 ▼                                            │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                   Feature Modules                      │ │
-│  │  Auth │ Home │ Events │ Feed │ Profile │ Leaderboard  │ │
-│  │  History │ BadgeCatalog │ Map │ Notifications │ Admin  │ │
-│  └────────────────────────┬───────────────────────────────┘ │
-│                           ▼                                 │
-│                  ┌────────────────┐                          │
-│                  │  Axios Client  │                          │
-│                  │  (api.js)      │                          │
-│                  └────────┬───────┘                          │
-└───────────────────────────┼─────────────────────────────────┘
-                            │ HTTPS
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                       API SERVER                            │
-│                   Node.js / Express                         │
-│                                                             │
-│  ┌────────────┐  ┌──────────┐  ┌────────────┐              │
-│  │ JWT Auth   │  │  CORS    │  │  Multer    │              │
-│  │ Middleware │  │          │  │ (Uploads)  │              │
-│  └─────┬──────┘  └──────────┘  └────────────┘              │
-│        ▼                                                    │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                    Route Modules                       │ │
-│  │  /auth │ /profile │ /events │ /admin │ /notifications │ │
-│  │  /posts │ /badges │ /leaderboard                      │ │
-│  └────────────────────────┬───────────────────────────────┘ │
-│                           │                                 │
-│  ┌────────────────┐  ┌────┴───────┐  ┌──────────────────┐  │
-│  │ checkoutWorker │  │ PostgreSQL │  │   Brevo SMTP     │  │
-│  │ (every 30 min) │  │  Database  │  │   (Emails)       │  │
-│  └────────────────┘  └────────────┘  └──────────────────┘  │
-│  ┌────────────────┐  ┌─────────────────────────────┐       │
-│  │ badgeWorker    │  │  Expo Push Notification      │       │
-│  │ (scheduled)    │  │  Service                     │       │
-│  └────────────────┘  └─────────────────────────────┘       │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         MOBILE APP                                  │
+│                 React Native / Expo SDK 54                          │
+│                                                                     │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────────┐                  │
+│  │ ThemeCtx  │  │ AuthCtx  │  │ PermissionCtx    │                  │
+│  └────┬─────┘  └────┬─────┘  └────────┬─────────┘                  │
+│       └──────────────┼────────────────┘                             │
+│                      ▼                                              │
+│  ┌──────────────────────────────────────────────────┐               │
+│  │              Navigation Layer                    │               │
+│  │  RootStack → Drawer → MaterialTopTabs → Stacks  │               │
+│  └──────────────┬───────────────────────────────────┘               │
+│                 ▼                                                    │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │                      Feature Modules                         │   │
+│  │  Auth │ Home │ Events │ Feed │ Profile │ Leaderboard         │   │
+│  │  History │ BadgeCatalog │ Map │ Notifications │ Admin        │   │
+│  │  StudentVerification                                         │   │
+│  └──────────────────────────┬─────────────────────────────────┘   │
+│                             ▼                                       │
+│                    ┌────────────────┐                               │
+│                    │  Axios Client  │                               │
+│                    │  (api.js)      │                               │
+│                    └────────┬───────┘                               │
+└─────────────────────────────┼───────────────────────────────────────┘
+                              │ HTTPS
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                           WEB PORTAL                                │
+│                   Vue 3 + Vite (osace-web)                          │
+│  Login │ Admin Dashboard │ Leaderboard │ News Feed │ Profile        │
+└────────────────────────────────────┬────────────────────────────────┘
+                                     │ HTTPS
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                          API SERVER                                 │
+│                      Node.js / Express 5                            │
+│                                                                     │
+│  ┌─────────────┐  ┌──────────┐  ┌────────────┐  ┌───────────────┐  │
+│  │ JWT Auth    │  │  CORS    │  │  Multer    │  │ Rate Limiter  │  │
+│  │ Middleware  │  │          │  │ (Uploads)  │  │ (global)      │  │
+│  └──────┬──────┘  └──────────┘  └────────────┘  └───────────────┘  │
+│         ▼                                                           │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                       Route Modules                         │    │
+│  │  /auth │ /profile │ /events │ /admin │ /notifications       │    │
+│  │  /posts │ /badges │ /leaderboard │ /verification │ /config  │    │
+│  └─────────────────────────┬───────────────────────────────────┘    │
+│                            │                                        │
+│  ┌─────────────────┐  ┌────┴───────┐  ┌──────────────────┐         │
+│  │ checkoutWorker  │  │ PostgreSQL │  │   Brevo SMTP     │         │
+│  │ (every 30 min,  │  │  Database  │  │   (Emails)       │         │
+│  │  auto-start)    │  └────────────┘  └──────────────────┘         │
+│  └─────────────────┘                                               │
+│  ┌─────────────────┐  ┌─────────────────────────────┐              │
+│  │ badgeWorker     │  │  Expo Push Notification      │              │
+│  │ (cron job)      │  │  Service                     │              │
+│  └─────────────────┘  └─────────────────────────────┘              │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Navigation Hierarchy
@@ -156,36 +184,56 @@ App.js (Root Stack)
 │
 └── [Authenticated]
     ├── OnboardingScreen (first launch only)
+    ├── ScanScreen (QR code scanner overlay)
     └── MainDrawer
         ├── CoreAppNavigator (hidden from drawer)
-        │   ├── AppTabs (Bottom Tab Navigator)
+        │   ├── AppTabs (MaterialTopTabNavigator — floating pill tab bar)
         │   │   ├── Noutăți (News Feed)
         │   │   ├── Activități (All Events)
         │   │   ├── Activitățile Mele (My Events)
         │   │   ├── Istoric (History)
-        │   │   └── Admin/Coordonare (role-conditional)
-        │   │       └── ManagementNavigator (Stack)
-        │   │           ├── AdminMenuScreen
+        │   │   └── Admin / Coordonare (role-conditional tab)
+        │   │       └── ManagementNavigator (NativeStack)
+        │   │           ├── AdminMenuScreen          [shared: admin + coordinator]
+        │   │           ├── --- Events sub-domain ---
         │   │           ├── ManageEventsScreen
         │   │           ├── EventFormScreen
         │   │           ├── EventParticipantsScreen
+        │   │           ├── --- Users sub-domain ---
         │   │           ├── HourRequestsScreen
         │   │           ├── AssignHoursScreen
+        │   │           ├── --- Contributions sub-domain ---
+        │   │           ├── AssignContributionScreen
+        │   │           ├── ContributionRequestsScreen
+        │   │           ├── ManageContributionsScreen
+        │   │           ├── EditContributionScreen
+        │   │           ├── --- Admin-only screens ---
         │   │           ├── UserListScreen
         │   │           ├── UserDetailsScreen
         │   │           ├── SendNotificationScreen
         │   │           ├── PostFormScreen
+        │   │           ├── AuditLogScreen
         │   │           ├── ManageBadgesScreen
         │   │           ├── BadgeFormScreen
-        │   │           └── StatisticsScreen
+        │   │           ├── StatisticsScreen
+        │   │           ├── --- Student Verification ---
+        │   │           ├── StudentVerificationRequestsScreen
+        │   │           └── StudentVerificationScreen (fullscreen)
+        │   │           ├── --- Reports ---
+        │   │           └── ReportedCommentsScreen
         │   │
         │   ├── EventDetailScreen (overlay)
         │   ├── CommentsScreen (overlay)
         │   ├── PublicProfileScreen (overlay)
-        │   └── NotificationHistoryScreen (overlay)
+        │   ├── NotificationHistoryScreen (overlay)
+        │   └── StudentVerificationScreen (overlay — volunteer flow)
         │
-        ├── Profile
-        ├── EditProfile (hidden from drawer)
+        ├── ProfileStackNavigator (NativeStack)
+        │   ├── ProfileScreen
+        │   ├── EditProfileScreen
+        │   ├── DataExportScreen
+        │   ├── NotificationPreferencesScreen
+        │   └── BlockedUsersScreen
         ├── Leaderboard
         ├── Badge Catalog
         ├── Faculty Map
@@ -202,36 +250,65 @@ App.js (Root Stack)
 | Technology | Version | Purpose |
 |---|---|---|
 | React Native | 0.81.5 | Cross-platform mobile framework |
-| Expo | SDK 54 | Development platform & build service |
-| React Navigation | 7.x | Drawer, Tabs, Stack navigation |
+| React | 19.1.0 | UI library |
+| Expo | SDK 54.0.23 | Development platform & build service |
+| React Navigation | 7.x | Drawer, MaterialTopTabs, NativeStack navigation |
 | Axios | 1.13 | HTTP client with JWT interceptors |
-| Expo SecureStore | — | Secure token storage |
-| Expo Notifications | — | Push notification handling |
-| Expo Camera | — | QR code scanning |
-| Expo Image Picker | — | Avatar & image uploads |
-| React Native Calendars | — | Calendar views |
-| React Native Chart Kit | — | Statistics charts |
-| React Native QRCode SVG | — | QR code generation |
+| AsyncStorage | 2.2 | Local key-value storage |
+| Expo SecureStore | 15.x | Secure token storage |
+| Expo Notifications | 0.32 | Push notification handling |
+| Expo Camera | 17.x | QR code scanning |
+| Expo Image Picker | 17.x | Avatar & student ID photo uploads |
+| Expo Print + Sharing | 15.x / 14.x | PDF data export (GDPR) |
+| Expo AV | 16.x | Audio/video playback |
+| Expo Blur | 15.x | Blur effects (glassmorphism UI) |
+| Expo Haptics | 55.x | Haptic feedback |
+| Expo Web Browser | 15.x | In-app browser |
 | React Native Reanimated | 4.1 | Animations |
 | React Native Gesture Handler | 2.28 | Gestures & drawer swipe |
+| React Native Calendars | 1.x | Calendar views |
+| React Native Chart Kit | 6.x | Statistics charts |
+| React Native QRCode SVG | 6.x | QR code generation |
+| React Native SVG | 15.x | SVG rendering (faculty map) |
+| React Native WebView | 13.x | Embedded web content |
+| React Native Draggable FlatList | 4.x | Drag-to-reorder lists |
+| React Native Render HTML | 6.x | Rich HTML content rendering |
+| React Native Modal DateTime Picker | 18.x | Date/time picker modals |
+| React Native Device Info | 14.x | Device metadata |
 | Gorhom Bottom Sheet | 5.2 | Modal bottom sheets |
-| React Native Toast Message | — | In-app toast notifications |
+| React Native Toast Message | 2.x | In-app toast notifications |
+| NetInfo | 12.x | Network connectivity detection |
 | date-fns | 4.1 | Date formatting & manipulation |
 | jwt-decode | 4.0 | Client-side JWT decoding |
+| react-native-onboarding-swiper | 1.x | First-launch onboarding carousel |
 
 ### Backend (`osace-api`)
 
 | Technology | Purpose |
 |---|---|
-| Node.js + Express | REST API server |
+| Node.js + Express 5 | REST API server |
 | PostgreSQL (pg) | Relational database |
 | JSON Web Tokens (jsonwebtoken) | Authentication & authorization |
-| Argon2 | Password hashing |
+| Argon2 | Password hashing (primary) |
+| bcrypt | Password hashing (secondary/legacy) |
 | Nodemailer + Brevo SMTP | Transactional emails (welcome, password reset) |
-| Multer | File upload handling (avatars, post images) |
+| Multer | File upload handling (avatars, post images, student ID photos) |
 | OTPLib | TOTP-based dynamic QR codes |
+| express-rate-limit | Global API rate limiting |
+| Axios | Server-side HTTP calls (push notifications) |
 | CORS | Cross-origin request handling |
 | dotenv | Environment configuration |
+
+### Web Portal (`osace-web`)
+
+| Technology | Version | Purpose |
+|---|---|---|
+| Vue.js | 3.5 | Frontend framework |
+| Vite | 8.x | Build tool & dev server |
+| Vue Router | 5.x | Client-side routing |
+| Axios | 1.15 | HTTP client for API calls |
+| Lucide Vue Next | 1.x | Icon library |
+| QRCode | 1.5 | QR code generation (web) |
 
 ---
 
@@ -248,42 +325,47 @@ osace-project/
 │       ├── assets/                  # Images & icons
 │       │   └── osace.png            # App icon/logo
 │       ├── components/              # Shared/reusable components
+│       │   ├── DropdownPicker.js    # Dropdown component
+│       │   ├── EmptyState.js        # Empty state view
 │       │   ├── FilterModal.js       # Event filter modal
 │       │   ├── FullScreenLoading.js # Loading overlay
+│       │   ├── NetworkBanner.js     # No internet connection banner
 │       │   ├── SkeletonItem.js      # Skeleton loading placeholder
-│       │   ├── ThemeToggleSwitch.js  # Dark mode toggle
+│       │   ├── ThemeToggleSwitch.js # Dark mode toggle
 │       │   ├── forms/               # Form components
-│       │   └── layout/              # Layout components (ScreenContainer)
+│       │   └── layout/              # Layout components (ScreenContainer, CustomHeader, GlassAlert, UpdateModal)
 │       ├── constants/
 │       │   ├── theme.js             # Light & dark color palettes
 │       │   ├── useThemeColor.js     # Theme context & provider
-│       │   └── permissions.js       # Permission key constants
+│       │   ├── permissions.js       # Permission key constants
+│       │   └── Version.js           # App version constant
 │       ├── features/                # Feature-based modules
 │       │   ├── Auth/                # Authentication
-│       │   │   ├── AuthContext.js    # Auth state & JWT management
-│       │   │   ├── PermissionContext.js  # Permission checking
+│       │   │   ├── AuthContext.js   # Auth state & JWT management
+│       │   │   ├── PermissionContext.js # Permission checking
 │       │   │   └── screens/         # Login, Register, Onboarding, etc.
 │       │   ├── Home/                # Main events listing
 │       │   ├── Event/               # Event detail, my events, QR scan
 │       │   ├── Feed/                # News feed with likes & comments
-│       │   │   ├── components/      # PostCard, FeedSkeleton
-│       │   │   └── screens/         # NewsFeedScreen, CommentsScreen
 │       │   ├── History/             # Participation history
-│       │   ├── Profile/             # User profile
-│       │   │   ├── components/      # ProfileHeader, ProfileStats, BadgeList
-│       │   │   └── screens/         # ProfileScreen, EditProfile, PublicProfile
+│       │   ├── Profile/             # User profile (Stats, Data Export, Preferences)
 │       │   ├── Leaderboard/         # Volunteer rankings
 │       │   ├── BadgeCatalog/        # Achievement browser
 │       │   ├── Map/                 # Interactive faculty map
 │       │   ├── Notifications/       # Notification history
+│       │   ├── StudentVerification/ # Student ID upload flow
 │       │   └── Admin/               # Admin & coordinator panel
-│       │       ├── components/      # QrModal, ManageTeamModal, etc.
-│       │       └── screens/         # 13 management screens
+│       │       ├── events/          # Manage events, participants
+│       │       ├── users/           # User list, hour requests
+│       │       ├── badges/          # Badge management
+│       │       ├── posts/           # News feed management
+│       │       ├── components/      # Admin specific components
+│       │       └── screens/         # Dashboard, Statistics, Contributions, Reports
 │       ├── navigation/
-│       │   ├── AppTabs.js           # Bottom tab navigator
+│       │   ├── AppTabs.js           # MaterialTopTabs navigator
 │       │   ├── CoreAppNavigator.js  # Core stack with overlay screens
 │       │   ├── MainDrawer.js        # Side drawer navigator
-│       │   ├── ManagementNavigator.js  # Admin/coordinator stack
+│       │   ├── ManagementNavigator.js # Admin/coordinator sub-domains
 │       │   └── components/          # CustomDrawerContent
 │       └── services/
 │           └── api.js               # Axios instance & interceptors
@@ -298,30 +380,35 @@ osace-project/
 │           │   ├── mailer.js        # Nodemailer transport config
 │           │   └── multer.js        # File upload configuration
 │           ├── features/            # Feature-based route modules
-│           │   ├── Auth/
-│           │   │   └── auth.routes.js       # Register, login, password reset
-│           │   ├── Profile/
-│           │   │   └── profile.routes.js    # Profile CRUD, avatar, push tokens
-│           │   ├── Event/
-│           │   │   ├── event.routes.js      # Event CRUD, attendance, QR, teams
-│           │   │   └── event.queries.js     # Reusable SQL queries
-│           │   ├── Admin/
-│           │   │   ├── admin.routes.js      # User mgmt, hours, stats, notifications
-│           │   │   └── admin.queries.js     # Admin SQL queries
-│           │   ├── Posts/
-│           │   │   ├── posts.routes.js      # Feed posts, likes, comments
-│           │   │   └── components/          # Post-related components
-│           │   ├── Badge/
-│           │   │   ├── badge.routes.js      # Badge API endpoints
-│           │   │   └── badge.service.js     # Badge awarding logic (40+ badges)
-│           │   ├── Leaderboard/
-│           │   │   └── leaderboard.routes.js  # Rankings endpoint
-│           │   └── Notifications/
-│           │       └── notifications.routes.js  # Notification endpoints
-│           ├── middleware/           # (Reserved for custom middleware)
+│           │   ├── Auth/            # Register, login, password reset
+│           │   ├── Profile/         # Profile CRUD, avatar, push tokens
+│           │   ├── Event/           # Event CRUD, attendance, QR, teams
+│           │   ├── Admin/           # User mgmt, hours, stats, notifications
+│           │   ├── Posts/           # Feed posts, likes, comments
+│           │   ├── Badge/           # Badge API endpoints & services
+│           │   ├── Leaderboard/     # Rankings endpoint
+│           │   ├── Notifications/   # Notification endpoints
+│           │   ├── StudentVerification/ # Verify student identity
+│           │   └── Config/          # App config & version check
+│           ├── middleware/          # Express middlewares
+│           │   └── rateLimiter.js   # Global API rate limiting
+│           ├── utils/               # Reusable utilities
+│           │   ├── academicYear.js  # Academic year calculations
+│           │   └── auditLog.js      # Audit log recorder
 │           └── scripts/
-│               ├── checkoutWorker.js   # Auto-checkout background job
-│               └── badgeWorker.js      # Scheduled badge awarding
+│               ├── checkoutWorker.js # Auto-checkout background job
+│               └── badgeWorker.js   # Scheduled badge awarding
+│
+├── osace-web/                         # Vue 3 Web Portal
+│   ├── index.html                   # Entry HTML
+│   ├── vite.config.js               # Vite config
+│   └── src/
+│       ├── App.vue                  # Root Vue component
+│       ├── main.js                  # App initialization
+│       ├── components/              # Vue components
+│       ├── views/                   # Pages (AdminView, LoginView, etc.)
+│       ├── router/                  # Vue Router configuration
+│       └── services/                # Axios API services
 │
 └── osace-map/                       # Faculty map design assets
     └── osace-map/
@@ -422,6 +509,7 @@ Base URL: `https://api.osace.ro`
 | PUT | `/api/profile/me` | 🔒 Token | Update profile details |
 | POST | `/api/profile/avatar` | 🔒 Token | Upload profile avatar |
 | POST | `/api/profile/push-token` | 🔒 Token | Register Expo push token |
+| GET | `/api/profile/export` | 🔒 Token | Generate and download GDPR data export (PDF) |
 
 ### Events
 
@@ -447,6 +535,15 @@ Base URL: `https://api.osace.ro`
 | PUT | `/api/admin/hour-requests/:id` | 🔒 Manager | Approve/reject hour request |
 | POST | `/api/admin/notifications` | 🔒 Admin | Send push notification |
 | GET | `/api/admin/statistics` | 🔒 Manager | Get organisation statistics |
+| GET | `/api/admin/pending-counts` | 🔒 Manager | Get notification badge counts for admin menu |
+| POST | `/api/admin/special-contributions` | 🔒 Manager | Assign special contribution hours |
+| GET | `/api/admin/special-contributions/requests` | 🔒 Admin | Get pending special contribution requests |
+| PUT | `/api/admin/special-contributions/requests/:id` | 🔒 Admin | Approve/reject special contribution |
+| GET | `/api/admin/special-contributions` | 🔒 Admin | List all special contributions |
+| PUT | `/api/admin/special-contributions/:id` | 🔒 Admin | Edit special contribution |
+| GET | `/api/admin/audit-log` | 🔒 Admin | Get audit log of administrative actions |
+| GET | `/api/admin/reported-comments` | 🔒 Manager | View reported post comments |
+| DELETE | `/api/admin/reported-comments/:id` | 🔒 Manager | Dismiss report or delete comment |
 
 ### Posts (Feed)
 
@@ -456,6 +553,7 @@ Base URL: `https://api.osace.ro`
 | POST | `/api/posts` | 🔒 Manager | Create a new post |
 | POST | `/api/posts/:id/like` | 🔒 Token | Like/unlike a post |
 | POST | `/api/posts/:id/comments` | 🔒 Token | Add a comment |
+| POST | `/api/posts/comments/:id/report` | 🔒 Token | Report an inappropriate comment |
 
 ### Badges & Leaderboard
 
@@ -469,6 +567,21 @@ Base URL: `https://api.osace.ro`
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | GET | `/api/notifications` | 🔒 Token | Get notification history |
+
+### Student Verification
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/verification/status` | 🔒 Token | Check user's verification status |
+| POST | `/api/verification/upload` | 🔒 Token | Upload student ID photo |
+| GET | `/api/verification/requests` | 🔒 Admin | Get pending verification requests |
+| POST | `/api/verification/requests/:id/review` | 🔒 Admin | Approve/reject verification request |
+
+### Config
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/config/version-check` | — | Check if an app update is required/available |
 
 > **Auth Legend:**  
 > — = Public (no auth required)  
@@ -572,11 +685,16 @@ Key tables used throughout the application:
 | `events` | Volunteer events/activities with scheduling and metadata |
 | `event_attendance` | Tracks registrations, check-ins, check-outs, and awarded hours |
 | `hour_requests` | Requests for manual hour review (auto-checkout, manual requests) |
+| `special_contributions` | Special one-off volunteer actions and their assigned hours |
+| `student_id_verifications` | Student card verification requests and approval status |
 | `badges` | Badge definitions (key, name, description, icon) |
 | `user_badges` | Junction table for awarded badges |
 | `posts` | News feed posts with content and images |
 | `post_likes` | Post like tracking |
 | `post_comments` | Post comments |
+| `reported_comments` | Reports of inappropriate comments needing admin review |
+| `blocked_users` | Tracks which users have blocked other users |
+| `audit_log` | Immutable record of administrative actions (who, what, when) |
 | `notifications` | Push notification history |
 
 ---
