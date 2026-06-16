@@ -419,72 +419,14 @@ osace-project/
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Development
 
-### Prerequisites
+Access to the development environment, including source code, environment variables, and database configurations, is restricted to authorised members of the **O.S.A.C.E. IT Department**.
 
-- **Node.js** (v18+)
-- **PostgreSQL** (v15+)
-- **Expo CLI** — `npm install -g expo-cli`
-- **EAS CLI** (for builds) — `npm install -g eas-cli`
-- **Android Studio** or **Xcode** (for native development builds)
-
-### Backend Setup
-
-```bash
-# 1. Navigate to the API directory
-cd osace-api/osace-api
-
-# 2. Install dependencies
-npm install
-
-# 3. Configure environment variables
-#    Edit the .env file with your PostgreSQL credentials, JWT secret,
-#    and SMTP configuration (Brevo/Sendinblue)
-
-# 4. Ensure PostgreSQL is running with the required database
-#    Database: osace_dev_db (or as configured in .env)
-
-# 5. Start the server
-node index.js
-# Server starts at http://localhost:3000
-```
-
-### Frontend Setup
-
-```bash
-# 1. Navigate to the mobile app directory
-cd osace-mobile
-
-# 2. Install dependencies
-npm install
-
-# 3. Update the API URL in src/services/api.js if needed
-#    Default: https://api.osace.ro
-
-# 4. Start the Expo development server
-npx expo start
-
-# 5. Run on device/emulator
-npx expo run:android    # For Android
-npx expo run:ios        # For iOS
-```
-
-### Environment Variables (`.env`)
-
-| Variable | Description |
-|---|---|
-| `DB_USER` | PostgreSQL username |
-| `DB_HOST` | PostgreSQL host |
-| `DB_DATABASE` | Database name |
-| `DB_PASSWORD` | Database password |
-| `DB_PORT` | PostgreSQL port (default: 5432) |
-| `JWT_SECRET` | Secret key for JWT signing |
-| `EXPO_ACCESS_TOKEN` | Expo push notification token |
-| `SMTP_HOST` | SMTP server host (Brevo) |
-| `SMTP_PORT` | SMTP port (587) |
-| `SMTP_USER` | SMTP username |
-| `SMTP_PASS` | SMTP password |
+If you are a new developer joining the team:
+1. Contact the project lead or the current IT coordinator to request repository access.
+2. You will be provided with a secure onboarding document containing the required `.env` files and local database setup instructions.
+3. Ensure you have Node.js (v18+), PostgreSQL (v15+), and Expo CLI installed on your machine.
 
 ---
 
