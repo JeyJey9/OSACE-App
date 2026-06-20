@@ -82,3 +82,8 @@ productiondevelopmentprocess.txt
 #######################################################
 /osace-web/dist/
 /osace-web/node_modules/
+
+## 6. Project Analysis & Tracking Files
+#######################################################
+/IMPLEMENTATION_PLAN.md
+/status.md

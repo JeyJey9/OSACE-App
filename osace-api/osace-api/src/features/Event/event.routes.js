@@ -186,8 +186,10 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
           if (usersResult.rows.length > 0) {
             // 3. Asociem notificarea cu utilizatorii (pentru istoricul lor in-app)
             const userIds = [...new Set(usersResult.rows.map(user => user.id))];
-            const userNotificationValues = userIds.map(id => `(${id}, ${newNotificationId})`).join(',');
-            await pool.query(`INSERT INTO user_notifications (user_id, notification_id) VALUES ${userNotificationValues} ON CONFLICT DO NOTHING`);
+            // Parameterized batch insert to prevent SQL injection
+            const placeholders = userIds.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(', ');
+            const flatParams = userIds.flatMap(id => [id, newNotificationId]);
+            await pool.query(`INSERT INTO user_notifications (user_id, notification_id) VALUES ${placeholders} ON CONFLICT DO NOTHING`, flatParams);
             
             // 4. Trimitere via Expo Push API
             const pushTokens = usersResult.rows.filter(user => user.token).map(user => user.token);

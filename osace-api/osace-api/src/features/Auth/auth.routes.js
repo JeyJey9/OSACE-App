@@ -15,20 +15,28 @@ router.post('/register', authLimiter, async (req, res) => {
     if (!display_name || !first_name || !last_name || !email || !password) {
       return res.status(400).json({ error: 'Toate câmpurile sunt obligatorii.' });
     }
+    // Sanitizare input: trim + lungime maximă
+    const trimmedName = display_name.trim().substring(0, 50);
+    const trimmedFirst = first_name.trim().substring(0, 50);
+    const trimmedLast = last_name.trim().substring(0, 50);
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!trimmedName || !trimmedFirst || !trimmedLast) {
+      return res.status(400).json({ error: 'Numele nu poate fi gol.' });
+    }
     if (password.length < 8) {
       return res.status(400).json({ error: 'Parola trebuie să aibă cel puțin 8 caractere.' });
     }
     try {
-      const emailCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      const emailCheck = await pool.query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
       if (emailCheck.rows.length > 0) {
         return res.status(409).json({ error: 'Acest email este deja înregistrat.' });
       }
       const passwordHash = await argon2.hash(password);
       
-      // Inserăm noile coloane
+      // Inserăm noile coloane (cu valori sanitizate)
       const newUser = await pool.query(
         'INSERT INTO users (display_name, first_name, last_name, email, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id, display_name, first_name, last_name, email, role, created_at, avatar_url',
-        [display_name, first_name, last_name, email, passwordHash]
+        [trimmedName, trimmedFirst, trimmedLast, normalizedEmail, passwordHash]
       );
       const user = newUser.rows[0];
       
@@ -65,7 +73,7 @@ router.post('/register', authLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Email-ul și parola sunt obligatorii.' });
     }
     try {
-      const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email.trim().toLowerCase()]);
       if (userResult.rows.length === 0) {
         return res.status(401).json({ error: 'Acreditări invalide.' });
       }
@@ -100,7 +108,7 @@ const token = jwt.sign(
 
 
   // ▼▼▼ NOU: Ruta pentru a cere resetarea parolei (Pasul 1) ▼▼▼
-  router.post('/request-reset', async (req, res) => {
+  router.post('/request-reset', authLimiter, async (req, res) => {
     const { email } = req.body;
     if (!email) {
       return res.status(400).json({ error: 'Email-ul este obligatoriu.' });
@@ -108,7 +116,7 @@ const token = jwt.sign(
 
     try {
       // 1. Găsim utilizatorul
-      const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email.trim().toLowerCase()]);
       if (userResult.rows.length === 0) {
         // NU vrem să spunem dacă email-ul există sau nu.
         // Trimitem un răspuns de succes fals pentru securitate.
@@ -118,19 +126,21 @@ const token = jwt.sign(
 
       // 2. Generăm un cod de 6 cifre
       const resetToken = crypto.randomInt(100000, 999999).toString();
+      // Hash-uim tokenul înainte de stocare (apărăm împotriva dump-urilor de bază de date)
+      const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
       // Setăm expirarea la 10 minute de acum
       const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minute
 
-      // 3. Salvăm codul și data expirării în baza de date
+      // 3. Salvăm hash-ul codului și data expirării în baza de date
       await pool.query(
         'UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3',
-        [resetToken, expires, user.id]
+        [hashedToken, expires, user.id]
       );
 
       // 4. Trimitem email-ul prin Brevo
       try {
         await mailTransporter.sendMail({
-          from: `"O.S.A.C.E." <osace2001@gmail.com>`, // Asigură-te că acest email e valid/permis în Brevo
+          from: `"O.S.A.C.E." <contact@osace.ro>`,
           to: user.email,
           subject: 'Resetarea Parolei OSACE',
           html: `
@@ -159,7 +169,7 @@ const token = jwt.sign(
   });
   // ▲▲▲ SFÂRȘIT BLOC NOU ▲▲▲
 
-  router.post('/perform-reset', async (req, res) => {
+  router.post('/perform-reset', authLimiter, async (req, res) => {
   const { email, token, newPassword } = req.body;
 
   if (!email || !token || !newPassword) {
@@ -173,7 +183,7 @@ const token = jwt.sign(
     // 1. Găsim utilizatorul DUPĂ email
     const userResult = await pool.query(
       'SELECT * FROM users WHERE email = $1', 
-      [email]
+      [email.trim().toLowerCase()]
     );
 
     if (userResult.rows.length === 0) {
@@ -181,8 +191,9 @@ const token = jwt.sign(
     }
     const user = userResult.rows[0];
 
-    // 2. Verificăm dacă token-ul este corect ȘI dacă nu a expirat
-    if (user.reset_token !== token || new Date() > new Date(user.reset_token_expires)) {
+    // 2. Verificăm dacă hash-ul token-ului este corect ȘI dacă nu a expirat
+    const hashedInputToken = crypto.createHash('sha256').update(token).digest('hex');
+    if (user.reset_token !== hashedInputToken || new Date() > new Date(user.reset_token_expires)) {
       return res.status(400).json({ error: 'Codul este invalid sau a expirat.' });
     }
 

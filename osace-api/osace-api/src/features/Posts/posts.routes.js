@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const { logAction } = require('../../utils/auditLog');
 
 const path = require('path');
@@ -9,24 +8,6 @@ const { checkBadgesOnLike, checkBadgesOnComment, checkBadgesOnPostCreate } = req
 
 // --- Configurare Multer (Upload Imagini) ---
 const { uploadPostImages } = require('../../config/multer');
-const UPLOAD_DIRECTORY = '/var/www/osace-uploads';
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOAD_DIRECTORY);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extension = path.extname(file.originalname);
-    cb(null, 'osace-post-' + uniqueSuffix + extension);
-  }
-});
-
-// Middleware pentru upload de ARRAY de fișiere (max 10)
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }
-});
 
 // --- Exportăm Rutele ---
 module.exports = (pool, verifyToken, verifyManager) => {
@@ -60,7 +41,7 @@ module.exports = (pool, verifyToken, verifyManager) => {
 
       // 2. Inserăm URL-urile imaginilor
       const imageInsertPromises = req.files.map((file, index) => {
-        const imageUrl = `${API_DOMAIN}/uploads/${file.filename}`;
+        const imageUrl = `${API_DOMAIN}/uploads/posts/${file.filename}`;
         return client.query(
           `INSERT INTO post_images (post_id, image_url, sort_order) 
                  VALUES ($1, $2, $3)`,
@@ -492,7 +473,7 @@ module.exports = (pool, verifyToken, verifyManager) => {
   // ======================================================
   router.delete('/:id', [verifyToken, verifyManager], async (req, res) => {
     const postId = req.params.id;
-    const UPLOADS_DIR = '/var/www/osace-uploads/'; // Directorul de upload
+    const UPLOADS_DIR = '/var/www/osace-uploads/posts/'; // Directorul de upload (subfolder dedicat)
 
     try {
       // 1. Preluăm URL-urile imaginilor (pentru a le șterge fizic)

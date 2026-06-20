@@ -2,11 +2,12 @@ require('dotenv').config();
 process.env.PGTZ = 'Europe/Bucharest';
 const axios = require('axios');
 const express = require('express');
+const helmet = require('helmet');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const cors = require('cors');
 const path = require('path');
+const mailTransporter = require('./src/config/mailer');
 
 
 // --- 1. Importarea Rutelor ---
@@ -25,7 +26,10 @@ const { startCheckoutWorker } = require('./src/scripts/checkoutWorker');
 const app = express();
 const port = 3000;
 
-app.use(express.json());
+// Security headers (X-Content-Type-Options, X-Frame-Options, HSTS, CSP, etc.)
+app.use(helmet());
+
+app.use(express.json({ limit: '1mb' }));
 
 // --- 2. Inițializare Conexiuni ---
 const pool = new Pool({
@@ -35,28 +39,6 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT,
 });
-
-// ▼▼▼ MODIFICAT AICI: Configurația Nodemailer pentru BREVO ▼▼▼
-const mailTransporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: false, // Portul 587 folosește STARTTLS, deci 'secure' e false
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-// ▲▲▲ SFÂRȘIT MODIFICARE ▲▲▲
-
-console.log('Transporter email configurat. Se verifică conexiunea...');
-mailTransporter.verify(function (error, success) {
-  if (error) {
-    console.error("Eroare conexiune SMTP:", error);
-  } else {
-    console.log("Serverul SMTP este pregătit să primească mesaje.");
-  }
-});
-
 // --- 3. Configurare CORS (Actualizat) ---
 const allowedOrigins = [
   'https://osace.ro',
@@ -87,8 +69,12 @@ app.set('trust proxy', 1); // Trust first proxy (Nginx) for correct IP
 const { globalLimiter } = require('./src/middleware/rateLimiter');
 app.use(globalLimiter);
 
-// Folderul 'uploads' (Neschimbat)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Servire fișiere uploadate (Actualizat: calea corectă la directorul real de upload)
+app.use('/uploads', express.static('/var/www/osace-uploads', {
+  dotfiles: 'deny',         // Nu servi fișiere ascunse (.env, .htaccess etc.)
+  index: false,             // Dezactivează listarea directorului
+  maxAge: '7d',             // Cache-Control: 7 zile pentru imagini statice
+}));
 
 // --- 4. Middleware-uri (Neschimbat) ---
 function verifyToken(req, res, next) {

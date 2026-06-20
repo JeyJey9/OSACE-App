@@ -181,6 +181,9 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0 || !title || !description || awarded_hours == null) {
       return res.status(400).json({ error: 'Toate câmpurile sunt obligatorii și trebuie selectat cel puțin un voluntar.' });
     }
+    // Sanitizare input
+    const safeTitle = title.trim().substring(0, 200);
+    const safeDesc = description.trim().substring(0, 2000);
 
     const client = await pool.connect();
     try {
@@ -189,7 +192,7 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
         await client.query(
           `INSERT INTO special_contributions (user_id, coordinator_id, title, description, awarded_hours, event_id, status)
            VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
-          [uid, userId, title, description, awarded_hours, event_id || null]
+          [uid, userId, safeTitle, safeDesc, awarded_hours, event_id || null]
         );
       }
       await client.query('COMMIT');
@@ -347,13 +350,16 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
   if (!title || !message) {
     return res.status(400).json({ error: 'Titlul și mesajul sunt obligatorii.' });
   }
+  // Sanitizare input
+  const safeTitle = title.trim().substring(0, 200);
+  const safeMessage = message.trim().substring(0, 2000);
   if (!roles || !Array.isArray(roles) || roles.length === 0) {
     return res.status(400).json({ error: 'Trebuie selectat cel puțin un rol țintă.' });
   }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const notificationResult = await client.query('INSERT INTO notifications (title, body) VALUES ($1, $2) RETURNING id', [title, message]);
+    const notificationResult = await client.query('INSERT INTO notifications (title, body) VALUES ($1, $2) RETURNING id', [safeTitle, safeMessage]);
     const newNotificationId = notificationResult.rows[0].id;
     const usersQuery = `
       SELECT u.id, pt.token 
@@ -367,11 +373,13 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
       return res.status(200).json({ message: 'Notificare salvată, dar nu au fost găsiți utilizatori în grupurile selectate.' });
     }
     const userIds = [...new Set(usersResult.rows.map(user => user.id))];
-    const userNotificationValues = userIds.map(id => `(${id}, ${newNotificationId})`).join(',');
-    await client.query(`INSERT INTO user_notifications (user_id, notification_id) VALUES ${userNotificationValues} ON CONFLICT DO NOTHING`);
+    // Parameterized batch insert to prevent SQL injection
+    const placeholders = userIds.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(', ');
+    const flatParams = userIds.flatMap(id => [id, newNotificationId]);
+    await client.query(`INSERT INTO user_notifications (user_id, notification_id) VALUES ${placeholders} ON CONFLICT DO NOTHING`, flatParams);
     const pushTokens = usersResult.rows.filter(user => user.token).map(user => user.token);
     if (pushTokens.length > 0) {
-      const expoMessage = { to: pushTokens, sound: 'default', title: title, body: message, data: { _displayInForeground: true } };
+      const expoMessage = { to: pushTokens, sound: 'default', title: safeTitle, body: safeMessage, data: { _displayInForeground: true } };
       try {
         console.log(`[Push Notify] Se trimit ${pushTokens.length} notificări către rolurile: ${roles.join(', ')}`);
         console.log(`[Push Notify] Tokenuri:`, JSON.stringify(pushTokens));

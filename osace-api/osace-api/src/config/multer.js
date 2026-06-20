@@ -6,6 +6,29 @@ const fs = require('fs');
 // Definim locația de bază pentru toate upload-urile
 const UPLOAD_DIRECTORY = '/var/www/osace-uploads';
 
+// --- Validare strictă tip fișier ---
+// Verificăm ATÂT extensia fișierului CÂT ȘI MIME type-ul declarat.
+// Ambele trebuie să fie în lista albă pentru a preveni upload-uri malițioase
+// (ex: un .php redenumit în .jpg cu MIME type falsificat).
+
+const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+const ALLOWED_IMAGE_MIMETYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+/**
+ * File filter strict pentru imagini.
+ * Verifică atât extensia cât și MIME type-ul.
+ */
+const strictImageFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  const mime = file.mimetype;
+
+  if (ALLOWED_IMAGE_EXTENSIONS.includes(ext) && ALLOWED_IMAGE_MIMETYPES.includes(mime)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Tip de fișier nepermis (${ext}). Sunt acceptate doar: ${ALLOWED_IMAGE_EXTENSIONS.join(', ')}`), false);
+  }
+};
+
 // --- Configurare 1: Upload Avatar (pentru Profile) ---
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -19,44 +42,39 @@ const avatarStorage = multer.diskStorage({
     if (!req.user || !req.user.userId) {
       return cb(new Error('Utilizator neautentificat pentru upload avatar'), null);
     }
-    const uniqueName = `${req.user.userId}-${Date.now()}${path.extname(file.originalname)}`;
+    const ext = path.extname(file.originalname).toLowerCase();
+    const uniqueName = `${req.user.userId}-${Date.now()}${ext}`;
     cb(null, uniqueName);
   }
 });
-
-const avatarFileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Sunt permise doar imagini!'), false);
-  }
-};
 
 // Exportăm un middleware gata configurat pentru AVATAR
 const uploadAvatar = multer({ 
   storage: avatarStorage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
-  fileFilter: avatarFileFilter
+  fileFilter: strictImageFilter
 });
 
 // --- Configurare 2: Upload Imagini Postări (pentru Posts) ---
 const postStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Salvăm postările la rădăcina folderului de upload
-    fs.mkdirSync(UPLOAD_DIRECTORY, { recursive: true });
-    cb(null, UPLOAD_DIRECTORY);
+    // Salvăm postările într-un subfolder dedicat (nu la rădăcina upload-urilor)
+    const uploadPath = path.join(UPLOAD_DIRECTORY, 'posts');
+    fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extension = path.extname(file.originalname);
-    cb(null, 'osace-post-' + uniqueSuffix + extension);
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, 'osace-post-' + uniqueSuffix + ext);
   }
 });
 
 // Exportăm un middleware gata configurat pentru POSTĂRI
 const uploadPostImages = multer({ 
   storage: postStorage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: strictImageFilter
 });
 
 // --- Configurare 3: Upload Legitimație Student (pentru Verificare) ---
@@ -70,7 +88,8 @@ const studentIdStorage = multer.diskStorage({
     if (!req.user || !req.user.userId) {
       return cb(new Error('Utilizator neautentificat pentru upload legitimație'), null);
     }
-    const uniqueName = `student-id-${req.user.userId}-${Date.now()}${path.extname(file.originalname)}`;
+    const ext = path.extname(file.originalname).toLowerCase();
+    const uniqueName = `student-id-${req.user.userId}-${Date.now()}${ext}`;
     cb(null, uniqueName);
   }
 });
@@ -78,7 +97,7 @@ const studentIdStorage = multer.diskStorage({
 const uploadStudentId = multer({
   storage: studentIdStorage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: avatarFileFilter            // Doar imagini
+  fileFilter: strictImageFilter
 });
 
 // --- Exportăm toate trei ---
@@ -86,4 +105,4 @@ module.exports = {
   uploadAvatar,
   uploadPostImages,
   uploadStudentId
-};
+};
