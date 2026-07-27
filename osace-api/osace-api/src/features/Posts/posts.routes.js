@@ -14,6 +14,116 @@ module.exports = (pool, verifyToken, verifyManager) => {
   const fs = require('fs/promises'); // Modul necesar pentru ștergerea fișierelor
 
   // ======================================================
+  // ## POST /sync-instagram (Sincronizare postări de pe Instagram @o.s.a.c.e)
+  // ======================================================
+  router.post('/sync-instagram', [verifyToken, verifyManager], async (req, res) => {
+    const creatorId = req.user.userId;
+    const token = (req.body && req.body.accessToken) || process.env.INSTAGRAM_ACCESS_TOKEN;
+    const axios = require('axios');
+
+    let mediaItems = [];
+
+    // MOD 1: Dacă există Token Meta (Graph API) — Preluăm ÎNTREGUL ISTORIC
+    if (token) {
+      try {
+        let nextPageUrl = 'https://graph.instagram.com/me/media';
+        let params = {
+          fields: 'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp',
+          access_token: token,
+          limit: 50
+        };
+
+        while (nextPageUrl) {
+          const igRes = await axios.get(nextPageUrl, { params });
+          const items = igRes.data?.data || [];
+          for (const item of items) {
+            mediaItems.push({
+              caption: item.caption,
+              media_url: item.media_url || item.thumbnail_url,
+              permalink: item.permalink,
+              timestamp: item.timestamp ? new Date(item.timestamp) : new Date()
+            });
+          }
+          nextPageUrl = igRes.data?.paging?.next || null;
+          params = {}; // Paging URL contain params already
+        }
+      } catch (err) {
+        console.warn('[IG Sync] Token Graph API error:', err.message);
+      }
+    }
+
+    // MOD 2: Fără Token / Fallback Public pentru @o.s.a.c.e (Zero Setup!)
+    if (mediaItems.length === 0) {
+      try {
+        // Preluăm postările publice pentru @o.s.a.c.e prin RSS2JSON / RSSHub bridge
+        const rssRes = await axios.get('https://api.rss2json.com/v1/api.json?rss_url=https://rsshub.app/instagram/user/o.s.a.c.e', { timeout: 8000 });
+        if (rssRes.data && rssRes.data.items && rssRes.data.items.length > 0) {
+          mediaItems = rssRes.data.items.map(item => ({
+            caption: item.title || item.description || '',
+            media_url: item.thumbnail || item.enclosure?.link,
+            permalink: item.link || 'https://www.instagram.com/o.s.a.c.e/',
+            timestamp: item.pubDate ? new Date(item.pubDate) : new Date()
+          }));
+        }
+      } catch (publicErr) {
+        console.error('[IG Sync] Eroare la preluarea publică:', publicErr.message);
+      }
+    }
+
+    if (mediaItems.length === 0) {
+      return res.status(400).json({ 
+        error: 'Nu s-au putut prelua postările de pe Instagram @o.s.a.c.e. Poți adăuga link-uri Instagram direct când creezi o postare.' 
+      });
+    }
+
+    let syncedCount = 0;
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      for (const item of mediaItems) {
+        if (!item.media_url) continue;
+
+        const caption = (item.caption || '') + `\n\n📸 Vezi pe Instagram: ${item.permalink}`;
+        const postDate = item.timestamp || new Date();
+
+        // Verificăm dacă postarea cu acest link există deja în DB ca să nu o duplicăm
+        const check = await client.query(
+          `SELECT id FROM posts WHERE description LIKE $1`,
+          [`%${item.permalink}%`]
+        );
+
+        if (check.rows.length === 0) {
+          const newPost = await client.query(
+            `INSERT INTO posts (creator_id, description, created_at) VALUES ($1, $2, $3) RETURNING id`,
+            [creatorId, caption, postDate]
+          );
+          const postId = newPost.rows[0].id;
+
+          await client.query(
+            `INSERT INTO post_images (post_id, image_url, sort_order) VALUES ($1, $2, 0)`,
+            [postId, item.media_url]
+          );
+          syncedCount++;
+        }
+      }
+
+      await client.query('COMMIT');
+      if (syncedCount > 0) {
+        await logAction(pool, creatorId, 'POST_SYNC_INSTAGRAM', 'post', null, { synced_count: syncedCount });
+      }
+      res.json({ message: `Sincronizare reușită! S-au importat ${syncedCount} postări noi de pe @o.s.a.c.e.`, synced_count: syncedCount });
+    } catch (dbErr) {
+      await client.query('ROLLBACK');
+      console.error('Eroare DB la import Instagram:', dbErr);
+      res.status(500).json({ error: 'Eroare la salvarea postărilor în baza de date.' });
+    } finally {
+      client.release();
+    }
+  });
+
+  // ======================================================
   // ## POST / (Creează o postare nouă cu multiple imagini) - CORECTAT
   // ======================================================
   router.post('/', [verifyToken, verifyManager, uploadPostImages.array('images', 10)], async (req, res) => {

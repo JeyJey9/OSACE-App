@@ -115,7 +115,7 @@ export default function PostFormScreen() {
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ['images', 'videos'],
       allowsMultipleSelection: true, 
       selectionLimit: 10, 
       quality: 0.8,
@@ -124,14 +124,17 @@ export default function PostFormScreen() {
     if (!result.canceled) {
       const selectedImages = result.assets.map(asset => {
         const localUri = asset.uri;
-        const fileType = localUri.split('.').pop();
+        const fileType = (localUri.split('.').pop() || 'jpg').toLowerCase();
         const fileName = localUri.split('/').pop();
-        
+        const isVideo = asset.type === 'video' || /\.(mp4|mov|m4v|webm)$/i.test(localUri);
+        const mimeType = isVideo ? (fileType === 'mov' ? 'video/quicktime' : 'video/mp4') : `image/${fileType}`;
+
         return {
-          key: `image-${Date.now()}-${Math.random()}`, 
+          key: `media-${Date.now()}-${Math.random()}`, 
           uri: localUri,
-          type: `image/${fileType}`,
-          name: fileName,
+          type: mimeType,
+          name: fileName || `upload.${fileType}`,
+          isVideo,
         };
       });
       setImages(prevImages => [...prevImages, ...selectedImages]);
@@ -214,8 +217,8 @@ export default function PostFormScreen() {
                         </View>
                     ) : (
                         <TouchableOpacity style={styles.imagePicker} onPress={pickImages} disabled={isEditMode}>
-                            <Ionicons name="camera" size={40} color={colors.textSecondary} />
-                            <Text style={styles.imagePlaceholderText}>Alege Imagini (max 10)</Text>
+                            <Ionicons name="images-outline" size={40} color={colors.textSecondary} />
+                            <Text style={styles.imagePlaceholderText}>Alege Foto / Video (max 10)</Text>
                         </TouchableOpacity>
                     )
                 )}

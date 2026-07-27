@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Platform,
+  ActivityIndicator,
   PanResponder,
   Dimensions,
   Animated,
@@ -36,7 +37,21 @@ export default function NewsFeedScreen() {
   const [posts, setPosts] = useState(cached ?? []);
   const [loading, setLoading] = useState(cached === null);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncingIg, setSyncingIg] = useState(false);
   const hasLoadedOnce = useRef(cached !== null);
+
+  const handleSyncInstagram = async () => {
+    setSyncingIg(true);
+    try {
+      const res = await api.post('/api/posts/sync-instagram');
+      Alert.alert('Sincronizare Reușită 📸', res.data.message);
+      fetchPosts({ silent: false });
+    } catch (err) {
+      Alert.alert('Sincronizare Instagram', err.response?.data?.error || 'Nu s-a putut conecta la API-ul Instagram.');
+    } finally {
+      setSyncingIg(false);
+    }
+  };
 
   // ─── iOS only: PanResponder pentru zona dreaptă 75% → navigate('Activități') ───
   // Pe iOS pager-ul e dezactivat pe Noutăți (ca Drawer-ul să nu conflictuieze),
@@ -168,7 +183,7 @@ export default function NewsFeedScreen() {
               <EmptyState
                 illustration="no_feed"
                 title="Nicio noutate încă"
-                subtitle="Nu există postaje în momentul de faţă. Revino mai târziu!"
+                subtitle="Nu există postări în momentul de față. Revino mai târziu!"
               />
             )}
             contentContainerStyle={styles.listContent}
@@ -200,12 +215,28 @@ export default function NewsFeedScreen() {
         )}
 
         {(user?.role === 'admin' || user?.role === 'coordonator') && (
-          <TouchableOpacity
-            style={styles.fab}
-            onPress={() => navigation.navigate(managementTabName, { screen: 'PostForm' })}
-          >
-            <Ionicons name="add" size={30} color="white" />
-          </TouchableOpacity>
+          <View style={styles.fabRow}>
+            <TouchableOpacity
+              style={styles.fabIg}
+              onPress={handleSyncInstagram}
+              disabled={syncingIg}
+              activeOpacity={0.8}
+            >
+              {syncingIg ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Ionicons name="logo-instagram" size={24} color="white" />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.fab}
+              onPress={() => navigation.navigate(managementTabName, { screen: 'PostForm' })}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="add" size={30} color="white" />
+            </TouchableOpacity>
+          </View>
         )}
       </ScreenContainer>
     </View>
@@ -216,7 +247,9 @@ const createStyles = (colors) => StyleSheet.create({
   listContent: { paddingBottom: 130, paddingTop: 8 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
   emptyText: { fontSize: 16, color: colors.textSecondary },
-  fab: { position: 'absolute', right: 20, bottom: 100, backgroundColor: colors.primary, width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
+  fabRow: { position: 'absolute', right: 20, bottom: 100, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  fab: { backgroundColor: colors.primary, width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
+  fabIg: { backgroundColor: '#E1306C', width: 46, height: 46, borderRadius: 23, justifyContent: 'center', alignItems: 'center', elevation: 6, shadowColor: '#E1306C', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 4 },
   verifyBanner: {
     position: 'absolute', left: 16, right: 16, bottom: 100,
     borderRadius: 18,

@@ -9,7 +9,9 @@ import {
   Alert,
   useWindowDimensions,
   ScrollView,
+  Linking,
 } from 'react-native';
+import { Video, ResizeMode } from 'expo-av';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -201,6 +203,21 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
 
   const styles = createStyles(colors, isDark, width);
 
+  const isVideoUrl = (url) => {
+    if (!url) return false;
+    return /\.(mp4|mov|m4v|webm)(\?.*)?$/i.test(url);
+  };
+
+  const igMatch = item.instagram_url || item.description?.match(/https?:\/\/(www\.)?instagram\.com\/(p|reel|tv)\/[a-zA-Z0-9_\-\.]+/i)?.[0];
+
+  const handleOpenInstagram = () => {
+    if (igMatch) {
+      Linking.openURL(igMatch).catch(() => {
+        Alert.alert('Eroare', 'Nu s-a putut deschide link-ul Instagram.');
+      });
+    }
+  };
+
   return (
     <View style={styles.card}>
 
@@ -217,6 +234,14 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
           </View>
         </View>
 
+        {/* Instagram Badge */}
+        {igMatch && (
+          <TouchableOpacity onPress={handleOpenInstagram} style={styles.igBadge} activeOpacity={0.8}>
+            <Ionicons name="logo-instagram" size={14} color="#E1306C" />
+            <Text style={styles.igBadgeText}>Instagram</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Admin / Coordinator actions */}
         {(currentUserRole === 'admin' || currentUserRole === 'coordonator') && (
           <View style={styles.adminActions}>
@@ -230,7 +255,7 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
         )}
       </View>
 
-      {/* ── Image carousel with double-tap to like ── */}
+      {/* ── Image/Video carousel with double-tap to like ── */}
       {imageCount > 0 && (
         <View style={styles.imageWrapper}>
           <GestureDetector gesture={doubleTap}>
@@ -243,12 +268,42 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
               style={{ width }}
             >
               {item.image_urls.map((url, index) => (
-                <Image
-                  key={index}
-                  source={{ uri: url }}
-                  style={{ width, height: width, backgroundColor: '#000' }}
-                  resizeMode="contain"
-                />
+                isVideoUrl(url) ? (
+                  <View key={index} style={{ width, height: width, backgroundColor: colors.card, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                    {/* Blurred backdrop matching video colors */}
+                    <Image
+                      source={{ uri: url }}
+                      style={[StyleSheet.absoluteFillObject, { opacity: 0.45 }]}
+                      blurRadius={25}
+                      resizeMode="cover"
+                    />
+                    {/* Full uncropped video */}
+                    <Video
+                      source={{ uri: url }}
+                      style={{ width: '100%', height: '100%' }}
+                      useNativeControls
+                      resizeMode={ResizeMode.CONTAIN}
+                      isLooping
+                      shouldPlay={false}
+                    />
+                  </View>
+                ) : (
+                  <View key={index} style={{ width, height: width, backgroundColor: colors.card, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                    {/* Blurred backdrop matching photo colors */}
+                    <Image
+                      source={{ uri: url }}
+                      style={[StyleSheet.absoluteFillObject, { opacity: 0.45 }]}
+                      blurRadius={25}
+                      resizeMode="cover"
+                    />
+                    {/* Full uncropped photo */}
+                    <Image
+                      source={{ uri: url }}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="contain"
+                    />
+                  </View>
+                )
               ))}
             </ScrollView>
           </GestureDetector>
@@ -416,6 +471,23 @@ const createStyles = (colors, isDark, width) => StyleSheet.create({
   },
   actionButtonAdmin: {
     // just spacing
+  },
+  igBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: isDark ? 'rgba(225, 48, 108, 0.15)' : '#FDF2F8',
+    borderColor: 'rgba(225, 48, 108, 0.3)',
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 14,
+    marginRight: 8,
+  },
+  igBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#E1306C',
   },
 
   // ── Image carousel ──
