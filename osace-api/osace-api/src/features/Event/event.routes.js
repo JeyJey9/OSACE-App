@@ -466,6 +466,14 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       if (attendance.confirmation_status === 'checked_in') {
         const checkOutTime = new Date();
         const checkInTime = new Date(attendance.check_in_time);
+        
+        // Anti-double-scan protection: must wait at least 5 seconds after check-in before check-out
+        if (attendance.check_in_time && (checkOutTime - checkInTime) < 5000) {
+          return res.status(400).json({ 
+            error: 'Ai efectuat check-in-ul recent. Te rugăm să aștepți cel puțin 5 secunde înainte de a efectua check-out-ul.' 
+          });
+        }
+
         const eventStartTime = new Date(event.start_time);
         const eventEndTime = new Date(event.end_time);
         
