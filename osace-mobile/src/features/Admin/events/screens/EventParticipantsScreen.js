@@ -16,8 +16,13 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import api from '../../../../services/api';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { format } from 'date-fns';
+import { ro } from 'date-fns/locale';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
+import { Asset } from 'expo-asset';
 
 import ScreenContainer from '../../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../../constants/useThemeColor';
@@ -33,12 +38,21 @@ export default function EventParticipantsScreen() {
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal State for Editing Participant
+  // Single Edit Modal State
   const [selectedParticipant, setSelectedParticipant] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [editStatus, setEditStatus] = useState('registered');
   const [editHours, setEditHours] = useState('0');
   const [saving, setSaving] = useState(false);
+
+  // Bulk Select State
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  // Export Modal State
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -53,8 +67,32 @@ export default function EventParticipantsScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       ),
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 8 }}>
+          <TouchableOpacity
+            onPress={() => {
+              setBulkMode(!bulkMode);
+              setSelectedIds([]);
+            }}
+            style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+          >
+            <Ionicons 
+              name={bulkMode ? "checkbox" : "checkbox-outline"} 
+              size={22} 
+              color={bulkMode ? colors.primary : colors.textPrimary} 
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setExportModalVisible(true)}
+            style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+          >
+            <Ionicons name="download-outline" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+      )
     });
-  }, [navigation, colors.textPrimary]);
+  }, [navigation, colors.textPrimary, bulkMode]);
 
   const fetchParticipants = async () => {
     try {
@@ -70,6 +108,49 @@ export default function EventParticipantsScreen() {
   useEffect(() => {
     fetchParticipants();
   }, [eventId]);
+
+  const toggleSelectParticipant = (id) => {
+    Haptics.selectionAsync();
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const selectAll = () => {
+    if (selectedIds.length === participants.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(participants.map(p => p.id));
+    }
+  };
+
+  const handleBulkStatusChange = async (targetStatus) => {
+    if (selectedIds.length === 0) return;
+    setBulkActionLoading(true);
+    try {
+      const promises = selectedIds.map(userId => 
+        api.put(`/api/events/${eventId}/participants/${userId}`, { status: targetStatus })
+      );
+      await Promise.all(promises);
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Toast.show({
+        type: 'success',
+        text1: 'Actualizare în lot reușită! ✅',
+        text2: `Statusul a fost modificat pentru ${selectedIds.length} voluntari.`,
+      });
+
+      setSelectedIds([]);
+      setBulkMode(false);
+      fetchParticipants();
+    } catch (error) {
+      console.error("Eroare actualizare lot:", error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert("Eroare", "Nu s-au putut actualiza toți participanții selectați.");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
 
   const handleOpenEditModal = (participant) => {
     setSelectedParticipant(participant);
@@ -108,9 +189,230 @@ export default function EventParticipantsScreen() {
     }
   };
 
+  // Export CSV
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      let csv = `ID,Nume,Prenume,Username,Email,Status,Hora Check-In,Hora Check-Out,Ore Acordate\n`;
+      participants.forEach(p => {
+        const checkIn = p.check_in_time ? format(new Date(p.check_in_time.replace(' ', 'T')), 'HH:mm dd/MM/yyyy') : '—';
+        const checkOut = p.check_out_time ? format(new Date(p.check_out_time.replace(' ', 'T')), 'HH:mm dd/MM/yyyy') : '—';
+        const hours = parseFloat(p.awarded_hours || 0).toFixed(1);
+        csv += `${p.id},"${p.last_name || ''}","${p.first_name || ''}","${p.display_name || ''}","${p.email || ''}","${p.confirmation_status}","${checkIn}","${checkOut}",${hours}\n`;
+      });
+
+      const fileName = `OSACE_Prezenta_Event_${eventId}_${format(new Date(), 'yyyyMMdd')}.csv`;
+      const filePath = `${FileSystem.documentDirectory}${fileName}`;
+      await FileSystem.writeAsStringAsync(filePath, csv, { encoding: FileSystem.EncodingType.UTF8 });
+
+      setExportModalVisible(false);
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(filePath, {
+          mimeType: 'text/csv',
+          dialogTitle: `Export Prezență CSV - ${eventTitle}`,
+        });
+      } else {
+        Alert.alert('Salvat', `Fișier CSV salvat la: ${filePath}`);
+      }
+    } catch (err) {
+      console.error("Eroare export CSV:", err);
+      Alert.alert("Eroare", "Nu s-a putut genera fișierul CSV.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Export PDF with Official OSACE Header Template
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      const asset = Asset.fromModule(require('../../../../assets/osace.png'));
+      await asset.downloadAsync();
+      const logoBase64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: 'base64' });
+      const logoSrc = `data:image/png;base64,${logoBase64}`;
+
+      const currentDate = format(new Date(), 'dd.MM.yyyy', { locale: ro });
+      const totalHours = participants
+        .filter(p => p.confirmation_status === 'attended')
+        .reduce((sum, p) => sum + (parseFloat(p.awarded_hours) || 0), 0);
+
+      const rowsHTML = participants.map((p, idx) => {
+        const checkIn = p.check_in_time ? format(new Date(p.check_in_time.replace(' ', 'T')), 'HH:mm') : '—';
+        const checkOut = p.check_out_time ? format(new Date(p.check_out_time.replace(' ', 'T')), 'HH:mm') : '—';
+        const hours = p.confirmation_status === 'attended' ? `+${parseFloat(p.awarded_hours || 0).toFixed(1)}h` : '0h';
+        const statusLabel = p.confirmation_status === 'attended' ? 'Finalizat' : p.confirmation_status === 'checked_in' ? 'Prezent' : 'Înscris';
+
+        return `
+          <tr>
+            <td style="text-align:center">${idx + 1}</td>
+            <td><strong>${p.last_name || ''} ${p.first_name || ''}</strong></td>
+            <td>@${p.display_name}</td>
+            <td style="text-align:center"><span class="pill ${p.confirmation_status === 'attended' ? 'green' : 'gray'}">${statusLabel}</span></td>
+            <td style="text-align:center">${checkIn}</td>
+            <td style="text-align:center">${checkOut}</td>
+            <td style="text-align:center"><strong>${hours}</strong></td>
+          </tr>
+        `;
+      }).join('');
+
+      const html = `
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Prezență Activitate OSACE</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; color: #222; background: #fff; padding: 1.8cm 2cm; }
+    
+    .org-title { text-align: center; font-size: 10.5pt; font-weight: bold; text-transform: uppercase; line-height: 1.4; margin-bottom: 14px; color: #111; }
+    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    .header-table td { border: none; padding: 0; vertical-align: middle; background: transparent !important; }
+    .col-left { width: 32%; font-size: 8.5pt; line-height: 1.6; color: #333; }
+    .col-center { width: 36%; text-align: center; }
+    .col-center img { width: 140px; height: auto; }
+    .col-right { width: 32%; font-size: 8.5pt; line-height: 1.6; text-align: right; color: #333; }
+    
+    .header-divider-thick { border: none; border-top: 2.5px solid #111; margin: 10px 0 3px 0; }
+    .header-divider-thin { border: none; border-top: 1px solid #111; margin: 0 0 16px 0; }
+    
+    .doc-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 10pt; }
+    .doc-title { text-align: center; font-size: 16pt; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; color: #1566B9; }
+    .doc-subtitle { text-align: center; font-size: 9.5pt; color: #555; margin-bottom: 20px; }
+    
+    .event-info-box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; }
+    .event-info-box .title { font-size: 13pt; font-weight: bold; color: #111; }
+    .event-info-box .sub { font-size: 9pt; color: #555; margin-top: 2px; }
+    .event-info-box .totals { text-align: right; }
+    .event-info-box .totals .num { font-size: 22pt; font-weight: bold; color: #1566B9; line-height: 1; }
+    .event-info-box .totals .lbl { font-size: 8pt; text-transform: uppercase; color: #666; }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 0; }
+    th { border: 1px solid #cbd5e1; padding: 7px 8px; background: #f1f5f9; color: #334155; text-align: left; font-size: 8pt; text-transform: uppercase; }
+    td { border: 1px solid #cbd5e1; padding: 7px 8px; color: #334155; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 8pt; font-weight: bold; }
+    .pill.green { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .pill.gray { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+    .sig-block { margin-top: 40px; display: flex; justify-content: flex-end; }
+    .sig-inner { text-align: center; width: 220px; font-size: 10pt; line-height: 1.6; }
+    .sig-inner .sig-role { font-weight: bold; color: #111; }
+    .sig-inner .sig-line { border-top: 1px solid #111; margin-top: 45px; padding-top: 4px; font-size: 8.5pt; color: #555; }
+    
+    .footer { margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 10px; font-size: 8pt; color: #64748b; text-align: center; }
+    @page { size: A4; margin: 1.5cm; }
+    tr, .sig-block, .event-info-box { page-break-inside: avoid; }
+  </style>
+</head>
+<body>
+
+  <div class="org-title">
+    ORGANIZAȚIA STUDENȚILOR DIN FACULTATEA DE AUTOMATICĂ, CALCULATOARE ȘI ELECTRONICĂ (O.S.A.C.E.)
+  </div>
+
+  <table class="header-table">
+    <tr>
+      <td class="col-left">
+        B-dul. Decebal Nr. 107<br/>
+        CRAIOVA 200440<br/>
+        DOLJ, ROMÂNIA
+      </td>
+      <td class="col-center">
+        <img src="${logoSrc}" alt="OSACE Logo" />
+      </td>
+      <td class="col-right">
+        Tel: +4-0773-365-903<br/>
+        Fax: +4-0251-438-198<br/>
+        contact@osace.ro<br/>
+        www.osace.ro
+      </td>
+    </tr>
+  </table>
+
+  <hr class="header-divider-thick"/>
+  <hr class="header-divider-thin"/>
+
+  <div class="doc-meta">
+    <div class="doc-nr">Nr. ________ / ${currentDate}</div>
+    <div>Craiova, România</div>
+  </div>
+
+  <div class="doc-title">FRAPĂ PREZENȚĂ ACTIVITATE</div>
+  <div class="doc-subtitle">Raport Oficial de Participare & Ore de Voluntariat</div>
+
+  <div class="event-info-box">
+    <div>
+      <div class="title">${eventTitle}</div>
+      <div class="sub">Event ID: #${eventId} &nbsp;·&nbsp; Data generării: ${currentDate}</div>
+      <div class="sub">Total Voluntari Înscriși: ${participants.length}</div>
+    </div>
+    <div class="totals">
+      <div class="num">${totalHours.toFixed(1)}</div>
+      <div class="lbl">total ore acordate</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 30px; text-align:center">#</th>
+        <th>Nume Voluntar</th>
+        <th>Username</th>
+        <th style="text-align:center">Status</th>
+        <th style="text-align:center">In</th>
+        <th style="text-align:center">Out</th>
+        <th style="text-align:center">Ore</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHTML}
+    </tbody>
+  </table>
+
+  <div class="sig-block">
+    <div class="sig-inner">
+      <div class="sig-role">Președinte O.S.A.C.E.,</div>
+      <div style="font-weight:600; margin-top:2px;">Rădoi Constantin-Mihai</div>
+      <div class="sig-line">Semnătură și Ștampilă</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Document generat automat de aplicația OSACE &nbsp;·&nbsp; www.osace.ro<br/>
+    CUI: 14277339 &nbsp;·&nbsp; B-dul. Decebal Nr. 107, Craiova, Dolj
+  </div>
+
+</body>
+</html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      setExportModalVisible(false);
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `Export Prezență PDF - ${eventTitle}`,
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        Alert.alert('Salvat', `PDF salvat la: ${uri}`);
+      }
+    } catch (err) {
+      console.error("Eroare export PDF:", err);
+      Alert.alert("Eroare", "Nu s-a putut genera PDF-ul.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const styles = createStyles(colors, isDark);
 
   const renderParticipantItem = ({ item }) => {
+    const isSelected = selectedIds.includes(item.id);
     const status = item.confirmation_status;
     
     let iconName = "time-outline";
@@ -122,7 +424,7 @@ export default function EventParticipantsScreen() {
     if (status === 'checked_in') {
       iconName = "scan-circle";
       iconColor = "#3498db";
-      statusText = "Prezent (In)";
+      statusText = "Prezent";
       tagStyle = styles.statusCheckedIn;
       textColor = "#3498db";
     } else if (status === 'attended') {
@@ -140,7 +442,24 @@ export default function EventParticipantsScreen() {
         : 'Nu a sosit încă';
 
     return (
-      <View style={styles.participantItem}>
+      <TouchableOpacity 
+        style={[styles.participantItem, isSelected && { borderColor: colors.primary, borderWidth: 1.5 }]}
+        onPress={() => bulkMode ? toggleSelectParticipant(item.id) : null}
+        activeOpacity={bulkMode ? 0.7 : 1}
+      >
+        {bulkMode && (
+          <TouchableOpacity 
+            onPress={() => toggleSelectParticipant(item.id)}
+            style={{ marginRight: 10 }}
+          >
+            <Ionicons 
+              name={isSelected ? "checkbox" : "square-outline"} 
+              size={24} 
+              color={isSelected ? colors.primary : colors.textSecondary} 
+            />
+          </TouchableOpacity>
+        )}
+
         <Ionicons 
           name={iconName}
           size={24} 
@@ -163,21 +482,23 @@ export default function EventParticipantsScreen() {
           )}
         </View>
 
-        <View style={styles.rightActions}>
-          <View style={[styles.statusTag, tagStyle]}>
-            <Text style={[styles.statusTagText, { color: textColor }]}>
-              {statusText}
-            </Text>
+        {!bulkMode && (
+          <View style={styles.rightActions}>
+            <View style={[styles.statusTag, tagStyle]}>
+              <Text style={[styles.statusTagText, { color: textColor }]}>
+                {statusText}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.editBtn}
+              onPress={() => handleOpenEditModal(item)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="create-outline" size={18} color={colors.primary} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity 
-            style={styles.editBtn}
-            onPress={() => handleOpenEditModal(item)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="create-outline" size={18} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-      </View>
+        )}
+      </TouchableOpacity>
     );
   };
 
@@ -205,7 +526,17 @@ export default function EventParticipantsScreen() {
                 <Text style={styles.eventIdBadgeText}>Event ID #{eventId}</Text>
               </View>
             </View>
-            <Text style={styles.headerSubtitle}>Total participanți înscriși: {participants.length}</Text>
+            
+            <View style={styles.subHeaderRow}>
+              <Text style={styles.headerSubtitle}>Total înscriși: {participants.length}</Text>
+              {bulkMode && (
+                <TouchableOpacity onPress={selectAll} style={styles.selectAllBtn}>
+                  <Text style={[styles.selectAllText, { color: colors.primary }]}>
+                    {selectedIds.length === participants.length ? 'Deselectează Tot' : 'Selectează Tot'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         }
         ListEmptyComponent={
@@ -217,6 +548,89 @@ export default function EventParticipantsScreen() {
         contentContainerStyle={styles.listContent}
         overScrollMode="never"
       />
+
+      {/* BULK ACTION BAR */}
+      {bulkMode && selectedIds.length > 0 && (
+        <View style={[styles.bulkBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.bulkBarText, { color: colors.textPrimary }]}>
+            {selectedIds.length} selectați
+          </Text>
+          
+          <View style={styles.bulkBtnGroup}>
+            <TouchableOpacity 
+              style={[styles.bulkBtn, { backgroundColor: '#3498db' }]}
+              onPress={() => handleBulkStatusChange('checked_in')}
+              disabled={bulkActionLoading}
+            >
+              <Text style={styles.bulkBtnText}>Prezent</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.bulkBtn, { backgroundColor: '#2ecc71' }]}
+              onPress={() => handleBulkStatusChange('attended')}
+              disabled={bulkActionLoading}
+            >
+              <Text style={styles.bulkBtnText}>Finalizat</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* MODAL EXPORT OPTIONS */}
+      <Modal
+        visible={exportModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setExportModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setExportModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Export Prezență</Text>
+                <TouchableOpacity onPress={() => setExportModalVisible(false)}>
+                  <Ionicons name="close" size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.modalUserSub, { color: colors.textSecondary }]}>
+                Alege formatul în care dorești să descarci prezența pentru activitatea "{eventTitle}"
+              </Text>
+
+              {exporting ? (
+                <View style={{ paddingVertical: 30, alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={{ marginTop: 10, color: colors.textSecondary }}>Se generează fișierul...</Text>
+                </View>
+              ) : (
+                <View style={{ gap: 12, marginTop: 10 }}>
+                  <TouchableOpacity 
+                    style={[styles.exportOptionBtn, { borderColor: colors.primary, backgroundColor: colors.primary + '10' }]}
+                    onPress={handleExportPDF}
+                  >
+                    <Ionicons name="document-text-outline" size={26} color={colors.primary} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.exportOptionTitle, { color: colors.primary }]}>Descarcă PDF (Adeverință / Frapă)</Text>
+                      <Text style={styles.exportOptionSub}>Document oficial cu antetul OSACE și ștampilă</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.exportOptionBtn, { borderColor: colors.border }]}
+                    onPress={handleExportCSV}
+                  >
+                    <Ionicons name="stats-chart-outline" size={26} color="#27ae60" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.exportOptionTitle, { color: colors.textPrimary }]}>Exportă CSV (Excel)</Text>
+                      <Text style={styles.exportOptionSub}>Tabel brut pentru Google Sheets / Excel</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       {/* MODAL EDITARE PREZENȚĂ ȘI ORE */}
       <Modal
@@ -230,9 +644,7 @@ export default function EventParticipantsScreen() {
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
               <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
                 <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-                    Editează Prezența
-                  </Text>
+                  <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Editează Prezența</Text>
                   <TouchableOpacity onPress={() => setModalVisible(false)}>
                     <Ionicons name="close" size={24} color={colors.textSecondary} />
                   </TouchableOpacity>
@@ -244,7 +656,6 @@ export default function EventParticipantsScreen() {
                   </Text>
                 )}
 
-                {/* Status Selector */}
                 <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Status Prezență:</Text>
                 <View style={styles.statusPillsRow}>
                   {[
@@ -274,7 +685,6 @@ export default function EventParticipantsScreen() {
                   })}
                 </View>
 
-                {/* Hours Input (Admin only) */}
                 <View style={styles.fieldBlock}>
                   <View style={styles.labelWithBadge}>
                     <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Ore Acordate:</Text>
@@ -308,7 +718,6 @@ export default function EventParticipantsScreen() {
                   )}
                 </View>
 
-                {/* Action Buttons */}
                 <View style={styles.modalActions}>
                   <TouchableOpacity
                     style={[styles.modalBtn, styles.cancelBtn, { borderColor: colors.border }]}
@@ -355,8 +764,11 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     borderColor: colors.primary + '40'
   },
   eventIdBadgeText: { fontSize: 11, fontWeight: '700', color: colors.primary },
-  headerSubtitle: { fontSize: 14, color: colors.textSecondary, marginTop: 6 },
-  listContent: { paddingBottom: 40 },
+  subHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
+  headerSubtitle: { fontSize: 14, color: colors.textSecondary },
+  selectAllBtn: { paddingVertical: 2, paddingHorizontal: 6 },
+  selectAllText: { fontSize: 12, fontWeight: '700' },
+  listContent: { paddingBottom: 100 },
   participantItem: { backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', padding: 15, marginHorizontal: 15, marginVertical: 6, borderRadius: 12, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, borderWidth: isDark ? 1 : 0, borderColor: colors.border },
   icon: { marginRight: 12 },
   participantDetails: { flex: 1 },
@@ -375,6 +787,13 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   statusPending: { backgroundColor: isDark ? 'rgba(243, 156, 18, 0.15)' : '#fef9e7' },
   emptyContainer: { alignItems: 'center', marginTop: 60, paddingHorizontal: 40 },
   emptyText: { textAlign: 'center', marginTop: 15, color: colors.textSecondary, fontSize: 16 },
+
+  // Bulk Bar
+  bulkBar: { position: 'absolute', bottom: 15, left: 15, right: 15, padding: 14, borderRadius: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 8, borderWidth: 1 },
+  bulkBarText: { fontWeight: 'bold', fontSize: 14 },
+  bulkBtnGroup: { flexDirection: 'row', gap: 8 },
+  bulkBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
+  bulkBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
 
   // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
@@ -397,4 +816,9 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   cancelBtn: { borderWidth: 1 },
   cancelBtnText: { fontWeight: 'bold' },
   saveBtnText: { color: '#fff', fontWeight: 'bold' },
+
+  // Export Option Buttons
+  exportOptionBtn: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 12, borderWidth: 1 },
+  exportOptionTitle: { fontSize: 14, fontWeight: 'bold' },
+  exportOptionSub: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
 });

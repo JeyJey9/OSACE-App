@@ -56,19 +56,17 @@ export default function DataExportScreen() {
 
       const { data } = await api.get('/api/profile/my-data');
 
-      const exportDate = format(new Date(data.exported_at.replace(' ', 'T')), 'dd MMMM yyyy, HH:mm', { locale: ro });
-      const joinDate = format(new Date(data.user.created_at.replace(' ', 'T')), 'dd MMMM yyyy', { locale: ro });
+      const exportDate = format(new Date(data.exported_at.replace(' ', 'T')), 'dd.MM.yyyy', { locale: ro });
+      const joinDate = format(new Date(data.user.created_at.replace(' ', 'T')), 'dd.MM.yyyy', { locale: ro });
 
       const totalHours = [
         ...data.events_attended.filter(e => e.confirmation_status === 'attended'),
         ...data.special_contributions,
       ].reduce((sum, e) => sum + (parseFloat(e.awarded_hours) || 0), 0);
 
-      const attendedEvents = data.events_attended.filter(e => e.confirmation_status === 'attended');
-
       const eventsRows = data.events_attended.map(e => `
         <tr>
-          <td>${e.title}</td>
+          <td><strong>${e.title}</strong></td>
           <td style="text-transform:capitalize">${e.category || '—'}</td>
           <td>${e.start_time ? format(new Date(e.start_time.replace(' ', 'T')), 'dd.MM.yyyy') : '—'}</td>
           <td style="text-align:center">${e.confirmation_status === 'attended'
@@ -80,7 +78,7 @@ export default function DataExportScreen() {
 
       const contribRows = data.special_contributions.map(c => `
         <tr>
-          <td>${c.title}</td>
+          <td><strong>${c.title}</strong></td>
           <td>${c.description || '—'}</td>
           <td>${format(new Date(c.created_at.replace(' ', 'T')), 'dd.MM.yyyy')}</td>
           <td style="text-align:center"><span class="pill green">+${parseFloat(c.awarded_hours || 0).toFixed(1)}h</span></td>
@@ -105,313 +103,268 @@ export default function DataExportScreen() {
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Times New Roman', Times, serif;
-      font-size: 12pt;
-      color: #000;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 11pt;
+      color: #222;
       background: #fff;
-      padding: 2cm 2.2cm;
+      padding: 1.8cm 2cm;
     }
 
-    /* ── HEADER ── */
-    .org-name {
+    /* ── HEADER OFICIAL OSACE ── */
+    .org-title {
       text-align: center;
-      font-size: 11pt;
+      font-size: 10.5pt;
       font-weight: bold;
       text-transform: uppercase;
-      line-height: 1.5;
-      margin-bottom: 12px;
+      line-height: 1.4;
+      margin-bottom: 14px;
+      color: #111;
     }
 
-    .header-cols {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 6px;
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
     }
 
-    .col-address {
-      font-size: 9pt;
-      line-height: 1.8;
-      width: 33%;
-    }
-
-    .col-logo {
-      width: 33%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    /* SVG Shield Logo */
-    .shield {
-      width: 200px;
-      height: 100px;
-    }
-
-    .col-contact {
-      font-size: 9pt;
-      line-height: 1.8;
-      width: 33%;
-      text-align: right;
-    }
-    .col-contact a, .col-contact .link { color: #0000EE; text-decoration: underline; }
-
-    .header-divider {
+    .header-table td {
       border: none;
-      border-top: 2px solid #000;
-      margin: 8px 0 4px;
+      padding: 0;
+      vertical-align: middle;
+      background: transparent !important;
     }
+
+    .col-left {
+      width: 32%;
+      font-size: 8.5pt;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    .col-center {
+      width: 36%;
+      text-align: center;
+    }
+
+    .col-center img {
+      width: 140px;
+      height: auto;
+    }
+
+    .col-right {
+      width: 32%;
+      font-size: 8.5pt;
+      line-height: 1.6;
+      text-align: right;
+      color: #333;
+    }
+
+    .col-right a { color: #1566B9; text-decoration: none; }
+
+    .header-divider-thick {
+      border: none;
+      border-top: 2.5px solid #111;
+      margin: 10px 0 3px 0;
+    }
+
     .header-divider-thin {
       border: none;
-      border-top: 1px solid #000;
-      margin: 3px 0 16px;
+      border-top: 1px solid #111;
+      margin: 0 0 16px 0;
     }
 
-    /* ── DOC META ── */
+    /* ── DOCUMENT METADATA ── */
     .doc-meta {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 20px;
+      align-items: center;
+      margin-bottom: 22px;
+      font-size: 10pt;
     }
-    .doc-nr { font-size: 11pt; }
-    .doc-nr span { font-size: 9pt; color: #555; }
+
+    .doc-nr { font-weight: bold; }
 
     /* ── TITLE ── */
     .doc-title {
       text-align: center;
       font-size: 16pt;
       font-weight: bold;
-      margin-bottom: 6px;
-    }
-    .doc-subtitle {
-      text-align: center;
-      font-size: 9.5pt;
-      color: #555;
-      margin-bottom: 24px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      color: #1566B9;
     }
 
-    /* ── RGPD NOTICE ── */
+    .doc-subtitle {
+      text-align: center;
+      font-size: 9pt;
+      color: #666;
+      margin-bottom: 22px;
+    }
+
+    /* ── RGPD BOX ── */
     .rgpd-box {
-      border: 1px solid #bbb;
-      border-left: 4px solid #555;
+      border: 1px solid #dcdcdc;
+      border-left: 4px solid #1566B9;
       padding: 10px 14px;
       margin-bottom: 22px;
-      font-size: 9.5pt;
-      line-height: 1.6;
-      background: #fafafa;
+      font-size: 9pt;
+      line-height: 1.5;
+      background: #f8fafc;
+      border-radius: 4px;
     }
 
     /* ── VOLUNTEER CARD ── */
     .volunteer-card {
-      border: 1px solid #ccc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
       padding: 14px 18px;
       margin-bottom: 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: #f8fafc;
     }
-    .volunteer-card .info { line-height: 1.9; font-size: 11pt; }
-    .volunteer-card .info .name { font-size: 14pt; font-weight: bold; }
-    .volunteer-card .info .sub { font-size: 9.5pt; color: #444; }
+
+    .volunteer-card .info { line-height: 1.8; font-size: 10pt; }
+    .volunteer-card .info .name { font-size: 13pt; font-weight: bold; color: #111; }
+    .volunteer-card .info .sub { font-size: 9pt; color: #555; }
     .volunteer-card .totals { text-align: right; }
-    .volunteer-card .totals .hours-num { font-size: 28pt; font-weight: bold; line-height: 1; }
-    .volunteer-card .totals .hours-lbl { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.5px; color: #555; margin-top: 2px; }
+    .volunteer-card .totals .hours-num { font-size: 26pt; font-weight: bold; line-height: 1; color: #1566B9; }
+    .volunteer-card .totals .hours-lbl { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5px; color: #666; margin-top: 2px; }
 
     /* ── SECTION ── */
-    .section { margin-bottom: 26px; page-break-inside: auto; }
+    .section { margin-bottom: 24px; }
     .section-title {
-      font-size: 11pt;
+      font-size: 10pt;
       font-weight: bold;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      border-bottom: 1.5px solid #000;
-      padding-bottom: 5px;
+      border-bottom: 2px solid #1566B9;
+      padding-bottom: 4px;
       margin-bottom: 10px;
-      page-break-after: avoid;
-      break-after: avoid;
+      color: #1566B9;
     }
 
     /* ── TABLE ── */
-    table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin-top: 0; }
-    thead {
-      display: table-header-group; /* repeats header on each new page */
-    }
-    thead tr th {
-      border-top: 2px solid #000; /* visible top border when thead repeats on a new page */
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 0; }
     th {
-      border: 1px solid #000;
-      padding: 6px 10px;
-      background: #000;
-      color: #fff;
+      border: 1px solid #cbd5e1;
+      padding: 7px 10px;
+      background: #f1f5f9;
+      color: #334155;
       text-align: left;
-      font-size: 8.5pt;
+      font-size: 8pt;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    td { border: 1px solid #aaa; padding: 6px 10px; }
-    tr:nth-child(even) td { background: #f6f6f6; }
+    td { border: 1px solid #cbd5e1; padding: 7px 10px; color: #334155; }
+    tr:nth-child(even) td { background: #f8fafc; }
 
-    .pill { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 8.5pt; font-weight: bold; }
-    .pill.green { background: #d4f5e2; color: #0d6e39; border: 1px solid #9adbb9; }
-    .pill.gray  { background: #e8ecf2; color: #5a6a8a; border: 1px solid #c5ccda; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 8pt; font-weight: bold; }
+    .pill.green { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .pill.gray  { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
 
-    .empty-note { font-style: italic; color: #777; font-size: 10pt; padding: 6px 0; }
+    .empty-note { font-style: italic; color: #94a3b8; font-size: 9pt; padding: 6px 0; }
 
     /* ── SIGNATURE BLOCK ── */
     .sig-block {
-      margin-top: 80px; /* Increased to push it down further */
+      margin-top: 45px;
       display: flex;
       justify-content: flex-end;
     }
+
     .sig-inner {
       text-align: center;
       width: 220px;
-      font-size: 11pt;
-      line-height: 1.8;
+      font-size: 10pt;
+      line-height: 1.6;
     }
-    .sig-inner .sig-role { font-weight: bold; }
-    .sig-inner .sig-stamp {
-      width: 100px; height: 100px;
-      border: 2px dashed #aaa;
-      border-radius: 50%;
-      margin: 16px auto 0;
-      display: flex; align-items: center; justify-content: center;
-      color: #aaa; font-size: 8pt; font-style: italic;
-    }
+
+    .sig-inner .sig-role { font-weight: bold; color: #111; }
+    .sig-inner .sig-name { font-size: 10pt; font-weight: 600; margin-top: 2px; }
     .sig-inner .sig-line {
-      border-top: 1px solid #000;
-      margin-top: 50px;
+      border-top: 1px solid #111;
+      margin-top: 45px;
       padding-top: 4px;
-      font-size: 9.5pt;
+      font-size: 8.5pt;
+      color: #555;
     }
 
     /* ── FOOTER ── */
     .footer {
       margin-top: 30px;
-      border-top: 1px solid #ccc;
-      padding-top: 8px;
-      font-size: 8.5pt;
-      color: #777;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 10px;
+      font-size: 8pt;
+      color: #64748b;
       text-align: center;
-      line-height: 1.7;
+      line-height: 1.6;
     }
 
-    /* ── PAGE BREAK / PRINT ── */
     @page {
       size: A4;
-      margin-top: 1.5cm;
-      margin-bottom: 1.5cm;
-      margin-left: 0;
-      margin-right: 0;
+      margin: 1.5cm;
     }
 
-    /* Don't break inside these blocks */
-    .volunteer-card,
-    .rgpd-box,
-    .sig-block,
-    .section-title,
-    .empty-note {
+    .volunteer-card, .rgpd-box, .sig-block, .section-title, tr {
       page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    /* Section title must always stay with its first table row */
-    .section-title {
-      page-break-after: avoid;
-      break-after: avoid;
-    }
-
-    /* Table rows never split across pages */
-    tr {
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    /* Table header repeats on each new page automatically */
-    thead {
-      display: table-header-group;
-    }
-
-    /* Push each major section to start cleanly — no orphan titles */
-    .section {
-      page-break-inside: auto;
-      break-inside: auto;
-    }
-
-    /* Signature block always stays together on whatever page it ends up on */
-    .sig-block {
-      page-break-before: auto;
-      break-before: auto;
-    }
-
-    /* Footer stays with signature */
-    .footer {
-      page-break-inside: avoid;
-      break-inside: avoid;
     }
   </style>
 </head>
 <body>
 
-  <!-- ORG NAME -->
-  <div class="org-name">
-    Organizația Studenților din Facultatea de<br/>
-    Automatică, Calculatoare și Electronică (O.S.A.C.E.)
+  <!-- TITLE HEADER -->
+  <div class="org-title">
+    ORGANIZAȚIA STUDENȚILOR DIN FACULTATEA DE AUTOMATICĂ, CALCULATOARE ȘI ELECTRONICĂ (O.S.A.C.E.)
   </div>
 
-  <!-- THREE-COLUMN HEADER -->
-  <div class="header-cols">
-    <div class="col-address">
-      B-dul. Decebal Nr. 107<br/>
-      CRAIOVA 200440<br/>
-      DOLJ<br/>
-      ROMÂNIA
-    </div>
+  <!-- THREE COLUMN HEADER -->
+  <table class="header-table">
+    <tr>
+      <td class="col-left">
+        B-dul. Decebal Nr. 107<br/>
+        CRAIOVA 200440<br/>
+        DOLJ, ROMÂNIA
+      </td>
+      <td class="col-center">
+        <img src="${logoSrc}" alt="OSACE Logo" />
+      </td>
+      <td class="col-right">
+        Tel: +4-0773-365-903<br/>
+        Fax: +4-0251-438-198<br/>
+        contact@osace.ro<br/>
+        www.osace.ro
+      </td>
+    </tr>
+  </table>
 
-    <div class="col-logo">
-      <img src="${logoSrc}" alt="OSACE Logo" style="width:180px; height:auto;" />
-    </div>
-
-    <div class="col-contact">
-      Tel: +4-0773-365903<br/>
-      Fax: +4-0251-438198<br/>
-      <span class="link">osace2001@gmail.com</span><br/>
-      <span class="link">osace2001@yahoo.com</span><br/>
-      <span class="link">www.osace.ro</span>
-    </div>
-  </div>
-
-  <hr class="header-divider"/>
+  <hr class="header-divider-thick"/>
   <hr class="header-divider-thin"/>
 
-  <!-- DOCUMENT NUMBER + DATE -->
+  <!-- DOCUMENT METADATA -->
   <div class="doc-meta">
-    <div class="doc-nr">Nr. ________ / ________________</div>
-    <div></div>
+    <div class="doc-nr">Nr. ________ / ${exportDate}</div>
+    <div>Craiova, România</div>
   </div>
 
   <!-- DOCUMENT TITLE -->
-  <div class="doc-title">Export Date Personale</div>
-  <div class="doc-subtitle">Generat: ${exportDate} &nbsp;·&nbsp; Conform RGPD (UE) 2016/679, Art. 15</div>
+  <div class="doc-title">EXPORT DATE PERSONALE</div>
+  <div class="doc-subtitle">Conform Regulamentului (UE) 2016/679 (RGPD), Art. 15 — Dreptul de Acces</div>
 
   <!-- RGPD NOTICE -->
   <div class="rgpd-box">
     <strong>Informare RGPD:</strong> Acest document conține toate datele personale pe care O.S.A.C.E. le deține despre
-    membrul menționat mai jos, în conformitate cu dreptul de acces prevăzut de Art. 15 din Regulamentul (UE) 2016/679.
-    Documentul poate fi utilizat pentru verificarea corectitudinii datelor. Pentru solicitări de ștergere a datelor,
-    vă rugăm să accesați <em>Profil → Setări cont → Șterge cont</em> în aplicația OSACE.
+    membrul menționat mai jos. Documentul este extras în mod securizat din baza de date oficială a organizației.
   </div>
 
   <!-- VOLUNTEER INFO CARD -->
   <div class="volunteer-card">
     <div class="info">
-      <div class="name">${data.user.first_name} ${data.user.last_name}</div>
-      <div class="sub">Utilizator: @${data.user.display_name}</div>
-      <div class="sub">Email: ${data.user.email}</div>
-      <div class="sub">Rol: ${data.user.role} &nbsp;·&nbsp; Înregistrat: ${joinDate}</div>
-      <div class="sub">Status verificare: ${data.user.student_verification_status}</div>
+      <div class="name">${data.user.first_name || ''} ${data.user.last_name || ''}</div>
+      <div class="sub">Utilizator: @${data.user.display_name} &nbsp;·&nbsp; Email: ${data.user.email}</div>
+      <div class="sub">Rol: ${data.user.role?.toUpperCase()} &nbsp;·&nbsp; Membru din: ${joinDate}</div>
+      <div class="sub">Status verificare student: ${data.user.student_verification_status || 'N/A'}</div>
     </div>
     <div class="totals">
       <div class="hours-num">${totalHours.toFixed(1)}</div>
@@ -476,23 +429,21 @@ export default function DataExportScreen() {
   <div class="sig-block">
     <div class="sig-inner">
       <div class="sig-role">Președinte O.S.A.C.E.,</div>
-      <div class="sig-stamp">Ștampilă</div>
-      <div class="sig-line">Semnătură</div>
+      <div class="sig-name">Rădoi Constantin-Mihai</div>
+      <div class="sig-line">Semnătură și Ștampilă</div>
     </div>
   </div>
 
   <!-- FOOTER -->
   <div class="footer">
-    Document generat automat de platforma OSACE &nbsp;·&nbsp; www.osace.ro<br/>
-    Date exportate conform Regulamentului General privind Protecția Datelor (RGPD/GDPR) — Art. 15<br/>
-    CUI: 14277339 &nbsp;·&nbsp; contact@osace.ro
+    Document generat automat de aplicația OSACE &nbsp;·&nbsp; www.osace.ro<br/>
+    CUI: 14277339 &nbsp;·&nbsp; B-dul. Decebal Nr. 107, Craiova, Dolj
   </div>
 
 </body>
 </html>`;
 
       const { uri } = await Print.printToFileAsync({ html, base64: false });
-      const fileName = `OSACE_Date_${data.user.last_name}_${data.user.first_name}_${format(new Date(), 'yyyyMMdd')}.pdf`;
 
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, {
