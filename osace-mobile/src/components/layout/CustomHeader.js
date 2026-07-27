@@ -262,12 +262,6 @@ export default function CustomHeader({ title, showRole = true, isHidden = false 
 
 const styles = StyleSheet.create({
   wrapper: {
-    // The shadow sits on the wrapper so it appears BELOW the blur
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 12,
     zIndex: 10,
   },
   blurContainer: {

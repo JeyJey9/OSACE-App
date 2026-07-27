@@ -160,13 +160,11 @@ function useIsInsideAdminSubScreen() {
 // CRITIC: aceste componente trebuie create UNA SINGURĂ DATĂ, în afara lui AppTabs.
 // Dacă ar fi create în JSX (withHeaderOffset(HomeScreen)), React le-ar trata ca
 // tipuri noi la fiecare render al AppTabs → demontare + remontare completă la swipe = LAG.
+const HeaderHeightContext = React.createContext(140);
+
 function HeaderOffsetWrapper({ children }) {
-  const insets = useSafeAreaInsets();
-  const headerPaddingTop = Platform.OS === 'android'
-    ? (insets?.top || 25) + 12
-    : Math.max(insets?.top || 0, 12);
-  const paddingTop = headerPaddingTop + 105;
-  return <View style={{ flex: 1, paddingTop }}>{children}</View>;
+  const headerHeight = React.useContext(HeaderHeightContext);
+  return <View style={{ flex: 1, paddingTop: headerHeight }}>{children}</View>;
 }
 
 function NewsFeedTab(props) {
@@ -199,6 +197,12 @@ export default function AppTabs() {
   const isDark = theme === 'dark';
   const hideHeader = useIsInsideAdminSubScreen();
 
+  const insets = useSafeAreaInsets();
+  const initialHeaderPaddingTop = Platform.OS === 'android'
+    ? (insets?.top || 25) + 12
+    : Math.max(insets?.top || 0, 12);
+  const [headerHeight, setHeaderHeight] = React.useState(initialHeaderPaddingTop + 85);
+
   // tabBar callback stabil — nu recrea FloatingTabBar la fiecare render al AppTabs
   const renderTabBar = useCallback(
     (props) => <FloatingTabBar {...props} colors={colors} isDark={isDark} />,
@@ -224,31 +228,40 @@ export default function AppTabs() {
   }, [user]);
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Header-ul stă fix absolut în afara pager-ului */}
-      <View style={styles.headerContainer} pointerEvents={hideHeader ? 'none' : 'auto'}>
-        <CustomHeader isHidden={hideHeader} />
+    <HeaderHeightContext.Provider value={headerHeight}>
+      <View style={{ flex: 1 }}>
+        {/* Header-ul stă fix absolut în afara pager-ului */}
+        <View 
+          style={styles.headerContainer} 
+          pointerEvents={hideHeader ? 'none' : 'auto'}
+          onLayout={(e) => {
+            const { height } = e.nativeEvent.layout;
+            if (height > 0) setHeaderHeight(height);
+          }}
+        >
+          <CustomHeader isHidden={hideHeader} />
+        </View>
+
+        <Tab.Navigator
+          tabBarPosition="bottom"
+          tabBar={renderTabBar}
+          screenOptions={buildScreenOptions}
+        >
+          <Tab.Screen name="Noutăți" component={NewsFeedTab} />
+          <Tab.Screen name="Activități" component={HomeTab} />
+          <Tab.Screen name="Activitățile Mele" component={MyEventsTab} />
+          <Tab.Screen name="Istoric" component={HistoryTab} />
+
+          {user && user.role === 'coordonator' && (
+            <Tab.Screen name="Coordonare" component={ManagementNavigator} />
+          )}
+
+          {user && user.role === 'admin' && (
+            <Tab.Screen name="Admin" component={ManagementNavigator} />
+          )}
+        </Tab.Navigator>
       </View>
-
-      <Tab.Navigator
-        tabBarPosition="bottom"
-        tabBar={renderTabBar}
-        screenOptions={buildScreenOptions}
-      >
-        <Tab.Screen name="Noutăți" component={NewsFeedTab} />
-        <Tab.Screen name="Activități" component={HomeTab} />
-        <Tab.Screen name="Activitățile Mele" component={MyEventsTab} />
-        <Tab.Screen name="Istoric" component={HistoryTab} />
-
-        {user && user.role === 'coordonator' && (
-          <Tab.Screen name="Coordonare" component={ManagementNavigator} />
-        )}
-
-        {user && user.role === 'admin' && (
-          <Tab.Screen name="Admin" component={ManagementNavigator} />
-        )}
-      </Tab.Navigator>
-    </View>
+    </HeaderHeightContext.Provider>
   );
 }
 
