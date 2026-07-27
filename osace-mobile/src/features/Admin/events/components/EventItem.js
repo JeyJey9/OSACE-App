@@ -18,10 +18,24 @@ const EventItem = memo(({ item, can, navigation, openQrModal, openTeamModal, han
     <View style={styles.eventItem}>
       <View style={styles.itemHeader}>
         <Text style={styles.eventTitle}>{item.title}</Text>
-        <View style={[styles.categoryTag, { backgroundColor: colors.primary + '20' }]}>
-          <Text style={[styles.categoryTagText, { color: colors.primary }]}>
-            {(item.category || 'social').toUpperCase()}
-          </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View
+            style={{
+              backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+              paddingHorizontal: 6,
+              paddingVertical: 3,
+              borderRadius: 6,
+            }}
+          >
+            <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textSecondary }}>
+              #ID: {item.id}
+            </Text>
+          </View>
+          <View style={[styles.categoryTag, { backgroundColor: colors.primary + '20' }]}>
+            <Text style={[styles.categoryTagText, { color: colors.primary }]}>
+              {(item.category || 'social').toUpperCase()}
+            </Text>
+          </View>
         </View>
       </View>
       <View style={styles.dateIntervalContainer}>

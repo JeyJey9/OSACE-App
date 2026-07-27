@@ -247,6 +247,111 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
     }
   });
 
+  // PUT /:id/participants/:targetUserId (Modificare manuală status/ore participant)
+  router.put('/:id/participants/:targetUserId', verifyToken, async (req, res) => {
+    const { id, targetUserId } = req.params;
+    const { userId, role } = req.user;
+    const { status, awarded_hours } = req.body;
+
+    const eventIdNum = parseInt(id, 10);
+    const targetUserIdNum = parseInt(targetUserId, 10);
+
+    if (isNaN(eventIdNum) || isNaN(targetUserIdNum)) {
+      return res.status(400).json({ error: 'ID-uri invalide.' });
+    }
+
+    try {
+      const hasAccess = await checkEventAccess(eventIdNum, userId, role, 'CAN_MANAGE_PARTICIPANTS');
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Nu aveți permisiunea de a modifica prezența la acest eveniment.' });
+      }
+
+      const attCheck = await pool.query(
+        'SELECT * FROM event_attendance WHERE event_id = $1 AND user_id = $2',
+        [eventIdNum, targetUserIdNum]
+      );
+      if (attCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Utilizatorul nu este înscris la acest eveniment.' });
+      }
+
+      const currentAtt = attCheck.rows[0];
+      const validStatuses = ['registered', 'checked_in', 'attended'];
+      if (status && !validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Status invalid.' });
+      }
+
+      // Validare și securitate pentru Ore Acordate
+      let parsedHours = null;
+      if (awarded_hours !== undefined && awarded_hours !== null && awarded_hours !== '') {
+        parsedHours = parseFloat(awarded_hours);
+        if (isNaN(parsedHours) || parsedHours < 0 || parsedHours > 1000) {
+          return res.status(400).json({ error: 'Numărul de ore trebuie să fie un număr valid între 0 și 1000.' });
+        }
+      }
+
+      const currentHoursNum = parseFloat(currentAtt.awarded_hours || 0);
+      const isEditingHours = parsedHours !== null && parsedHours !== currentHoursNum;
+
+      if (isEditingHours && role !== 'admin') {
+        return res.status(403).json({ error: 'Doar administratorii au permisiunea de a modifica numărul de ore acordate.' });
+      }
+
+      const newStatus = status || currentAtt.confirmation_status;
+      let newHours = currentAtt.awarded_hours;
+      if (role === 'admin' && parsedHours !== null) {
+        newHours = parsedHours.toFixed(2);
+      }
+
+      let checkInTime = currentAtt.check_in_time;
+      let checkOutTime = currentAtt.check_out_time;
+      let confirmedAt = currentAtt.confirmed_at;
+
+      if (newStatus === 'checked_in') {
+        if (!checkInTime) checkInTime = new Date();
+        checkOutTime = null;
+      } else if (newStatus === 'attended') {
+        if (!checkInTime) checkInTime = new Date();
+        if (!checkOutTime) checkOutTime = new Date();
+        if (!confirmedAt) confirmedAt = new Date();
+      } else if (newStatus === 'registered') {
+        checkInTime = null;
+        checkOutTime = null;
+        confirmedAt = null;
+        newHours = 0;
+      }
+
+      const updateResult = await pool.query(
+        `UPDATE event_attendance 
+         SET confirmation_status = $1, 
+             awarded_hours = $2, 
+             check_in_time = $3, 
+             check_out_time = $4, 
+             confirmed_at = $5 
+         WHERE event_id = $6 AND user_id = $7 
+         RETURNING *`,
+        [newStatus, newHours, checkInTime, checkOutTime, confirmedAt, eventIdNum, targetUserIdNum]
+      );
+
+      await logAction(pool, userId, 'PARTICIPANT_UPDATE', 'event_attendance', targetUserIdNum, { 
+        eventId: eventIdNum, 
+        newStatus, 
+        newHours 
+      });
+
+      if (newStatus === 'attended') {
+        checkBadgesOnConfirmation(targetUserIdNum, eventIdNum, pool);
+      }
+
+      return res.status(200).json({ 
+        message: 'Datele participantului au fost actualizate cu succes.',
+        attendance: updateResult.rows[0]
+      });
+    } catch (error) {
+      console.error('Eroare la modificarea manuală a participantului:', error);
+      return res.status(500).json({ error: 'Eroare server la actualizare.' });
+    }
+  });
+
   // GET /:id/current-code (Ruta pentru generare QR)
   router.get('/:id/current-code', verifyToken, async (req, res) => {
     const { id } = req.params;

@@ -168,10 +168,26 @@ export default function UserListScreen() {
           )}
 
           <Text style={styles.userEmail}>{item.email}</Text>
-          <View style={[styles.roleTag, { backgroundColor: roleColor + '20' }]}>
-            <Text style={[styles.roleTagText, { color: roleColor }]}>
-              {item.role} {isSelf ? '(Tu)' : ''}
-            </Text>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={[styles.roleTag, { backgroundColor: roleColor + '20' }]}>
+              <Text style={[styles.roleTagText, { color: roleColor }]}>
+                {item.role} {isSelf ? '(Tu)' : ''}
+              </Text>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                paddingHorizontal: 6,
+                paddingVertical: 3,
+                borderRadius: 6,
+              }}
+            >
+              <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textSecondary }}>
+                #ID: {item.id}
+              </Text>
+            </View>
           </View>
         </View>
 
