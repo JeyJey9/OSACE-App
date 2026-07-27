@@ -151,6 +151,18 @@ export default function NewsFeedScreen() {
     );
   };
 
+  const [viewableItemIds, setViewableItemIds] = useState([]);
+
+  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    if (viewableItems) {
+      setViewableItemIds(viewableItems.map(v => v.item.id));
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+  }).current;
+
   const isUnverified = user?.role === 'user' && user?.student_verification_status !== 'verified';
   const styles = createStyles(colors);
 
@@ -162,9 +174,12 @@ export default function NewsFeedScreen() {
         ) : (
           <FlatList
             data={posts}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
             renderItem={({ item }) => (
               <PostCard
                 item={item}
+                isVisible={viewableItemIds.includes(item.id)}
                 onPostUpdate={onPostUpdate}
                 onPostDelete={onPostDelete}
                 currentUserRole={user?.role}
@@ -215,28 +230,18 @@ export default function NewsFeedScreen() {
         )}
 
         {(user?.role === 'admin' || user?.role === 'coordonator') && (
-          <View style={styles.fabRow}>
-            <TouchableOpacity
-              style={styles.fabIg}
-              onPress={handleSyncInstagram}
-              disabled={syncingIg}
-              activeOpacity={0.8}
-            >
-              {syncingIg ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Ionicons name="logo-instagram" size={24} color="white" />
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.fab}
-              onPress={() => navigation.navigate(managementTabName, { screen: 'PostForm' })}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="add" size={30} color="white" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.fabIg}
+            onPress={handleSyncInstagram}
+            disabled={syncingIg}
+            activeOpacity={0.8}
+          >
+            {syncingIg ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Ionicons name="logo-instagram" size={26} color="white" />
+            )}
+          </TouchableOpacity>
         )}
       </ScreenContainer>
     </View>
@@ -247,9 +252,22 @@ const createStyles = (colors) => StyleSheet.create({
   listContent: { paddingBottom: 130, paddingTop: 8 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
   emptyText: { fontSize: 16, color: colors.textSecondary },
-  fabRow: { position: 'absolute', right: 20, bottom: 100, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  fab: { backgroundColor: colors.primary, width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
-  fabIg: { backgroundColor: '#E1306C', width: 46, height: 46, borderRadius: 23, justifyContent: 'center', alignItems: 'center', elevation: 6, shadowColor: '#E1306C', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 4 },
+  fabIg: {
+    position: 'absolute',
+    right: 20,
+    bottom: 100,
+    backgroundColor: '#E1306C',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#E1306C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+  },
   verifyBanner: {
     position: 'absolute', left: 16, right: 16, bottom: 100,
     borderRadius: 18,

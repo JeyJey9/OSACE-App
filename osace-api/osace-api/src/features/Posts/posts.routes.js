@@ -4,10 +4,7 @@ const { logAction } = require('../../utils/auditLog');
 
 const path = require('path');
 const API_DOMAIN = 'https://api.osace.ro'; // URL-ul API-ului
-const { checkBadgesOnLike, checkBadgesOnComment, checkBadgesOnPostCreate } = require('../../features/Badge/badge.service'); // S-ar putea să trebuiască să ajustezi calea '../'
-
-// --- Configurare Multer (Upload Imagini) ---
-const { uploadPostImages } = require('../../config/multer');
+const { checkBadgesOnLike, checkBadgesOnComment } = require('../../features/Badge/badge.service'); // S-ar putea să trebuiască să ajustezi calea '../'
 
 // --- Exportăm Rutele ---
 module.exports = (pool, verifyToken, verifyManager) => {
@@ -123,62 +120,6 @@ module.exports = (pool, verifyToken, verifyManager) => {
     }
   });
 
-  // ======================================================
-  // ## POST / (Creează o postare nouă cu multiple imagini) - CORECTAT
-  // ======================================================
-  router.post('/', [verifyToken, verifyManager, uploadPostImages.array('images', 10)], async (req, res) => {
-
-    const { description, created_at } = req.body;
-    const creatorId = req.user.userId;
-    const postDate = created_at ? new Date(created_at) : new Date();
-
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: 'Postarea trebuie să conțină cel puțin o imagine.' });
-    }
-
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
-      // 1. Inserăm postarea principală
-      const newPostResult = await client.query(
-        `INSERT INTO posts (creator_id, description, created_at) 
-             VALUES ($1, $2, $3) 
-             RETURNING id`,
-        [creatorId, description, postDate]
-      );
-      const postId = newPostResult.rows[0].id;
-
-      // 2. Inserăm URL-urile imaginilor
-      const imageInsertPromises = req.files.map((file, index) => {
-        const imageUrl = `${API_DOMAIN}/uploads/posts/${file.filename}`;
-        return client.query(
-          `INSERT INTO post_images (post_id, image_url, sort_order) 
-                 VALUES ($1, $2, $3)`,
-          [postId, imageUrl, index]
-        );
-      });
-
-      await Promise.all(imageInsertPromises);
-
-      await client.query('COMMIT');
-      checkBadgesOnPostCreate(creatorId, pool);
-      await logAction(pool, creatorId, 'POST_CREATE', 'post', postId, { image_count: req.files.length });
-      res.status(201).json({
-        id: postId,
-        description,
-        created_at: postDate,
-        message: `Postare creată cu ${req.files.length} imagini.`
-      });
-
-    } catch (error) {
-      await client.query('ROLLBACK');
-      console.error('Eroare la crearea postării cu multiple imagini:', error);
-      res.status(500).json({ error: 'Eroare server la crearea postării.' });
-    } finally {
-      client.release();
-    }
-  });
 
 
   router.get('/:id/comments', verifyToken, async (req, res) => {
@@ -515,48 +456,6 @@ module.exports = (pool, verifyToken, verifyManager) => {
     }
   });
 
-  // ======================================================
-  // ## PUT /:id (Editează o postare existentă) - CORECTAT
-  // ======================================================
-  router.put('/:id', [verifyToken, verifyManager], async (req, res) => {
-    const postId = req.params.id;
-    const { description, created_at } = req.body;
-    const { userId, role } = req.user;
-
-    if (!description) {
-      return res.status(400).json({ error: 'Descrierea postării este obligatorie.' });
-    }
-
-    try {
-      let query;
-      let params;
-
-      // NOTĂ: Nu permitem schimbarea imaginii aici.
-      const baseQuery = `UPDATE posts SET description = $1, created_at = $2 WHERE id = $3`;
-      // CORECTAT: Am scos 'image_url' din RETURN, deoarece nu mai există în tabela 'posts'
-      const returning = ` RETURNING id, description, created_at, creator_id`;
-
-      if (role === 'admin') {
-        query = baseQuery + returning;
-        params = [description, created_at, postId];
-      } else { // Coordonator
-        query = baseQuery + ` AND creator_id = $4` + returning;
-        params = [description, created_at, postId, userId];
-      }
-
-      const updateResult = await pool.query(query, params);
-
-      if (updateResult.rows.length === 0) {
-        return res.status(403).json({ error: 'Postarea nu a fost găsită sau nu ai permisiunea de a o edita.' });
-      }
-
-      res.status(200).json(updateResult.rows[0]);
-
-    } catch (error) {
-      console.error('Eroare la editarea postării:', error);
-      res.status(500).json({ error: 'Eroare server la editare.' });
-    }
-  });
 
   // ======================================================
   // ## DELETE /:id/like (Retrage like-ul)

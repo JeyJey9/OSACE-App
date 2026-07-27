@@ -37,8 +37,6 @@ import UserDetailsScreen from '../features/Admin/users/screens/UserDetailsScreen
 import HourRequestsScreen from '../features/Admin/users/screens/HourRequestsScreen';
 import AssignHoursScreen from '../features/Admin/users/screens/AssignHoursScreen';
 
-// Sub-domeniu: Posts
-import PostFormScreen from '../features/Admin/posts/screens/PostFormScreen';
 
 // Sub-domeniu: Badges
 import ManageBadgesScreen from '../features/Admin/badges/screens/ManageBadgesScreen';
@@ -103,7 +101,6 @@ export default function ManagementNavigator() {
         {/* --- ECRANE DOAR PENTRU ADMIN --- */}
         <Stack.Screen name="AdminUserList" component={UserListScreen} options={{ title: 'Utilizatori' }} />
         <Stack.Screen name="SendNotification" component={SendNotificationScreen} options={{ title: 'Trimite Notificare' }} />
-        <Stack.Screen name="PostForm" component={PostFormScreen} options={{ title: 'Postare Nouă' }} />
         <Stack.Screen name="AuditLog" component={AuditLogScreen} options={{ title: 'Jurnal de Audit' }} />
         <Stack.Screen name="ManageBadges" component={ManageBadgesScreen} options={{ title: 'Gestionează Badge-uri' }} />
         <Stack.Screen name="BadgeForm" component={BadgeFormScreen} options={({ route }) => ({ title: route.params?.badge ? 'Editează Badge' : 'Adaugă Badge' })} />

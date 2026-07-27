@@ -61,7 +61,7 @@ const MAX_DESCRIPTION_LENGTH = 120;
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export default function PostCard({ item, onPostUpdate, onPostDelete, currentUserRole }) {
+export default function PostCard({ item, onPostUpdate, onPostDelete, currentUserRole, isVisible = true }) {
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
   const { colors, isDark } = useThemeColor();
@@ -71,6 +71,7 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
   const [commentCount, setCommentCount] = useState(parseInt(item.comment_count, 10) || 0);
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isMuted, setIsMuted] = useState(true);
 
   // ─── Animated values ──────────────────────────────────────────────────────
   const heartScale = useSharedValue(1);
@@ -147,12 +148,6 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
     });
 
   // ─── Other handlers ───────────────────────────────────────────────────────
-  const handleEdit = () => {
-    navigation.navigate('Admin', {
-      screen: 'PostForm',
-      params: { postToEdit: { id: item.id, description: item.description, created_at: item.created_at, image_urls: item.image_urls } },
-    });
-  };
 
   const handleShare = async () => {
     try {
@@ -191,8 +186,10 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
     });
   };
 
+  const cardWidth = width - 24;
+
   const handleImageScroll = (e) => {
-    const index = Math.round(e.nativeEvent.contentOffset.x / width);
+    const index = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
     setCurrentImageIndex(index);
   };
 
@@ -201,7 +198,7 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
   const isLongText = descriptionExists && item.description.length > MAX_DESCRIPTION_LENGTH;
   const isNew = isNewPost(item.created_at);
 
-  const styles = createStyles(colors, isDark, width);
+  const styles = createStyles(colors, isDark, cardWidth);
 
   const isVideoUrl = (url) => {
     if (!url) return false;
@@ -245,9 +242,6 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
         {/* Admin / Coordinator actions */}
         {(currentUserRole === 'admin' || currentUserRole === 'coordonator') && (
           <View style={styles.adminActions}>
-            <TouchableOpacity onPress={handleEdit} style={styles.actionButtonAdmin}>
-              <Ionicons name="create-outline" size={22} color={colors.primary} />
-            </TouchableOpacity>
             <TouchableOpacity onPress={handleDelete}>
               <Ionicons name="trash-outline" size={22} color="#C0392B" />
             </TouchableOpacity>
@@ -265,11 +259,11 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
               showsHorizontalScrollIndicator={false}
               onMomentumScrollEnd={handleImageScroll}
               scrollEnabled={imageCount > 1}
-              style={{ width }}
+              style={{ width: cardWidth }}
             >
               {item.image_urls.map((url, index) => (
                 isVideoUrl(url) ? (
-                  <View key={index} style={{ width, height: width, backgroundColor: colors.card, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                  <View key={index} style={{ width: cardWidth, height: cardWidth, backgroundColor: colors.card, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
                     {/* Blurred backdrop matching video colors */}
                     <Image
                       source={{ uri: url }}
@@ -277,18 +271,28 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
                       blurRadius={25}
                       resizeMode="cover"
                     />
-                    {/* Full uncropped video */}
+                    {/* Full uncropped video with Instagram-style autoplay */}
                     <Video
                       source={{ uri: url }}
                       style={{ width: '100%', height: '100%' }}
-                      useNativeControls
+                      useNativeControls={false}
                       resizeMode={ResizeMode.CONTAIN}
                       isLooping
-                      shouldPlay={false}
+                      isMuted={isMuted}
+                      shouldPlay={isVisible}
                     />
+
+                    {/* Instagram-style Mute/Unmute toggle button */}
+                    <TouchableOpacity
+                      style={styles.muteButton}
+                      onPress={() => setIsMuted(m => !m)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name={isMuted ? 'volume-mute' : 'volume-high'} size={16} color="white" />
+                    </TouchableOpacity>
                   </View>
                 ) : (
-                  <View key={index} style={{ width, height: width, backgroundColor: colors.card, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                  <View key={index} style={{ width: cardWidth, height: cardWidth, backgroundColor: colors.card, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
                     {/* Blurred backdrop matching photo colors */}
                     <Image
                       source={{ uri: url }}
@@ -395,7 +399,7 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-const createStyles = (colors, isDark, width) => StyleSheet.create({
+const createStyles = (colors, isDark, cardWidth) => StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     marginHorizontal: 12,
@@ -489,13 +493,28 @@ const createStyles = (colors, isDark, width) => StyleSheet.create({
     fontWeight: '700',
     color: '#E1306C',
   },
+  muteButton: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
 
   // ── Image carousel ──
   imageWrapper: {
-    width,
+    width: cardWidth,
     aspectRatio: 1,
     backgroundColor: colors.background,
     position: 'relative',
+    overflow: 'hidden',
   },
   floatingHeart: {
     position: 'absolute',
