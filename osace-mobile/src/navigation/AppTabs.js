@@ -226,7 +226,7 @@ export default function AppTabs() {
   return (
     <View style={{ flex: 1 }}>
       {/* Header-ul stă fix absolut în afara pager-ului */}
-      <View style={styles.headerContainer}>
+      <View style={styles.headerContainer} pointerEvents={hideHeader ? 'none' : 'auto'}>
         <CustomHeader isHidden={hideHeader} />
       </View>
 

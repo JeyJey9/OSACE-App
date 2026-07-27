@@ -145,6 +145,7 @@ export default function CustomHeader({ title, showRole = true, isHidden = false 
 
   return (
     <Animated.View
+      pointerEvents={isHidden ? 'none' : 'auto'}
       style={[
         styles.wrapper,
         { 
