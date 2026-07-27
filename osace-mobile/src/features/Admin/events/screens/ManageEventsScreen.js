@@ -2,14 +2,12 @@ import React, { useState, useCallback, useMemo, useLayoutEffect } from 'react';
 import { 
   View, 
   Text, 
-  SectionList,
-  ActivityIndicator, 
+  SectionList, 
   StyleSheet, 
   TouchableOpacity, 
   Alert,
   useWindowDimensions,
-  RefreshControl,
-  Switch 
+  RefreshControl
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../../../../services/api';
@@ -17,7 +15,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 import { useAuth } from '../../../Auth/AuthContext';
 
-import FilterModal from '../../../../components/FilterModal';
 import { usePermissions } from '../../../Auth/PermissionContext';
 import { PERMISSIONS } from '../../../../constants/permissions';
 import ScreenContainer from '../../../../components/layout/ScreenContainer';
@@ -27,6 +24,12 @@ import EventItem from '../components/EventItem';
 import DynamicQrModal from '../components/DynamicQrModal';
 import ManageTeamModal from '../components/ManageTeamModal';
 import EmptyState from '../../../../components/EmptyState';
+
+const CATEGORIES = [
+  { key: 'sedinta', label: 'Ședințe', color: '#3498db', icon: 'briefcase-outline' },
+  { key: 'social', label: 'Social', color: '#27ae60', icon: 'people-outline' },
+  { key: 'proiect', label: 'Proiecte', color: '#f39c12', icon: 'bulb-outline' },
+];
 
 const SECTION_TITLES = {
   sedinta: 'Ședințe',
@@ -71,15 +74,15 @@ export default function ManageEventsScreen({ navigation }) {
     });
   }, [navigation, colors.textPrimary]);
 
-  
   const [events, setEvents] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [selectedEventTitle, setSelectedEventTitle] = useState('');
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [teamModalVisible, setTeamModalVisible] = useState(false);
-  const [isFilterVisible, setFilterVisible] = useState(false);
-  const [activeFilters, setActiveFilters] = useState({ sedinta: true, social: true, proiect: true });
+
+  // Multi-select categories array: [] means NO filter active (show ALL)
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const layout = useWindowDimensions();
@@ -91,42 +94,46 @@ export default function ManageEventsScreen({ navigation }) {
 
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
-  useFocusEffect(
-    useCallback(() => {
-      let isMounted = true;
-      async function fetchEvents() {
-        setLoading(true);
-        try {
-          const response = await api.get('/api/admin/events/all');
-          if (isMounted) setEvents(response.data);
-        } catch (error) {
-          Alert.alert("Eroare", "Nu s-au putut încărca evenimentele.");
-        } finally {
-          if (isMounted) setLoading(false);
-        }
-      }
-      fetchEvents();
-      return () => { isMounted = false; };
-    }, []) 
-  );
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
+  const fetchEvents = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const response = await api.get('/api/admin/events/all');
       setEvents(response.data);
     } catch (error) {
-      console.error("Eroare refresh events:", error);
+      Alert.alert("Eroare", "Nu s-au putut încărca evenimentele.");
     } finally {
-      setRefreshing(false);
+      setLoading(false);
     }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchEvents();
+    }, [fetchEvents]) 
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchEvents(true);
+    setRefreshing(false);
+  }, [fetchEvents]);
+
+  const toggleCategoryFilter = (catKey) => {
+    setSelectedCategories(prev => 
+      prev.includes(catKey) ? prev.filter(c => c !== catKey) : [...prev, catKey]
+    );
+  };
 
   const processedData = useMemo(() => {
     const now = new Date();
     const futureEvents = [];
     const pastEvents = [];
-    const filteredEvents = events.filter(event => activeFilters[event.category || 'social']);
+
+    // If selectedCategories is empty -> show all. Else -> filter by selected
+    const filteredEvents = events.filter(event => {
+      if (selectedCategories.length === 0) return true;
+      return selectedCategories.includes(event.category || 'social');
+    });
 
     filteredEvents.forEach(event => {
       if (new Date(event.end_time.replace(' ', 'T')) >= now) futureEvents.push(event);
@@ -137,7 +144,7 @@ export default function ManageEventsScreen({ navigation }) {
       futureSections: groupEvents(futureEvents),
       pastSections: groupEvents(pastEvents),
     };
-  }, [events, activeFilters]);
+  }, [events, selectedCategories]);
 
   const openQrModal = useCallback((item) => {
     setSelectedEventId(item.id);
@@ -198,7 +205,7 @@ export default function ManageEventsScreen({ navigation }) {
         <EmptyState
           illustration="no_events"
           title="Nicio activitate viitoare"
-          subtitle="Creează prima activitate folosind butonul de mai sus."
+          subtitle="Creează o activitate sau resetează filtrele."
         />
       }
       contentContainerStyle={styles.listContent}
@@ -207,7 +214,7 @@ export default function ManageEventsScreen({ navigation }) {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
       }
     />
-  ), [processedData.futureSections, renderEventItem, renderSectionHeader, styles]);
+  ), [processedData.futureSections, renderEventItem, renderSectionHeader, styles, refreshing, onRefresh, colors.primary]);
 
   const PastEventsTab = useCallback(() => (
     <SectionList
@@ -227,23 +234,56 @@ export default function ManageEventsScreen({ navigation }) {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
       }
     />
-  ), [processedData.pastSections, renderEventItem, renderSectionHeader, styles]);
+  ), [processedData.pastSections, renderEventItem, renderSectionHeader, styles, refreshing, onRefresh, colors.primary]);
 
   if (loading) return <ScreenContainer loading={true} />;
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerButtonContainer}>
+      {/* ACTION & CHIP TOGGLE FILTER BAR */}
+      <View style={styles.topContainer}>
         {(user?.role === 'admin' || user?.role === 'coordonator' || can(PERMISSIONS.CREATE_EVENTS)) && (
-          <TouchableOpacity style={[styles.topActionBtn, { backgroundColor: colors.primary }]} onPress={() => navigation.navigate('EventForm')}>
+          <TouchableOpacity 
+            style={[styles.createBtn, { backgroundColor: colors.primary }]} 
+            onPress={() => navigation.navigate('EventForm')}
+            activeOpacity={0.8}
+          >
             <Ionicons name="add-circle-outline" size={20} color="white" />
-            <Text style={styles.topActionText}>Creează</Text>
+            <Text style={styles.createBtnText}>Creează Activitate</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={[styles.topActionBtn, { backgroundColor: isDark ? colors.border : '#6c757d' }]} onPress={() => setFilterVisible(true)}>
-          <Ionicons name="options-outline" size={20} color="white" />
-          <Text style={styles.topActionText}>Filtre</Text>
-        </TouchableOpacity>
+
+        {/* INLINE MULTI-SELECT CHIP TOGGLES */}
+        <View style={styles.chipRow}>
+          {CATEGORIES.map(cat => {
+            const isSelected = selectedCategories.includes(cat.key);
+            return (
+              <TouchableOpacity
+                key={cat.key}
+                activeOpacity={0.7}
+                onPress={() => toggleCategoryFilter(cat.key)}
+                style={[
+                  styles.chip,
+                  isSelected 
+                    ? { backgroundColor: cat.color + '20', borderColor: cat.color }
+                    : { backgroundColor: colors.card, borderColor: colors.border }
+                ]}
+              >
+                <Ionicons 
+                  name={isSelected ? cat.icon.replace('-outline', '') : cat.icon} 
+                  size={15} 
+                  color={isSelected ? cat.color : colors.textSecondary} 
+                />
+                <Text style={[
+                  styles.chipText,
+                  { color: isSelected ? cat.color : colors.textSecondary, fontWeight: isSelected ? '800' : '600' }
+                ]}>
+                  {cat.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
       
       <TabView
@@ -266,52 +306,44 @@ export default function ManageEventsScreen({ navigation }) {
 
       <DynamicQrModal isVisible={qrModalVisible} onClose={() => setQrModalVisible(false)} eventId={selectedEventId} title={selectedEventTitle} />
       <ManageTeamModal isVisible={teamModalVisible} onClose={() => setTeamModalVisible(false)} eventId={selectedEventId} eventTitle={selectedEventTitle} />
-      
-      <FilterModal visible={isFilterVisible} onClose={() => setFilterVisible(false)}>
-        <View style={{ padding: 10 }}>
-          {Object.keys(SECTION_TITLES).map(key => (
-            <View key={key} style={styles.filterRow}>
-              <Text style={[styles.filterText, { color: colors.textPrimary }]}>{SECTION_TITLES[key]}</Text>
-              <Switch
-                trackColor={{ false: "#767577", true: colors.primary }}
-                thumbColor="#f4f3f4"
-                onValueChange={() => setActiveFilters(prev => ({ ...prev, [key]: !prev[key] }))}
-                value={activeFilters[key]}
-              />
-            </View>
-          ))}
-        </View>
-      </FilterModal>
     </View>
   );
 }
 
 const createStyles = (colors, isDark) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  headerButtonContainer: { flexDirection: 'row', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.card, gap: 10 },
-  topActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 8 },
-  topActionText: { color: 'white', fontWeight: 'bold', marginLeft: 6 },
+  topContainer: { 
+    padding: 12, 
+    borderBottomWidth: 1, 
+    borderBottomColor: colors.border, 
+    backgroundColor: colors.card, 
+    gap: 10 
+  },
+  createBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingVertical: 12, 
+    borderRadius: 12,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  createBtnText: { color: 'white', fontWeight: '800', fontSize: 15, marginLeft: 8 },
+  chipRow: { flexDirection: 'row', gap: 8 },
+  chip: { 
+    flex: 1, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: 6, 
+    paddingVertical: 8, 
+    borderRadius: 10, 
+    borderWidth: 1.5 
+  },
+  chipText: { fontSize: 12 },
   listContent: { padding: 10, paddingBottom: 110 },
-  sectionHeader: { fontSize: 16, fontWeight: 'bold', paddingHorizontal: 10, marginTop: 20, marginBottom: 8, color: colors.primary, textTransform: 'uppercase' },
-  emptyText: { textAlign: 'center', marginTop: 50, fontSize: 14, color: colors.textSecondary },
-  eventItem: { backgroundColor: colors.card, padding: 15, marginVertical: 6, marginHorizontal: 4, borderRadius: 12, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, borderWidth: isDark ? 1 : 0, borderColor: colors.border },
-  itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
-  eventTitle: { flex: 1, fontSize: 17, fontWeight: 'bold', color: colors.textPrimary, marginRight: 10 },
-  categoryTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  categoryTagText: { fontSize: 9, fontWeight: 'bold' },
-  eventDetails: { fontSize: 13, color: colors.textSecondary },
-  dateIntervalContainer: { marginBottom: 12 },
-  dateRow: { flexDirection: 'row', alignItems: 'center' },
-  dateDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8, marginLeft: 2 },
-  dateDivider: { borderLeftWidth: 2, borderStyle: 'dotted', borderColor: colors.textSecondary, height: 12, marginLeft: 5, marginTop: 2, marginBottom: 2, opacity: 0.5 },
-  buttonRow: { flexDirection: 'row', gap: 8 },
-  button: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: 6 },
-  buttonText: { color: 'white', fontWeight: 'bold', fontSize: 11, marginLeft: 4 },
-  participantsButton: { backgroundColor: '#8e44ad' },
-  qrButton: { backgroundColor: '#27ae60' },
-  editButton: { backgroundColor: '#3498db' },
-  deleteButton: { backgroundColor: '#e74c3c' },
-  buttonDisabled: { backgroundColor: colors.border },
-  filterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: colors.border },
-  filterText: { fontSize: 16 },
+  sectionHeader: { fontSize: 15, fontWeight: 'bold', paddingHorizontal: 10, marginTop: 16, marginBottom: 8, color: colors.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
 });

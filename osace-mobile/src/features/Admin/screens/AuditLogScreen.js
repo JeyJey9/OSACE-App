@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { formatDistanceToNowStrict } from 'date-fns';
-import { ro } from 'date-fns/locale';
+import { format } from 'date-fns';
 import api from '../../../services/api';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
@@ -91,14 +90,31 @@ const formatDetails = (details) => {
   };
 
   return Object.entries(details)
-    .filter(([k, v]) => v !== null && v !== undefined && k !== 'title' && k !== 'target_name' && k !== 'deleted_name') // ascundem ce e deja in target
+    .filter(([k, v]) => v !== null && v !== undefined && k !== 'title' && k !== 'target_name' && k !== 'deleted_name')
     .map(([k, v]) => {
       const niceKey = keyMap[k] || k.replace(/_/g, ' ');
-      // Daca valoarea este un array (cum e la 'roles') il facem string
       const niceValue = Array.isArray(v) ? v.join(', ') : v;
       return `${niceKey}: ${niceValue}`;
     })
     .join(' · ');
+};
+
+const getCompactTimeAgo = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr.replace(' ', 'T'));
+    const diffMs = Date.now() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'acum';
+    if (diffMins < 60) return `acum ${diffMins} min`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `acum ${diffHours} h`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 30) return `acum ${diffDays} zile`;
+    return format(date, 'dd.MM.yyyy');
+  } catch (e) {
+    return dateStr;
+  }
 };
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -119,6 +135,10 @@ export default function AuditLogScreen() {
   const navigation = useNavigation();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selectedCategory, setSelectedCategory] = useState(LOG_CATEGORIES[0]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -133,11 +153,6 @@ export default function AuditLogScreen() {
       ),
     });
   }, [navigation, colors.textPrimary]);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  
-  const [selectedCategory, setSelectedCategory] = useState(LOG_CATEGORIES[0]);
 
   const fetchLogs = useCallback(async (pageNum = 1, append = false, category = selectedCategory) => {
     try {
@@ -176,7 +191,6 @@ export default function AuditLogScreen() {
     if (selectedCategory.id === category.id) return;
     setSelectedCategory(category);
     setLoading(true);
-    // fetchLogs will be called by the effect dependency change
   };
 
   const styles = createStyles(colors, isDark);
@@ -184,7 +198,7 @@ export default function AuditLogScreen() {
   const renderItem = ({ item }) => {
     const meta = getActionMeta(item.action);
     const details = formatDetails(item.details);
-    const timeAgo = formatDistanceToNowStrict(new Date(item.created_at.replace(' ', 'T')), { addSuffix: true, locale: ro });
+    const timeAgo = getCompactTimeAgo(item.created_at);
     const friendlyTarget = getHumanReadableTarget(item);
 
     return (
@@ -193,18 +207,18 @@ export default function AuditLogScreen() {
         <View style={[styles.colorBar, { backgroundColor: meta.color }]} />
 
         <View style={styles.logBody}>
-          {/* Action badge */}
+          {/* Action badge & time */}
           <View style={styles.topRow}>
-            <View style={[styles.badge, { backgroundColor: meta.color + '22' }]}>
+            <View style={[styles.badge, { backgroundColor: meta.color + '20' }]}>
               <Ionicons name={meta.icon} size={14} color={meta.color} style={{ marginRight: 5 }} />
-              <Text style={[styles.badgeText, { color: meta.color }]}>{meta.label}</Text>
+              <Text style={[styles.badgeText, { color: meta.color }]} numberOfLines={1}>{meta.label}</Text>
             </View>
             <Text style={styles.timeText}>{timeAgo}</Text>
           </View>
 
           {/* Actor */}
           <Text style={styles.actorText}>
-            <Text style={styles.actorName}>{item.actor_name || 'Unknown'}</Text>
+            <Text style={styles.actorName}>{item.actor_name || 'Desconoscut'}</Text>
             <Text style={styles.actorRole}> ({item.actor_role})</Text>
           </Text>
 
@@ -330,15 +344,16 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 20,
     flexShrink: 1,
+    maxWidth: '70%',
   },
   badgeText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
-    flexShrink: 1,
   },
   timeText: {
     fontSize: 11,
     color: colors.textSecondary,
+    fontWeight: '600',
     flexShrink: 0,
   },
   actorText: {
@@ -355,10 +370,6 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   targetText: {
     fontSize: 12,
     color: colors.textSecondary,
-  },
-  targetValue: {
-    color: colors.primary,
-    fontWeight: '600',
   },
   detailsText: {
     fontSize: 11,

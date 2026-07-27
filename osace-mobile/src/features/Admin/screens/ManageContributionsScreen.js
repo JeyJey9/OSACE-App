@@ -8,12 +8,21 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../constants/useThemeColor';
+import EmptyState from '../../../components/EmptyState';
+
+const STATUS_CHIPS = [
+  { key: 'pending', label: 'În așteptare', color: '#f59e0b', icon: 'time-outline' },
+  { key: 'approved', label: 'Aprobate', color: '#10b981', icon: 'checkmark-circle-outline' },
+  { key: 'rejected', label: 'Respinse', color: '#ef4444', icon: 'close-circle-outline' },
+];
 
 export default function ManageContributionsScreen() {
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // all, approved, pending, rejected
+  
+  // Multi-select status array: [] means NO filter active (show ALL)
+  const [selectedStatuses, setSelectedStatuses] = useState([]);
 
   const navigation = useNavigation();
   const { colors, isDark } = useThemeColor();
@@ -46,6 +55,12 @@ export default function ManageContributionsScreen() {
 
   useFocusEffect(useCallback(() => { fetchContributions(); }, []));
 
+  const toggleStatusFilter = (statusKey) => {
+    setSelectedStatuses(prev => 
+      prev.includes(statusKey) ? prev.filter(s => s !== statusKey) : [...prev, statusKey]
+    );
+  };
+
   const handleDelete = (id) => {
     Alert.alert(
       'Ștergere Contribuție',
@@ -71,18 +86,21 @@ export default function ManageContributionsScreen() {
 
   const filteredData = useMemo(() => {
     let data = contributions;
-    if (statusFilter !== 'all') {
-      data = data.filter(c => c.status === statusFilter);
+
+    // Multi-select status filter: dacă [] -> arată toți
+    if (selectedStatuses.length > 0) {
+      data = data.filter(c => selectedStatuses.includes(c.status));
     }
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
       data = data.filter(c => 
         c.title?.toLowerCase().includes(q) ||
         c.target_name?.toLowerCase().includes(q)
       );
     }
     return data;
-  }, [contributions, searchQuery, statusFilter]);
+  }, [contributions, searchQuery, selectedStatuses]);
 
   const styles = createStyles(colors, isDark);
 
@@ -152,28 +170,54 @@ export default function ManageContributionsScreen() {
   return (
     <ScreenContainer scrollable={false}>
       <View style={styles.container}>
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Caută după titlu sau voluntar..."
-            placeholderTextColor={colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+        <View style={styles.topContainer}>
+          <View style={styles.searchInputWrapper}>
+            <Ionicons name="search" size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Caută după titlu sau voluntar..."
+              placeholderTextColor={colors.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
 
-        <View style={styles.filterRow}>
-          {['all', 'approved', 'pending', 'rejected'].map(status => (
-            <TouchableOpacity 
-              key={status}
-              style={[styles.filterChip, statusFilter === status && styles.filterChipActive]}
-              onPress={() => setStatusFilter(status)}
-            >
-              <Text style={[styles.filterText, statusFilter === status && styles.filterTextActive]}>
-                {status === 'all' ? 'Toate' : getStatusText(status)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {/* Multi-Select Status Chips */}
+          <View style={styles.chipRow}>
+            {STATUS_CHIPS.map(st => {
+              const isSelected = selectedStatuses.includes(st.key);
+              return (
+                <TouchableOpacity
+                  key={st.key}
+                  activeOpacity={0.7}
+                  onPress={() => toggleStatusFilter(st.key)}
+                  style={[
+                    styles.chip,
+                    isSelected 
+                      ? { backgroundColor: st.color + '20', borderColor: st.color }
+                      : { backgroundColor: colors.card, borderColor: colors.border }
+                  ]}
+                >
+                  <Ionicons 
+                    name={isSelected ? st.icon.replace('-outline', '') : st.icon} 
+                    size={14} 
+                    color={isSelected ? st.color : colors.textSecondary} 
+                  />
+                  <Text style={[
+                    styles.chipText,
+                    { color: isSelected ? st.color : colors.textSecondary, fontWeight: isSelected ? '800' : '600' }
+                  ]}>
+                    {st.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         {loading ? (
@@ -185,7 +229,11 @@ export default function ManageContributionsScreen() {
             renderItem={renderItem}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>Nu există contribuții care să corespundă criteriilor.</Text>
+              <EmptyState
+                illustration="no_contributions"
+                title="Nicio contribuție găsită"
+                subtitle="Nu există contribuții care să corespundă căutării sau filtrelor."
+              />
             }
           />
         )}
@@ -196,59 +244,46 @@ export default function ManageContributionsScreen() {
 
 const createStyles = (colors, isDark) => StyleSheet.create({
   container: { flex: 1 },
-  searchContainer: { padding: 16, paddingBottom: 8 },
-  input: {
-    backgroundColor: colors.card,
-    color: colors.textPrimary,
+  topContainer: { padding: 12, backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 10 },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    gap: 8,
-  },
-  filterChip: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
+    height: 44,
   },
-  filterChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+  searchInput: { flex: 1, fontSize: 14, color: colors.textPrimary },
+  chipRow: { flexDirection: 'row', gap: 8 },
+  chip: { 
+    flex: 1, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: 6, 
+    paddingVertical: 8, 
+    borderRadius: 10, 
+    borderWidth: 1.5 
   },
-  filterText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  filterTextActive: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
+  chipText: { fontSize: 12 },
   listContent: {
-    padding: 16,
+    padding: 12,
     paddingBottom: 110,
   },
   card: {
     backgroundColor: colors.card,
     borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
+    marginBottom: 10,
+    borderWidth: isDark ? 1 : 0,
     borderColor: colors.border,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: isDark ? 0.2 : 0.05,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -257,7 +292,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: colors.textPrimary,
     marginBottom: 2,
@@ -269,7 +304,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   statusText: {
     color: '#fff',
@@ -277,10 +312,10 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     fontWeight: 'bold',
   },
   description: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textPrimary,
-    marginBottom: 12,
-    lineHeight: 20,
+    marginBottom: 10,
+    lineHeight: 18,
   },
   metaRow: {
     flexDirection: 'row',
@@ -288,7 +323,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     marginBottom: 4,
   },
   metaText: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSecondary,
     marginLeft: 6,
     flex: 1,
@@ -300,8 +335,8 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 12,
-    paddingTop: 12,
+    marginTop: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     gap: 16,
@@ -313,13 +348,6 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   actionText: {
     fontWeight: 'bold',
     marginLeft: 4,
-    fontSize: 14,
-  },
-  emptyText: {
-    marginTop: 40,
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    alignSelf: 'stretch',
+    fontSize: 13,
   },
 });
