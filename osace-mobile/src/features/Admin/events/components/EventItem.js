@@ -14,6 +14,14 @@ const EventItem = memo(({ item, can, navigation, openQrModal, openTeamModal, han
   const canEdit = can(PERMISSIONS.EDIT_EVENTS, item);
   const canDelete = can(PERMISSIONS.DELETE_EVENTS, item);
 
+  const categoryColors = {
+    sedinta: '#3498db',  // Blue
+    social: '#27ae60',   // Green
+    proiect: '#f39c12',  // Orange
+    default: colors.primary,
+  };
+  const catColor = categoryColors[item.category] || categoryColors.default;
+
   return (
     <View style={styles.eventItem}>
       <View style={styles.itemHeader}>
@@ -31,13 +39,14 @@ const EventItem = memo(({ item, can, navigation, openQrModal, openTeamModal, han
               #ID: {item.id}
             </Text>
           </View>
-          <View style={[styles.categoryTag, { backgroundColor: colors.primary + '20' }]}>
-            <Text style={[styles.categoryTagText, { color: colors.primary }]}>
+          <View style={[styles.categoryTag, { backgroundColor: catColor + '20' }]}>
+            <Text style={[styles.categoryTagText, { color: catColor }]}>
               {(item.category || 'social').toUpperCase()}
             </Text>
           </View>
         </View>
       </View>
+
       <View style={styles.dateIntervalContainer}>
         <View style={styles.dateRow}>
           <View style={[styles.dateDot, { backgroundColor: '#2ecc71' }]} />
@@ -54,7 +63,8 @@ const EventItem = memo(({ item, can, navigation, openQrModal, openTeamModal, han
         </View>
       </View>
 
-      <View style={styles.buttonRow}>
+      {/* RÂNDUL 1: Operațiuni Principale (QR, Membri, Echipă) */}
+      <View style={[styles.buttonRow, { marginBottom: 8 }]}>
         {canScanQR && (
           <TouchableOpacity
             style={[styles.button, styles.qrButton, isEventOver && styles.buttonDisabled]}
@@ -63,16 +73,6 @@ const EventItem = memo(({ item, can, navigation, openQrModal, openTeamModal, han
           >
             <Ionicons name="qr-code" size={16} color="white" />
             <Text style={styles.buttonText}>{isEventOver ? 'Expirat' : 'QR'}</Text>
-          </TouchableOpacity>
-        )}
-
-        {canManageTeam && (
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: '#f39c12' }]}
-            onPress={() => openTeamModal(item)}
-          >
-            <Ionicons name="people-circle" size={16} color="white" />
-            <Text style={styles.buttonText}>Echipă</Text>
           </TouchableOpacity>
         )}
 
@@ -86,6 +86,19 @@ const EventItem = memo(({ item, can, navigation, openQrModal, openTeamModal, han
           </TouchableOpacity>
         )}
 
+        {canManageTeam && (
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: '#f39c12' }]}
+            onPress={() => openTeamModal(item)}
+          >
+            <Ionicons name="people-circle" size={16} color="white" />
+            <Text style={styles.buttonText}>Echipă</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* RÂNDUL 2: Management & Ștergere (Edit, Duplică, Șterge) */}
+      <View style={styles.buttonRow}>
         {canEdit && (
           <TouchableOpacity style={[styles.button, styles.editButton]} onPress={() => navigation.navigate('EventForm', { eventToEdit: item })}>
             <Ionicons name="pencil" size={16} color="white" />
@@ -93,12 +106,20 @@ const EventItem = memo(({ item, can, navigation, openQrModal, openTeamModal, han
           </TouchableOpacity>
         )}
 
+        {(canEdit || canScanQR) && (
+          <TouchableOpacity style={[styles.button, { backgroundColor: '#16a085' }]} onPress={() => navigation.navigate('EventForm', { eventToDuplicate: item })}>
+            <Ionicons name="copy-outline" size={16} color="white" />
+            <Text style={styles.buttonText}>Duplică</Text>
+          </TouchableOpacity>
+        )}
+
         {canDelete && (
           <TouchableOpacity
-            style={[styles.button, styles.deleteButton, { flex: 0.6 }]}
+            style={[styles.button, styles.deleteButton]}
             onPress={() => handleDelete(item.id)}
           >
             <Ionicons name="trash" size={16} color="white" />
+            <Text style={styles.buttonText}>Șterge</Text>
           </TouchableOpacity>
         )}
       </View>
