@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useState, useContext, createContext } from 'react';
 import { Platform, TouchableOpacity, View, StyleSheet, Text } from 'react-native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { useNavigationState } from '@react-navigation/native';
@@ -160,10 +160,10 @@ function useIsInsideAdminSubScreen() {
 // CRITIC: aceste componente trebuie create UNA SINGURĂ DATĂ, în afara lui AppTabs.
 // Dacă ar fi create în JSX (withHeaderOffset(HomeScreen)), React le-ar trata ca
 // tipuri noi la fiecare render al AppTabs → demontare + remontare completă la swipe = LAG.
-const HeaderHeightContext = React.createContext(140);
+const HeaderHeightContext = createContext(140);
 
 function HeaderOffsetWrapper({ children }) {
-  const headerHeight = React.useContext(HeaderHeightContext);
+  const headerHeight = useContext(HeaderHeightContext);
   return <View style={{ flex: 1, paddingTop: headerHeight }}>{children}</View>;
 }
 
@@ -201,7 +201,7 @@ export default function AppTabs() {
   const initialHeaderPaddingTop = Platform.OS === 'android'
     ? (insets?.top || 25) + 12
     : Math.max(insets?.top || 0, 12);
-  const [headerHeight, setHeaderHeight] = React.useState(initialHeaderPaddingTop + 85);
+  const [headerHeight, setHeaderHeight] = useState(initialHeaderPaddingTop + 85);
 
   // tabBar callback stabil — nu recrea FloatingTabBar la fiecare render al AppTabs
   const renderTabBar = useCallback(
