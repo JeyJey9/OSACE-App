@@ -4,7 +4,7 @@ export const Colors = {
     card: '#ffffff',
     textPrimary: '#0E3035',
     textSecondary: '#555555',
-    primary: '#1C748C',
+    primary: '#2563EB', // Clean Royal Sapphire Blue
     border: '#dddddd',
   },
   dark: {
@@ -12,7 +12,7 @@ export const Colors = {
     card: '#1e1e1e',
     textPrimary: '#f5f5f5',
     textSecondary: '#aaaaaa',
-    primary: '#46bff7', // Un albastru mai deschis ca să se vadă bine pe negru
+    primary: '#3B82F6', // Bright Royal Blue for dark mode
     border: '#333333',
   }
 };

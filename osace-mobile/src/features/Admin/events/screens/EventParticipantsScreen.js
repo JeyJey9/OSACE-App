@@ -49,6 +49,9 @@ export default function EventParticipantsScreen() {
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [bulkModalVisible, setBulkModalVisible] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState('attended');
+  const [bulkHours, setBulkHours] = useState('0');
 
   // Export Modal State
   const [exportModalVisible, setExportModalVisible] = useState(false);
@@ -124,12 +127,16 @@ export default function EventParticipantsScreen() {
     }
   };
 
-  const handleBulkStatusChange = async (targetStatus) => {
+  const handleBulkStatusChange = async (targetStatus, customHours = null) => {
     if (selectedIds.length === 0) return;
     setBulkActionLoading(true);
     try {
+      const payload = { status: targetStatus };
+      if (customHours !== null && !isNaN(parseFloat(customHours))) {
+        payload.awarded_hours = parseFloat(customHours);
+      }
       const promises = selectedIds.map(userId => 
-        api.put(`/api/events/${eventId}/participants/${userId}`, { status: targetStatus })
+        api.put(`/api/events/${eventId}/participants/${userId}`, payload)
       );
       await Promise.all(promises);
 
@@ -137,11 +144,12 @@ export default function EventParticipantsScreen() {
       Toast.show({
         type: 'success',
         text1: 'Actualizare în lot reușită! ✅',
-        text2: `Statusul a fost modificat pentru ${selectedIds.length} voluntari.`,
+        text2: `Modificările au fost salvate pentru ${selectedIds.length} voluntari.`,
       });
 
       setSelectedIds([]);
       setBulkMode(false);
+      setBulkModalVisible(false);
       fetchParticipants();
     } catch (error) {
       console.error("Eroare actualizare lot:", error);
@@ -150,6 +158,12 @@ export default function EventParticipantsScreen() {
     } finally {
       setBulkActionLoading(false);
     }
+  };
+
+  const openBulkModal = () => {
+    setBulkStatus('attended');
+    setBulkHours('0');
+    setBulkModalVisible(true);
   };
 
   const handleOpenEditModal = (participant) => {
@@ -553,28 +567,119 @@ export default function EventParticipantsScreen() {
       {bulkMode && selectedIds.length > 0 && (
         <View style={[styles.bulkBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.bulkBarText, { color: colors.textPrimary }]}>
-            {selectedIds.length} selectați
+            {selectedIds.length} voluntari selectați
           </Text>
           
           <View style={styles.bulkBtnGroup}>
             <TouchableOpacity 
-              style={[styles.bulkBtn, { backgroundColor: '#3498db' }]}
-              onPress={() => handleBulkStatusChange('checked_in')}
+              style={[styles.bulkBtn, { backgroundColor: colors.primary }]}
+              onPress={isAdmin ? openBulkModal : () => handleBulkStatusChange('attended')}
               disabled={bulkActionLoading}
+              activeOpacity={0.8}
             >
-              <Text style={styles.bulkBtnText}>Prezent</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.bulkBtn, { backgroundColor: '#2ecc71' }]}
-              onPress={() => handleBulkStatusChange('attended')}
-              disabled={bulkActionLoading}
-            >
-              <Text style={styles.bulkBtnText}>Finalizat</Text>
+              <Ionicons name="options-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.bulkBtnText}>
+                {isAdmin ? 'Setează Ore / Status' : 'Actualizează Prezența'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
+
+      {/* MODAL EDITARE ÎN LOT (STATUS ȘI ORE) */}
+      <Modal
+        visible={bulkModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setBulkModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setBulkModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+                    Editează {selectedIds.length} Voluntari
+                  </Text>
+                  <TouchableOpacity onPress={() => setBulkModalVisible(false)}>
+                    <Ionicons name="close" size={24} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={[styles.modalUserSub, { color: colors.textSecondary }]}>
+                  Setează statusul și orele pentru toți cei {selectedIds.length} voluntari selectați.
+                </Text>
+
+                <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Status Prezență:</Text>
+                <View style={styles.statusPillsRow}>
+                  {[
+                    { key: 'registered', label: 'Înscris' },
+                    { key: 'checked_in', label: 'Prezent' },
+                    { key: 'attended', label: 'Finalizat' },
+                  ].map((st) => {
+                    const isSelected = bulkStatus === st.key;
+                    return (
+                      <TouchableOpacity
+                        key={st.key}
+                        style={[
+                          styles.statusPill,
+                          { borderColor: isSelected ? colors.primary : colors.border },
+                          isSelected && { backgroundColor: colors.primary + '20' }
+                        ]}
+                        onPress={() => setBulkStatus(st.key)}
+                      >
+                        <Text style={[
+                          styles.statusPillText,
+                          { color: isSelected ? colors.primary : colors.textSecondary }
+                        ]}>
+                          {st.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <View style={styles.fieldBlock}>
+                  <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Ore Acordate Fiecăruia:</Text>
+                  <TextInput
+                    style={[
+                      styles.hoursInput,
+                      { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.background }
+                    ]}
+                    keyboardType="numeric"
+                    value={bulkHours}
+                    onChangeText={setBulkHours}
+                    placeholder="0.0"
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                </View>
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.cancelBtn, { borderColor: colors.border }]}
+                    onPress={() => setBulkModalVisible(false)}
+                    disabled={bulkActionLoading}
+                  >
+                    <Text style={[styles.cancelBtnText, { color: colors.textSecondary }]}>Anulează</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.saveBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => handleBulkStatusChange(bulkStatus, bulkHours)}
+                    disabled={bulkActionLoading}
+                  >
+                    {bulkActionLoading ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.saveBtnText}>Aplică pe Lot</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       {/* MODAL EXPORT OPTIONS */}
       <Modal
@@ -768,7 +873,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   headerSubtitle: { fontSize: 14, color: colors.textSecondary },
   selectAllBtn: { paddingVertical: 2, paddingHorizontal: 6 },
   selectAllText: { fontSize: 12, fontWeight: '700' },
-  listContent: { paddingBottom: 100 },
+  listContent: { paddingBottom: 180 },
   participantItem: { backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', padding: 15, marginHorizontal: 15, marginVertical: 6, borderRadius: 12, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, borderWidth: isDark ? 1 : 0, borderColor: colors.border },
   icon: { marginRight: 12 },
   participantDetails: { flex: 1 },
@@ -789,11 +894,28 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   emptyText: { textAlign: 'center', marginTop: 15, color: colors.textSecondary, fontSize: 16 },
 
   // Bulk Bar
-  bulkBar: { position: 'absolute', bottom: 15, left: 15, right: 15, padding: 14, borderRadius: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 8, borderWidth: 1 },
+  bulkBar: { 
+    position: 'absolute', 
+    bottom: 95, 
+    left: 15, 
+    right: 15, 
+    padding: 14, 
+    borderRadius: 14, 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    elevation: 10, 
+    zIndex: 999,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: isDark ? 0.35 : 0.15,
+    shadowRadius: 8,
+  },
   bulkBarText: { fontWeight: 'bold', fontSize: 14 },
-  bulkBtnGroup: { flexDirection: 'row', gap: 8 },
-  bulkBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
-  bulkBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  bulkBtnGroup: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  bulkBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
+  bulkBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
 
   // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },

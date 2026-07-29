@@ -1,11 +1,12 @@
-// src/components/FullScreenLoading.js
 import React from 'react';
 import { SafeAreaView, ActivityIndicator, StyleSheet } from 'react-native';
+import { useThemeColor } from '../constants/useThemeColor';
 
 export default function FullScreenLoading() {
+  const { colors } = useThemeColor();
   return (
-    <SafeAreaView style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#1C748C" />
+    <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <ActivityIndicator size="large" color={colors.primary} />
     </SafeAreaView>
   );
 }
