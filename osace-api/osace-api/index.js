@@ -124,7 +124,14 @@ app.get('/', (req, res) => {
 });
 
 // --- 6. Pornirea Serverului ---
-app.listen(port, () => {
+app.listen(port, async () => {
   startCheckoutWorker(pool);
+  // Safe migration: add last_seen_at if it doesn't exist yet
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`);
+    console.log('[DB] Column last_seen_at ensured on users table.');
+  } catch (e) {
+    console.warn('[DB] Could not ensure last_seen_at column:', e.message);
+  }
   console.log(`Serverul a pornit la http://localhost:${port}`);
 });

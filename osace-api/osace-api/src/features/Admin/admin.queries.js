@@ -142,7 +142,9 @@ const STATS_QUERY = `
 const USER_DETAILS_QUERY = `
   WITH UserAllEvents AS (
     SELECT 
-      e.id, e.title, e.category, e.duration_hours, e.start_time, ea.confirmation_status
+      e.id, e.title, e.category,
+      COALESCE(ea.awarded_hours, e.duration_hours, 0) AS awarded_hours,
+      e.start_time, ea.confirmation_status
     FROM event_attendance ea
     JOIN events e ON ea.event_id = e.id
     WHERE ea.user_id = $1
@@ -154,41 +156,42 @@ const USER_DETAILS_QUERY = `
   ),
 
   UserInfo AS (
-    SELECT id, display_name, first_name, last_name, email, role, avatar_url 
+    SELECT id, display_name, first_name, last_name, email, role, avatar_url,
+           student_verification_status, last_seen_at
     FROM users 
     WHERE id = $1
   ),
 
   UserSpecialContributions AS (
-    SELECT id, title, 'contributie' AS category, awarded_hours AS duration_hours, created_at AS start_time, 'approved' AS confirmation_status
+    SELECT id, title, 'contributie' AS category, awarded_hours, created_at AS start_time, 'approved' AS confirmation_status
     FROM special_contributions
     WHERE user_id = $1 AND status = 'approved'
   ),
   
   Aggregates AS (
     SELECT
-      (SELECT COALESCE(SUM(duration_hours), 0) FROM UserAttendedEvents) + 
-      (SELECT COALESCE(SUM(duration_hours), 0) FROM UserSpecialContributions) as total_hours,
+      (SELECT COALESCE(SUM(awarded_hours), 0) FROM UserAttendedEvents) + 
+      (SELECT COALESCE(SUM(awarded_hours), 0) FROM UserSpecialContributions) as total_hours,
       (SELECT COALESCE(COUNT(*), 0) FROM UserAttendedEvents) as total_attended_events
   ),
   
   CategoryHours AS (
     SELECT category, SUM(hours) as hours FROM (
-      SELECT COALESCE(category, 'social') as category, duration_hours as hours FROM UserAttendedEvents
+      SELECT COALESCE(category, 'social') as category, awarded_hours as hours FROM UserAttendedEvents
       UNION ALL
-      SELECT category, duration_hours as hours FROM UserSpecialContributions
+      SELECT category, awarded_hours as hours FROM UserSpecialContributions
     ) combined
     GROUP BY category
   ),
   
   RecentEvents AS (
-    SELECT id, title, confirmation_status FROM (
-      SELECT id, title, confirmation_status, start_time FROM UserAllEvents
+    SELECT id, title, category, confirmation_status, awarded_hours, start_time FROM (
+      SELECT id, title, category, confirmation_status, awarded_hours, start_time FROM UserAllEvents
       UNION ALL
-      SELECT id, title, confirmation_status, start_time FROM UserSpecialContributions
+      SELECT id, title, category, confirmation_status, awarded_hours, start_time FROM UserSpecialContributions
     ) combined
     ORDER BY start_time DESC
-    LIMIT 5
+    LIMIT 20
   )
   
   SELECT 

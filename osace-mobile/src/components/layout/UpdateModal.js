@@ -30,9 +30,9 @@ export default function UpdateModal({ visible, isRequired, updateUrl, latestVers
       const defaultStoreUrl = Platform.OS === 'ios'
         ? 'https://apps.apple.com/us/app/osace-voluntariat/id6774091102'
         : 'https://play.google.com/store/apps/details?id=ro.osace.app&hl=en';
-      
+
       const targetUrl = (updateUrl && updateUrl !== 'https://osace.ro/app')
-        ? updateUrl 
+        ? updateUrl
         : defaultStoreUrl;
 
       const supported = await Linking.canOpenURL(targetUrl);
@@ -60,19 +60,19 @@ export default function UpdateModal({ visible, isRequired, updateUrl, latestVers
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          
+
           {/* Logo/Iconiță strălucitoare cu efect de sticlă */}
           <View style={[
-            styles.iconWrapper, 
-            { 
+            styles.iconWrapper,
+            {
               backgroundColor: isRequired ? 'rgba(231, 76, 60, 0.15)' : 'rgba(74, 144, 226, 0.15)',
               borderColor: isRequired ? 'rgba(231, 76, 60, 0.3)' : 'rgba(74, 144, 226, 0.3)'
             }
           ]}>
-            <Ionicons 
-              name={isRequired ? "alert-circle" : "rocket"} 
-              size={48} 
-              color={isRequired ? "#E74C3C" : STANDARD_BLUE} 
+            <Ionicons
+              name={isRequired ? "alert-circle" : "rocket"}
+              size={48}
+              color={isRequired ? "#E74C3C" : STANDARD_BLUE}
             />
           </View>
 
@@ -88,15 +88,15 @@ export default function UpdateModal({ visible, isRequired, updateUrl, latestVers
           )}
 
           <Text style={styles.modalDescription}>
-            {isRequired 
+            {isRequired
               ? "Pentru a continua să folosești aplicația OSACE și să înregistrezi orele de voluntariat, este necesar să descarci ultima versiune din store."
-              : "Am adăugat selecție de teme cromatice (Royal Blue, Smarald, Indigo, Crimson, etc.) în profil, gestionare avansată a orelor în lot și optimizări de performanță! Actualizează acum."}
+              : "Am adăugat un nou Selector de Teme în profil și optimizări de performanță! Actualizează acum."}
           </Text>
 
           {/* Secțiune Butoane */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-              style={[styles.primaryButton, { backgroundColor: isRequired ? '#E74C3C' : STANDARD_BLUE }]} 
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: isRequired ? '#E74C3C' : STANDARD_BLUE }]}
               onPress={handleUpdatePress}
               activeOpacity={0.8}
             >
@@ -105,8 +105,8 @@ export default function UpdateModal({ visible, isRequired, updateUrl, latestVers
             </TouchableOpacity>
 
             {!isRequired && (
-              <TouchableOpacity 
-                style={styles.secondaryButton} 
+              <TouchableOpacity
+                style={styles.secondaryButton}
                 onPress={onClose}
                 activeOpacity={0.7}
               >

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Dimensions, Alert, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Dimensions, Alert, FlatList, TouchableOpacity, Modal, TextInput, ScrollView } from 'react-native';
 import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
 import { PieChart } from 'react-native-chart-kit';
 import api from '../../../../services/api';
@@ -64,7 +64,20 @@ export default function UserDetailsScreen() {
 
   // State pentru Modal Permisiuni & Badge-uri
   const [permModalVisible, setPermModalVisible] = useState(false);
-  const [badgesModalVisible, setBadgesModalVisible] = useState(false); // NOU
+  const [badgesModalVisible, setBadgesModalVisible] = useState(false);
+
+  // State pentru #3 - Leaderboard rank
+  const [myRank, setMyRank] = useState(null);
+  const [totalRanked, setTotalRanked] = useState(null);
+
+  // State pentru #2 - Adaugă Ore modal
+  const [addHoursVisible, setAddHoursVisible] = useState(false);
+  const [eventsList, setEventsList] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [hoursInput, setHoursInput] = useState('');
+  const [submittingHours, setSubmittingHours] = useState(false);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventSearch, setEventSearch] = useState('');
 
   const fetchDetails = async () => {
     if (!details) setLoading(true);
@@ -93,7 +106,56 @@ export default function UserDetailsScreen() {
     }
   };
 
-  useFocusEffect(useCallback(() => { fetchDetails(); }, [userId, colors]));
+  const fetchRank = async () => {
+    try {
+      const res = await api.get('/api/leaderboard');
+      const sorted = [...res.data].sort((a, b) => parseFloat(b.total_hours) - parseFloat(a.total_hours));
+      const idx = sorted.findIndex(u => u.id === parseInt(userId));
+      if (idx !== -1) {
+        setMyRank(idx + 1);
+        setTotalRanked(sorted.length);
+      }
+    } catch (_) {}
+  };
+
+  const openAddHoursModal = async () => {
+    setAddHoursVisible(true);
+    setEventsLoading(true);
+    setSelectedEvent(null);
+    setHoursInput('');
+    setEventSearch('');
+    try {
+      const res = await api.get('/api/admin/events/all');
+      setEventsList(res.data);
+    } catch (_) {
+      Alert.alert('Eroare', 'Nu s-au putut încărca evenimentele.');
+    } finally {
+      setEventsLoading(false);
+    }
+  };
+
+  const submitHours = async () => {
+    if (!selectedEvent) { Alert.alert('Eroare', 'Selectează un eveniment.'); return; }
+    const h = parseFloat(hoursInput);
+    if (!hoursInput || isNaN(h) || h <= 0) { Alert.alert('Eroare', 'Introduceți un număr valid de ore.'); return; }
+    setSubmittingHours(true);
+    try {
+      await api.post('/api/admin/bulk-request-hours', {
+        userIds: [parseInt(userId)],
+        eventId: selectedEvent.id,
+        hours: h,
+      });
+      Alert.alert('Succes', `Cerere de ${h} ore trimisă spre aprobare pentru ${userName}!`);
+      setAddHoursVisible(false);
+      fetchDetails();
+    } catch (error) {
+      Alert.alert('Eroare', error.response?.data?.error || 'A apărut o eroare.');
+    } finally {
+      setSubmittingHours(false);
+    }
+  };
+
+  useFocusEffect(useCallback(() => { fetchDetails(); fetchRank(); }, [userId, colors]));
 
   // --- ACȚIUNI ADMIN ---
   const updateRoleOnServer = async (newRole) => {
@@ -150,17 +212,62 @@ export default function UserDetailsScreen() {
   const { user_info, total_hours, total_attended_events, recent_events } = details;
   const isSelf = user_info.id === loggedInAdmin.userId;
 
+  const CATEGORY_META = {
+    sedinta:     { label: 'Ședință',     color: '#1C748C' },
+    social:      { label: 'Social',      color: '#27ae60' },
+    proiect:     { label: 'Proiect',     color: '#f39c12' },
+    contributie: { label: 'Contribuție', color: '#9b59b6' },
+    default:     { label: 'Activitate', color: colors.textSecondary },
+  };
+
   const renderRecentEvent = ({ item }) => {
     const isAttended = item.confirmation_status === 'attended';
+    const meta = CATEGORY_META[item.category] || CATEGORY_META.default;
+    const hours = parseFloat(item.awarded_hours || 0);
+    const dateStr = item.start_time
+      ? new Date(item.start_time).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' })
+      : null;
+
     return (
       <View style={localStyles.eventItem}>
-        <Ionicons name={isAttended ? "checkmark-circle" : "time-outline"} size={20} color={isAttended ? "#27ae60" : colors.textSecondary} />
-        <Text style={[localStyles.eventTitle, { color: colors.textPrimary }]}>{item.title}</Text>
-        <View style={[localStyles.statusTag, isAttended ? localStyles.statusAttended : localStyles.statusPending]}>
-          <Text style={{ fontSize: 10, fontWeight: 'bold', color: isAttended ? "#27ae60" : "#f39c12" }}>
-            {isAttended ? 'PREZENT' : 'ÎNSCRIS'}
+        {/* Left accent bar */}
+        <View style={[localStyles.eventAccentBar, { backgroundColor: meta.color }]} />
+
+        {/* Main content */}
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
+            <View style={[localStyles.categoryChip, { backgroundColor: meta.color + '20' }]}>
+              <Text style={[localStyles.categoryChipText, { color: meta.color }]}>{meta.label}</Text>
+            </View>
+            {isAttended ? (
+              <View style={localStyles.statusAttended}>
+                <Ionicons name="checkmark-circle" size={11} color="#27ae60" />
+                <Text style={[localStyles.statusText, { color: '#27ae60' }]}>PREZENT</Text>
+              </View>
+            ) : (
+              <View style={localStyles.statusPending}>
+                <Ionicons name="time-outline" size={11} color="#f39c12" />
+                <Text style={[localStyles.statusText, { color: '#f39c12' }]}>ÎNSCRIS</Text>
+              </View>
+            )}
+          </View>
+
+          <Text style={[localStyles.eventTitle, { color: colors.textPrimary }]}>
+            {item.title}
           </Text>
+
+          {dateStr && (
+            <Text style={localStyles.eventDate}>{dateStr}</Text>
+          )}
         </View>
+
+        {/* Hours badge — only show when attended and hours > 0 */}
+        {isAttended && hours > 0 && (
+          <View style={[localStyles.hoursBadge, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30' }]}>
+            <Text style={[localStyles.hoursBadgeValue, { color: colors.primary }]}>{hours % 1 === 0 ? hours.toFixed(0) : hours.toFixed(1)}</Text>
+            <Text style={[localStyles.hoursBadgeLabel, { color: colors.primary }]}>ore</Text>
+          </View>
+        )}
       </View>
     );
   };
@@ -180,15 +287,32 @@ export default function UserDetailsScreen() {
             />
 
             <View style={localStyles.statCardRow}>
-              {(() => {
-                const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
-                return (
-                  <>
-                    <StatCard icon="hourglass-outline" title="Ore Totale" value={parseFloat(total_hours || 0).toFixed(1)} color={colors.primary} colors={colors} isDark={isDark} />
-                    <StatCard icon="checkmark-done-outline" title="Participări" value={parseInt(total_attended_events || 0)} color={STANDARD_BLUE} colors={colors} isDark={isDark} />
-                  </>
-                );
-              })()}
+              <StatCard icon="hourglass-outline" title="Ore Totale" value={parseFloat(total_hours || 0).toFixed(1)} color={colors.primary} colors={colors} isDark={isDark} />
+              <StatCard icon="checkmark-done-outline" title="Participări" value={parseInt(total_attended_events || 0)} color={colors.primary} colors={colors} isDark={isDark} />
+            </View>
+
+            {/* ── #3: Leaderboard Rank + #4: Last Active ── */}
+            <View style={localStyles.infoStrip}>
+              {myRank !== null && (
+                <View style={[localStyles.infoChip, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30' }]}>
+                  <Ionicons name="trophy-outline" size={13} color={colors.primary} />
+                  <Text style={[localStyles.infoChipText, { color: colors.primary }]}>#{myRank} din {totalRanked}</Text>
+                </View>
+              )}
+              {user_info.last_seen_at && (
+                <View style={[localStyles.infoChip, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', borderColor: colors.border }]}>
+                  <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+                  <Text style={[localStyles.infoChipText, { color: colors.textSecondary }]}>
+                    Activ: {new Date(user_info.last_seen_at).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </Text>
+                </View>
+              )}
+              {!user_info.last_seen_at && (
+                <View style={[localStyles.infoChip, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6', borderColor: colors.border }]}>
+                  <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+                  <Text style={[localStyles.infoChipText, { color: colors.textSecondary }]}>Niciodătă logat</Text>
+                </View>
+              )}
             </View>
 
             {/* --- ADMIN CONTROLS --- */}
@@ -207,11 +331,19 @@ export default function UserDetailsScreen() {
                     <Text style={[localStyles.adminBtnText, { color: colors.textPrimary }]}>Permisiuni</Text>
                   </TouchableOpacity>
                 </View>
-                
-                <TouchableOpacity style={[localStyles.adminBtn, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 10 }]} onPress={() => setBadgesModalVisible(true)}>
-                  <Ionicons name="medal-outline" size={20} color="#9b59b6" />
-                  <Text style={[localStyles.adminBtnText, { color: colors.textPrimary }]}>Gestionează Badge-uri</Text>
-                </TouchableOpacity>
+
+                <View style={localStyles.adminButtonsRow}>
+                  <TouchableOpacity style={[localStyles.adminBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => setBadgesModalVisible(true)}>
+                    <Ionicons name="medal-outline" size={20} color="#9b59b6" />
+                    <Text style={[localStyles.adminBtnText, { color: colors.textPrimary }]}>Badge-uri</Text>
+                  </TouchableOpacity>
+
+                  {/* #2: Quick Add Hours button */}
+                  <TouchableOpacity style={[localStyles.adminBtn, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '40' }]} onPress={openAddHoursModal}>
+                    <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                    <Text style={[localStyles.adminBtnText, { color: colors.primary }]}>Adaugă Ore</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <TouchableOpacity style={localStyles.deleteBtn} onPress={handleDeleteUser}>
                   <Ionicons name="trash-outline" size={20} color="#e74c3c" />
@@ -234,11 +366,11 @@ export default function UserDetailsScreen() {
               />
             </View>
 
-            <Text style={[localStyles.sectionTitle, { color: colors.textPrimary, paddingHorizontal: 20, marginTop: 10, marginBottom: 10 }]}>Activități Recente</Text>
+            <Text style={[localStyles.sectionTitle, { color: colors.textPrimary, paddingHorizontal: 20, marginTop: 10, marginBottom: 10 }]}>Ultimele Activități ({recent_events?.length || 0})</Text>
           </>
         }
         ListEmptyComponent={<Text style={[localStyles.emptyText, { color: colors.textSecondary }]}>Nicio activitate recentă.</Text>}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       />
 
       <UserPermissionsModal
@@ -254,6 +386,64 @@ export default function UserDetailsScreen() {
         userId={userId}
         userName={userName}
       />
+
+      {/* ── #2: Add Hours Modal ── */}
+      <Modal visible={addHoursVisible} animationType="slide" transparent onRequestClose={() => setAddHoursVisible(false)}>
+        <View style={localStyles.modalOverlay}>
+          <View style={[localStyles.modalBox, { backgroundColor: colors.card }]}>
+            <View style={localStyles.modalHeader}>
+              <Text style={[localStyles.modalTitle, { color: colors.textPrimary }]}>Adaugă Ore pentru {userName}</Text>
+              <TouchableOpacity onPress={() => setAddHoursVisible(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={[localStyles.searchInput, { backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6', color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="Caută eveniment..."
+              placeholderTextColor={colors.textSecondary}
+              value={eventSearch}
+              onChangeText={setEventSearch}
+            />
+
+            {eventsLoading ? (
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
+            ) : (
+              <ScrollView style={{ maxHeight: 220 }} keyboardShouldPersistTaps="handled">
+                {eventsList
+                  .filter(e => e.title.toLowerCase().includes(eventSearch.toLowerCase()))
+                  .map(e => (
+                    <TouchableOpacity
+                      key={e.id}
+                      style={[localStyles.eventOption, selectedEvent?.id === e.id && { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
+                      onPress={() => setSelectedEvent(e)}
+                    >
+                      <Ionicons name={selectedEvent?.id === e.id ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={selectedEvent?.id === e.id ? colors.primary : colors.textSecondary} />
+                      <Text style={[localStyles.eventOptionText, { color: colors.textPrimary }]} numberOfLines={1}>{e.title}</Text>
+                    </TouchableOpacity>
+                  ))}
+              </ScrollView>
+            )}
+
+            <TextInput
+              style={[localStyles.hoursInput, { backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : '#f3f4f6', color: colors.textPrimary, borderColor: selectedEvent ? colors.primary : colors.border }]}
+              placeholder="Număr de ore (ex: 2.5)"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="decimal-pad"
+              value={hoursInput}
+              onChangeText={setHoursInput}
+            />
+
+            <TouchableOpacity
+              style={[localStyles.submitBtn, { backgroundColor: colors.primary, opacity: submittingHours ? 0.7 : 1 }]}
+              onPress={submitHours}
+              disabled={submittingHours}
+            >
+              {submittingHours ? <ActivityIndicator color="#fff" /> : <Text style={localStyles.submitBtnText}>Trimite Cerere de Ore</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -281,10 +471,54 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   deleteBtnText: { marginLeft: 8, fontSize: 14, fontWeight: 'bold', color: '#e74c3c' },
 
   chartContainer: { backgroundColor: colors.card, borderRadius: 12, margin: 20, padding: 20, alignItems: 'center', borderWidth: isDark ? 1 : 0, borderColor: colors.border },
-  eventItem: { backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', padding: 15, marginHorizontal: 20, marginBottom: 8, borderRadius: 10, borderWidth: isDark ? 1 : 0, borderColor: colors.border },
-  eventTitle: { flex: 1, fontSize: 15, fontWeight: '600', marginLeft: 12 },
-  statusTag: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
-  statusAttended: { backgroundColor: isDark ? 'rgba(46, 204, 113, 0.15)' : '#E8F8F5' },
-  statusPending: { backgroundColor: isDark ? 'rgba(243, 156, 18, 0.15)' : '#FEF9E7' },
+
+  // Activity card
+  eventItem: {
+    backgroundColor: colors.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: isDark ? 1 : 0,
+    borderColor: colors.border,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: isDark ? 0.2 : 0.06,
+    shadowRadius: 3,
+    paddingVertical: 12,
+    paddingRight: 12,
+  },
+  eventAccentBar: { width: 4, alignSelf: 'stretch', marginRight: 12, borderRadius: 2 },
+  categoryChip: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  categoryChipText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.3 },
+  statusAttended: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(46,204,113,0.12)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
+  statusPending: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(243,156,18,0.12)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
+  statusText: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase' },
+  eventTitle: { fontSize: 14, fontWeight: '700' },
+  eventDate: { fontSize: 11, color: colors.textSecondary, marginTop: 3, fontWeight: '500' },
+  hoursBadge: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, marginLeft: 8, minWidth: 46 },
+  hoursBadgeValue: { fontSize: 16, fontWeight: '900', lineHeight: 18 },
+  hoursBadgeLabel: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+
   emptyText: { textAlign: 'center', paddingVertical: 40, fontSize: 14 },
+
+  // Info strip (rank, last active, verification)
+  infoStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, marginTop: 14, marginBottom: 4 },
+  infoChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
+  infoChipText: { fontSize: 12, fontWeight: '700' },
+
+  // Add Hours modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
+  modalBox: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 17, fontWeight: '800', flex: 1, marginRight: 12 },
+  searchInput: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 10 },
+  eventOption: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, marginBottom: 4, borderWidth: 1, borderColor: 'transparent' },
+  eventOptionText: { fontSize: 14, fontWeight: '600', flex: 1 },
+  hoursInput: { borderRadius: 10, borderWidth: 1.5, paddingHorizontal: 12, paddingVertical: 12, fontSize: 16, fontWeight: '700', marginTop: 12, marginBottom: 16, textAlign: 'center' },
+  submitBtn: { borderRadius: 14, paddingVertical: 15, alignItems: 'center', justifyContent: 'center' },
+  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
 });

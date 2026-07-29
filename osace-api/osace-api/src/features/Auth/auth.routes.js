@@ -82,7 +82,10 @@ router.post('/register', authLimiter, async (req, res) => {
       if (!validPassword) {
         return res.status(401).json({ error: 'Acreditări invalide.' });
       }
-const token = jwt.sign(
+      // Update last seen timestamp (fire-and-forget, non-blocking)
+      pool.query('UPDATE users SET last_seen_at = NOW() WHERE id = $1', [user.id]).catch(() => {});
+
+      const token = jwt.sign(
         { userId: user.id, role: user.role, displayName: user.display_name },
         process.env.JWT_SECRET,
         { expiresIn: '30d' }
