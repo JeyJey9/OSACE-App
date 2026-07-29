@@ -64,17 +64,17 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// --- Rate Limiting Global ---
-app.set('trust proxy', 1); // Trust first proxy (Nginx) for correct IP
-const { globalLimiter } = require('./src/middleware/rateLimiter');
-app.use(globalLimiter);
-
-// Servire fișiere uploadate (Actualizat: calea corectă la directorul real de upload)
+// Servire fișiere uploadate (Servit ÎNAINTE de globalLimiter pentru a preveni blocarea imaginilor statice)
 app.use('/uploads', express.static('/var/www/osace-uploads', {
   dotfiles: 'deny',         // Nu servi fișiere ascunse (.env, .htaccess etc.)
   index: false,             // Dezactivează listarea directorului
   maxAge: '7d',             // Cache-Control: 7 zile pentru imagini statice
 }));
+
+// --- Rate Limiting Global ---
+app.set('trust proxy', 1); // Trust first proxy (Nginx) for correct IP
+const { globalLimiter } = require('./src/middleware/rateLimiter');
+app.use(globalLimiter);
 
 // --- 4. Middleware-uri (Neschimbat) ---
 function verifyToken(req, res, next) {

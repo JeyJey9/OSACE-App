@@ -15,23 +15,26 @@ module.exports = () => {
       // Încărcăm configurațiile din mediu (cu fallback-uri sigure)
       const minIos = process.env.MIN_IOS_VERSION || '1.0.0';
       const latestIos = process.env.LATEST_IOS_VERSION || '1.0.0';
-      
+      const iosStoreUrl = process.env.IOS_UPDATE_URL || 'https://apps.apple.com/us/app/osace-voluntariat/id6774091102';
+
       const minAndroid = process.env.MIN_ANDROID_VERSION || '1.0.0';
       const latestAndroid = process.env.LATEST_ANDROID_VERSION || '1.0.0';
-
-      const updateUrl = process.env.UPDATE_URL || 'https://osace.ro/app';
+      const androidStoreUrl = process.env.ANDROID_UPDATE_URL || 'https://play.google.com/store/apps/details?id=ro.osace.app&hl=en';
 
       let minRequired = '1.0.0';
       let latestVersion = '1.0.0';
+      let updateUrl = androidStoreUrl;
 
       // Identificăm platforma
       if (platform.toLowerCase() === 'ios') {
         minRequired = minIos;
         latestVersion = latestIos;
+        updateUrl = iosStoreUrl;
       } else {
         // Implicit Android
         minRequired = minAndroid;
         latestVersion = latestAndroid;
+        updateUrl = androidStoreUrl;
       }
 
       // Funcție ajutătoare pentru a converti string-ul de versiune în array de numere

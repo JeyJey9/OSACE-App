@@ -27,12 +27,19 @@ export default function UpdateModal({ visible, isRequired, updateUrl, latestVers
 
   const handleUpdatePress = async () => {
     try {
-      const url = updateUrl || 'https://osace.ro/app';
-      const supported = await Linking.canOpenURL(url);
+      const defaultStoreUrl = Platform.OS === 'ios'
+        ? 'https://apps.apple.com/us/app/osace-voluntariat/id6774091102'
+        : 'https://play.google.com/store/apps/details?id=ro.osace.app&hl=en';
+      
+      const targetUrl = (updateUrl && updateUrl !== 'https://osace.ro/app')
+        ? updateUrl 
+        : defaultStoreUrl;
+
+      const supported = await Linking.canOpenURL(targetUrl);
       if (supported) {
-        await Linking.openURL(url);
+        await Linking.openURL(targetUrl);
       } else {
-        console.error("Nu se poate deschide URL-ul de update:", url);
+        await Linking.openURL(targetUrl);
       }
     } catch (error) {
       console.error("Eroare la deschiderea magazinului de aplicații:", error);
