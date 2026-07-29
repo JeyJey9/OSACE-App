@@ -313,7 +313,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   title: { fontSize: 24, fontWeight: 'bold', color: colors.textPrimary },
   subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 5, lineHeight: 18, paddingRight: 10 },
   addManualBtn: { backgroundColor: colors.primary, padding: 12, borderRadius: 12, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3 },
-  listContent: { padding: 15, paddingBottom: 40 },
+  listContent: { padding: 15, paddingBottom: 120 },
   card: { backgroundColor: colors.card, borderRadius: 12, padding: 15, marginBottom: 15, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, borderWidth: isDark ? 1 : 0, borderColor: colors.border },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },

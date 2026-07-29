@@ -201,7 +201,7 @@ export default function StudentVerificationRequestsScreen() {
 
 const createStyles = (colors, isDark, insets, BLUE) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  list: { padding: 16, paddingBottom: insets.bottom + 20 },
+  list: { padding: 16, paddingBottom: 120 },
   card: { backgroundColor: colors.card, borderRadius: 20, padding: 16, marginBottom: 16, borderWidth: isDark ? 1 : 0, borderColor: 'rgba(255,255,255,0.07)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: isDark ? 0.25 : 0.07, shadowRadius: 12, elevation: 4 },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 12 },
   avatar: { width: 52, height: 52, borderRadius: 26 },

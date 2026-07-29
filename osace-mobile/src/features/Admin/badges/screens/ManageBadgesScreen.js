@@ -151,7 +151,7 @@ export default function ManageBadgesScreen() {
 
 const createStyles = (colors, isDark) => StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  listPadding: { padding: 15, paddingBottom: 30 },
+  listPadding: { padding: 15, paddingBottom: 120 },
   itemContainer: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: colors.card, borderRadius: 12, marginBottom: 10, borderWidth: isDark ? 1 : 0, borderColor: colors.border, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
   icon: { marginRight: 15 },
   textContainer: { flex: 1 },
