@@ -76,7 +76,7 @@ const getTimeIcon = () => {
 export default function CustomHeader({ title, showRole = true, isHidden = false }) {
   const { user } = useAuth();
   const { colors, isDark } = useThemeColor();
-  const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
+  const STANDARD_BLUE = colors.primary;
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 

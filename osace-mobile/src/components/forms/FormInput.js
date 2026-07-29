@@ -4,7 +4,7 @@ import { useThemeColor } from '../../constants/useThemeColor';
 
 export default function FormInput({ label, multiline = false, style, ...props }) {
   const { colors, isDark } = useThemeColor();
-  const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
+  const STANDARD_BLUE = colors.primary;
   const styles = createStyles(colors, isDark, STANDARD_BLUE);
 
   const inputStyle = [

@@ -106,7 +106,7 @@ const FloatingTabBar = React.memo(function FloatingTabBar({ state, descriptors, 
         }
 
         const color = isFocused
-          ? (isDark ? '#4A90E2' : '#1566B9')
+          ? colors.primary
           : colors.textSecondary;
 
         return (

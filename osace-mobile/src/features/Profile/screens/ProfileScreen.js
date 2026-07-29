@@ -15,6 +15,7 @@ import ScreenContainer from '../../../components/layout/ScreenContainer';
 import Toast from 'react-native-toast-message';
 import ProfileSkeleton from '../components/ProfileSkeleton';
 import DropdownPicker from '../../../components/DropdownPicker';
+import ThemeSelector from '../../../components/ThemeSelector';
 
 // Hook pentru temă
 import { useThemeColor } from '../../../constants/useThemeColor';
@@ -242,6 +243,8 @@ export default function ProfileScreen() {
         infoTitle="Email"
         infoValue={user.email}
       />
+      
+      <ThemeSelector />
       
       <BadgeList 
         badges={badges}

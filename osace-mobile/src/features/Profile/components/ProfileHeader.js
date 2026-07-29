@@ -7,7 +7,7 @@ import { useThemeColor } from '../../../constants/useThemeColor';
 
 export default function ProfileHeader({ user, roleText, avatarLoading = false, onAvatarPress, email }) {
   const { colors, isDark } = useThemeColor();
-  const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
+  const STANDARD_BLUE = colors.primary;
   
   const getRoleColor = (role) => {
     if (role === 'admin') return '#E74C3C';

@@ -5,7 +5,7 @@ import { useThemeColor } from '../../constants/useThemeColor';
 
 export default function UpdateModal({ visible, isRequired, updateUrl, latestVersion, onClose }) {
   const { colors, isDark } = useThemeColor();
-  const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
+  const STANDARD_BLUE = colors.primary;
   const styles = createStyles(colors, isDark, STANDARD_BLUE);
 
   // Blochează acțiunea de back hardware pe Android dacă update-ul este obligatoriu
@@ -90,7 +90,7 @@ export default function UpdateModal({ visible, isRequired, updateUrl, latestVers
           <Text style={styles.modalDescription}>
             {isRequired 
               ? "Pentru a continua să folosești aplicația OSACE și să înregistrezi orele de voluntariat, este necesar să descarci ultima versiune din store."
-              : "Am adus optimizări premium de performanță, bug-fixuri vizuale și noi badge-uri! Actualizează acum pentru cea mai bună experiență."}
+              : "Am adăugat selecție de teme cromatice (Royal Blue, Smarald, Indigo, Crimson, etc.) în profil, gestionare avansată a orelor în lot și optimizări de performanță! Actualizează acum."}
           </Text>
 
           {/* Secțiune Butoane */}

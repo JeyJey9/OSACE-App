@@ -51,7 +51,7 @@ export default function HomeScreen({ navigation }) {
     default: { label: 'Activitate', color: colors.textSecondary }
   };
 
-  const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
+  const STANDARD_BLUE = colors.primary;
 
   const fetchEvents = async ({ silent = false } = {}) => {
     // silent = true → nu arată skeleton (date din cache sunt deja vizibile)

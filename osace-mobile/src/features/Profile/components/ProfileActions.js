@@ -6,7 +6,7 @@ import { useThemeColor } from '../../../constants/useThemeColor';
 
 export default function ProfileActions({ onEdit, onLogout, onDelete, onExport, onNotifPrefs, onBlockedUsers }) {
   const { colors, isDark } = useThemeColor();
-  const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
+  const STANDARD_BLUE = colors.primary;
   const styles = createStyles(colors, isDark, STANDARD_BLUE);
 
   return (

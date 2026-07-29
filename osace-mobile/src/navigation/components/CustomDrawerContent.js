@@ -144,8 +144,8 @@ export default function CustomDrawerContent(props) {
         {/* Navigare */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>NAVIGARE</Text>
-          <CustomDrawerItem label="Acasă" icon="home" navigateTo="HomeTabs" activeIconColor={STANDARD_BLUE} />
-          <CustomDrawerItem label="Profilul Meu" icon="person" navigateTo="Profile" activeIconColor={STANDARD_BLUE} />
+          <CustomDrawerItem label="Acasă" icon="home" navigateTo="HomeTabs" activeIconColor={colors.primary} />
+          <CustomDrawerItem label="Profilul Meu" icon="person" navigateTo="Profile" activeIconColor={colors.primary} />
         </View>
 
         {/* Comunitate */}

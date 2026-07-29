@@ -49,7 +49,7 @@ export default function HistoryScreen() {
     default: { label: 'Activitate', color: colors.textSecondary }
   };
 
-  const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
+  const STANDARD_BLUE = colors.primary;
 
   const formatData = (isoString) => {
     if (!isoString) return 'N/A';
