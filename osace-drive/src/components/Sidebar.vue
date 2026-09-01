@@ -1,60 +1,80 @@
 <template>
-  <aside class="sidebar">
-    <!-- Quick Nav -->
-    <div class="sidebar-section">
-      <span class="section-label">Arhivă</span>
-      <nav class="nav-list">
-        <router-link to="/" class="nav-row" :class="{ 'active': isRootActive }">
-          <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
-          </svg>
-          <span class="nav-label">Toate Directoarele</span>
-        </router-link>
+  <div>
+    <!-- Mobile Backdrop -->
+    <div 
+      class="sidebar-backdrop" 
+      :class="{ 'is-open': isOpen }" 
+      @click="$emit('close')"
+    ></div>
 
-        <a 
-          v-for="folder in topFolders" 
-          :key="folder.id" 
-          href="#"
-          class="nav-row"
-          :class="{ 'active': currentFolderId === folder.id }"
-          @click.prevent="$emit('navigate', folder.id)"
-        >
-          <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
+    <aside class="sidebar" :class="{ 'is-mobile-open': isOpen }">
+      <!-- Mobile Header in Drawer -->
+      <div class="sidebar-mobile-head">
+        <span class="drawer-title">Meniu Navigare</span>
+        <button class="btn btn-ghost btn-icon-only btn-sm" @click="$emit('close')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
-          <span class="nav-label">{{ folder.name }}</span>
-          <span v-if="folder.documents_count" class="nav-badge">{{ folder.documents_count }}</span>
-        </a>
-      </nav>
-    </div>
-
-    <!-- Admin Tools -->
-    <div class="sidebar-section" v-if="isAdmin">
-      <span class="section-label">Administrare</span>
-      <nav class="nav-list">
-        <button class="nav-row nav-btn" @click="$emit('init-structure')">
-          <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-          </svg>
-          <span class="nav-label">Reinițializează Foldere</span>
         </button>
-        <router-link to="/logs" class="nav-row">
-          <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-          </svg>
-          <span class="nav-label">Jurnal Activitate</span>
-        </router-link>
-      </nav>
-    </div>
+      </div>
 
-    <!-- Storage Widget -->
-    <div class="sidebar-bottom">
-      <StorageMeter :stats="stats" />
-    </div>
-  </aside>
+      <!-- Quick Nav -->
+      <div class="sidebar-section">
+        <span class="section-label">Arhivă</span>
+        <nav class="nav-list">
+          <router-link to="/" class="nav-row" :class="{ 'active': isRootActive }" @click="$emit('close')">
+            <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+            </svg>
+            <span class="nav-label">Toate Directoarele</span>
+          </router-link>
+
+          <a 
+            v-for="folder in topFolders" 
+            :key="folder.id" 
+            href="#"
+            class="nav-row"
+            :class="{ 'active': currentFolderId === folder.id }"
+            @click.prevent="handleFolderClick(folder.id)"
+          >
+            <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
+            </svg>
+            <span class="nav-label">{{ folder.name }}</span>
+            <span v-if="folder.documents_count" class="nav-badge">{{ folder.documents_count }}</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Admin Tools -->
+      <div class="sidebar-section" v-if="isAdmin">
+        <span class="section-label">Administrare</span>
+        <nav class="nav-list">
+          <button class="nav-row nav-btn" @click="handleInitClick">
+            <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            <span class="nav-label">Reinițializează Foldere</span>
+          </button>
+          <router-link to="/logs" class="nav-row" @click="$emit('close')">
+            <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span class="nav-label">Jurnal Activitate</span>
+          </router-link>
+        </nav>
+      </div>
+
+      <!-- Storage Widget -->
+      <div class="sidebar-bottom">
+        <StorageMeter :stats="stats" />
+      </div>
+    </aside>
+  </div>
 </template>
 
 <script setup>
@@ -64,7 +84,7 @@ import StorageMeter from './StorageMeter.vue';
 
 const route = useRoute();
 
-defineProps({
+const props = defineProps({
   topFolders: {
     type: Array,
     default: () => [],
@@ -77,9 +97,13 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  isOpen: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['navigate', 'init-structure']);
+const emit = defineEmits(['navigate', 'init-structure', 'close']);
 
 const currentFolderId = computed(() => {
   return route.params.id ? parseInt(route.params.id, 10) : null;
@@ -88,6 +112,16 @@ const currentFolderId = computed(() => {
 const isRootActive = computed(() => {
   return route.name === 'root-explorer' && !route.params.id;
 });
+
+function handleFolderClick(id) {
+  emit('navigate', id);
+  emit('close');
+}
+
+function handleInitClick() {
+  emit('init-structure');
+  emit('close');
+}
 </script>
 
 <style scoped>
@@ -100,6 +134,24 @@ const isRootActive = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.sidebar-mobile-head {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.drawer-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sidebar-backdrop {
+  display: none;
 }
 
 .sidebar-section {
@@ -127,7 +179,7 @@ const isRootActive = computed(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  padding: 7px 10px;
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text-secondary);
@@ -142,7 +194,7 @@ const isRootActive = computed(() => {
 }
 
 .nav-row.active {
-  background: rgba(16, 185, 129, 0.1);
+  background: var(--primary-subtle);
   color: var(--primary);
   font-weight: 600;
 }
@@ -185,5 +237,53 @@ const isRootActive = computed(() => {
 
 .sidebar-bottom {
   margin-top: auto;
+}
+
+/* Mobile Drawer Styles */
+@media (max-width: 768px) {
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 150;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .sidebar-backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    height: 100vh;
+    z-index: 160;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: var(--shadow-lg);
+    padding-top: calc(16px + env(safe-area-inset-top));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .sidebar.is-mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-mobile-head {
+    display: flex;
+  }
+
+  .nav-row {
+    padding: 10px 12px;
+    font-size: 0.875rem;
+  }
 }
 </style>

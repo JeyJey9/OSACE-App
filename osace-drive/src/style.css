@@ -247,6 +247,58 @@ select.input-control {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Touch & Mobile Optimizations (iOS / Android) */
+@media (hover: none) and (pointer: coarse) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn, button, a {
+    touch-action: manipulation;
+  }
+}
+
+/* Mobile & Tablet Media Queries */
+@media (max-width: 768px) {
+  :root {
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Prevent auto zoom on iOS inputs */
+  .input-control, input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Mobile Modals as Bottom Sheets */
+  .modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .modal-dialog {
+    max-width: 100% !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-top-left-radius: 18px !important;
+    border-top-right-radius: 18px !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+    animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  }
+}
+

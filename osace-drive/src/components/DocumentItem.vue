@@ -252,4 +252,23 @@ async function handleDownload() {
   color: var(--danger);
   background: var(--danger-subtle);
 }
+
+@media (max-width: 600px) {
+  .doc-row {
+    padding: 10px 10px;
+    gap: 10px;
+  }
+
+  .doc-name {
+    font-size: 0.8125rem;
+  }
+
+  .doc-actions .btn span {
+    display: none;
+  }
+
+  .doc-actions .btn {
+    padding: 6px;
+  }
+}
 </style>

@@ -1,6 +1,19 @@
 <template>
   <header class="navbar">
     <div class="nav-left">
+      <!-- Mobile Drawer Toggle Button -->
+      <button 
+        class="btn btn-ghost btn-icon-only mobile-menu-btn" 
+        @click="$emit('toggle-sidebar')"
+        aria-label="Deschide meniu"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
       <router-link to="/" class="brand-link">
         <div class="brand-badge">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -34,21 +47,21 @@
     </div>
 
     <div class="nav-right">
-      <router-link v-if="isAdmin" to="/logs" class="btn btn-ghost btn-sm" title="Jurnal de Audit">
+      <router-link v-if="isAdmin" to="/logs" class="btn btn-ghost btn-sm audit-btn" title="Jurnal de Audit">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>
           <line x1="16" y1="13" x2="8" y2="13"></line>
           <line x1="16" y1="17" x2="8" y2="17"></line>
         </svg>
-        <span>Audit Logs</span>
+        <span class="desktop-only-text">Audit Logs</span>
       </router-link>
 
       <div class="user-profile" v-if="user">
         <div class="avatar-initials">
           {{ (user.display_name || user.email || 'U')[0].toUpperCase() }}
         </div>
-        <div class="user-details">
+        <div class="user-details desktop-only-text">
           <span class="user-display">{{ user.display_name || user.email }}</span>
           <span class="badge" :class="getRoleBadgeClass(user.role)">{{ formatRole(user.role) }}</span>
         </div>
@@ -72,7 +85,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const searchQuery = ref('');
 
-defineEmits(['search']);
+defineEmits(['search', 'toggle-sidebar']);
 
 const user = computed(() => {
   const userStr = localStorage.getItem('userData');
@@ -254,5 +267,54 @@ function handleLogout() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.mobile-menu-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 8px 12px;
+    height: 50px;
+  }
+
+  .nav-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .mobile-menu-btn {
+    display: inline-flex;
+    padding: 6px;
+  }
+
+  .brand-sub {
+    display: none;
+  }
+
+  .nav-center {
+    margin: 0 8px;
+    max-width: none;
+  }
+
+  .search-kbd {
+    display: none;
+  }
+
+  .desktop-only-text {
+    display: none !important;
+  }
+
+  .audit-btn {
+    padding: 6px;
+  }
+
+  .user-profile {
+    padding: 2px;
+    border: none;
+    background: transparent;
+  }
 }
 </style>

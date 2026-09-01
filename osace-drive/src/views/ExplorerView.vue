@@ -1,12 +1,14 @@
 <template>
   <div class="explorer-layout">
-    <Navbar @search="handleSearch" />
+    <Navbar @search="handleSearch" @toggle-sidebar="isMobileSidebarOpen = !isMobileSidebarOpen" />
 
     <div class="explorer-body">
       <Sidebar 
         :top-folders="topLevelFolders" 
         :stats="archiveStats" 
         :is-admin="isAdmin"
+        :is-open="isMobileSidebarOpen"
+        @close="isMobileSidebarOpen = false"
         @navigate="navigateToFolder"
         @init-structure="handleInitStructure"
       />
@@ -206,6 +208,7 @@ const showUploadModal = ref(false);
 const showNewFolderModal = ref(false);
 const editingFolder = ref(null);
 const inspectedDoc = ref(null);
+const isMobileSidebarOpen = ref(false);
 
 const user = computed(() => {
   const userStr = localStorage.getItem('userData');
@@ -497,5 +500,36 @@ onMounted(() => {
   color: var(--text-muted);
   max-width: 380px;
   margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .explorer-main {
+    padding: 12px 10px;
+  }
+
+  .main-header-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .toolbar-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .toolbar-actions .btn {
+    width: 100%;
+    padding: 8px 6px;
+    font-size: 0.75rem;
+  }
+
+  .folders-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 }
 </style>

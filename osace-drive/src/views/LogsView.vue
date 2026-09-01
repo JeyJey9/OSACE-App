@@ -1,9 +1,13 @@
 <template>
   <div class="logs-layout">
-    <Navbar />
+    <Navbar @toggle-sidebar="isMobileSidebarOpen = !isMobileSidebarOpen" />
 
     <div class="logs-body">
-      <Sidebar :is-admin="true" />
+      <Sidebar 
+        :is-admin="true" 
+        :is-open="isMobileSidebarOpen" 
+        @close="isMobileSidebarOpen = false" 
+      />
 
       <main class="logs-main">
         <div class="logs-header">
@@ -116,6 +120,7 @@ const totalLogs = ref(0);
 const currentPage = ref(1);
 const totalPages = ref(1);
 const isLoading = ref(true);
+const isMobileSidebarOpen = ref(false);
 
 async function loadLogs() {
   isLoading.value = true;
@@ -332,5 +337,26 @@ onMounted(() => {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .logs-main {
+    padding: 12px 10px;
+  }
+
+  .logs-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .logs-header .btn {
+    width: 100%;
+  }
+
+  .logs-table-container {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 </style>
