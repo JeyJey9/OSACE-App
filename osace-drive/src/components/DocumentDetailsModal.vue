@@ -1,66 +1,79 @@
 <template>
   <div class="modal-overlay" @click.self="$emit('close')">
-    <div class="modal-box glass-panel animate-fade-in">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <span class="modal-emoji">📋</span>
-          <h3>Detalii & Integritate Document</h3>
+    <div class="modal-dialog panel animate-fade-in">
+      <div class="modal-head">
+        <div class="modal-title-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-primary">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <h3>Inspecție & Integritate Document</h3>
         </div>
-        <button class="btn btn-ghost btn-sm" @click="$emit('close')">✕</button>
+        <button class="btn btn-ghost btn-sm btn-icon-only" @click="$emit('close')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
 
-      <div class="details-content" v-if="doc">
-        <!-- Main Highlight -->
-        <div class="doc-header-card">
-          <h4 class="doc-big-title">{{ doc.name }}</h4>
-          <p class="doc-sub" v-if="doc.original_name !== doc.name">
-            Fișier original: <code>{{ doc.original_name }}</code>
-          </p>
+      <div class="modal-body" v-if="doc">
+        <!-- Title & Original File -->
+        <div class="doc-header">
+          <h4>{{ doc.name }}</h4>
+          <span class="original-filename" v-if="doc.original_name && doc.original_name !== doc.name">
+            Fișier sursă: <code>{{ doc.original_name }}</code>
+          </span>
         </div>
 
         <!-- Metadata Grid -->
         <div class="meta-grid">
-          <div class="meta-card">
-            <span class="meta-label">Format / MIME</span>
+          <div class="meta-item">
+            <span class="meta-key">Tip MIME</span>
             <span class="meta-val">{{ doc.mime_type }}</span>
           </div>
 
-          <div class="meta-card">
-            <span class="meta-label">Dimensiune</span>
+          <div class="meta-item">
+            <span class="meta-key">Dimensiune</span>
             <span class="meta-val">{{ formatBytes(doc.size_bytes) }}</span>
           </div>
 
-          <div class="meta-card">
-            <span class="meta-label">Departament</span>
+          <div class="meta-item">
+            <span class="meta-key">Departament</span>
             <span class="meta-val">{{ doc.department_id || 'N/A' }}</span>
           </div>
 
-          <div class="meta-card">
-            <span class="meta-label">An Academic</span>
+          <div class="meta-item">
+            <span class="meta-key">An Academic</span>
             <span class="meta-val">{{ doc.academic_year || 'N/A' }}</span>
           </div>
         </div>
 
         <!-- Description if present -->
-        <div v-if="doc.description" class="desc-box">
-          <span class="desc-title">Descriere / Note:</span>
+        <div v-if="doc.description" class="note-box">
+          <span class="note-label">Descriere / Note</span>
           <p>{{ doc.description }}</p>
         </div>
 
-        <!-- Integrity & Google Drive Sync -->
-        <div class="security-card">
-          <div class="security-row">
-            <span class="sec-label">Google Drive File ID:</span>
-            <code class="sec-val">{{ doc.drive_file_id }}</code>
+        <!-- Cloud & SHA256 Integrity -->
+        <div class="integrity-panel">
+          <div class="integrity-row">
+            <span class="int-label">Drive File ID</span>
+            <code class="int-code">{{ doc.drive_file_id }}</code>
           </div>
-          <div class="security-row" v-if="doc.checksum_sha256">
-            <span class="sec-label">Integritate SHA-256:</span>
-            <code class="sec-val checksum-val">{{ doc.checksum_sha256 }}</code>
+          <div class="integrity-row" v-if="doc.checksum_sha256">
+            <div class="checksum-head">
+              <span class="int-label">Integritate SHA-256</span>
+              <button class="btn btn-ghost btn-sm" @click="copyChecksum">
+                <span>{{ copied ? 'Copiat!' : 'Copiază Hash' }}</span>
+              </button>
+            </div>
+            <code class="int-code sha-code">{{ doc.checksum_sha256 }}</code>
           </div>
         </div>
 
-        <!-- Actions -->
-        <div class="modal-footer">
+        <!-- Modal Actions -->
+        <div class="modal-actions">
           <a 
             v-if="doc.drive_web_view_link" 
             :href="doc.drive_web_view_link" 
@@ -68,10 +81,21 @@
             rel="noopener noreferrer" 
             class="btn btn-secondary"
           >
-            Vizualizează în Google Drive ↗
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+            <span>Deschide în Google Drive</span>
           </a>
+
           <button class="btn btn-primary" @click="handleDownload">
-            Descarcă Fișierul
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Descarcă Fișier</span>
           </button>
         </div>
       </div>
@@ -80,6 +104,7 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import api from '../services/api';
 
 const props = defineProps({
@@ -91,12 +116,23 @@ const props = defineProps({
 
 defineEmits(['close']);
 
+const copied = ref(false);
+
 function formatBytes(bytes) {
   if (!bytes) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function copyChecksum() {
+  if (!props.doc?.checksum_sha256) return;
+  navigator.clipboard.writeText(props.doc.checksum_sha256);
+  copied.value = true;
+  setTimeout(() => {
+    copied.value = false;
+  }, 2000);
 }
 
 async function handleDownload() {
@@ -123,154 +159,172 @@ async function handleDownload() {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 999;
-  padding: 20px;
+  padding: 16px;
 }
 
-.modal-box {
+.modal-dialog {
   width: 100%;
-  max-width: 580px;
-  padding: 24px;
+  max-width: 520px;
   background: var(--bg-surface);
-  border: 1px solid var(--border-color-hover);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
 }
 
-.modal-header {
+.modal-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-default);
 }
 
-.modal-title-group {
+.modal-title-wrap {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.modal-title-group h3 {
-  font-size: 1.15rem;
+.modal-title-wrap h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
-.details-content {
+.text-primary {
+  color: var(--primary);
+}
+
+.modal-body {
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
-.doc-header-card {
-  padding: 14px 18px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+.doc-header {
+  padding: 10px 12px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
 }
 
-.doc-big-title {
-  font-size: 1.05rem;
+.doc-header h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  word-break: break-all;
 }
 
-.doc-sub {
-  font-size: 0.8rem;
+.original-filename {
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 
-.doc-sub code {
+.original-filename code {
   color: var(--text-secondary);
 }
 
 .meta-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 8px;
 }
 
-.meta-card {
-  padding: 10px 14px;
+.meta-item {
+  padding: 8px 10px;
   background: var(--bg-surface-elevated);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.meta-label {
-  font-size: 0.7rem;
-  color: var(--text-muted);
+.meta-key {
+  font-size: 0.65rem;
+  font-weight: 600;
   text-transform: uppercase;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
 }
 
 .meta-val {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.8125rem;
+  font-weight: 500;
   color: var(--text-primary);
-  word-break: break-all;
 }
 
-.desc-box {
-  padding: 12px 14px;
+.note-box {
+  padding: 10px 12px;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  font-size: 0.8125rem;
   color: var(--text-secondary);
 }
 
-.desc-title {
+.note-label {
   display: block;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
   color: var(--text-muted);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
-.security-card {
-  padding: 12px 14px;
-  background: rgba(16, 185, 129, 0.04);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: var(--radius-sm);
+.integrity-panel {
+  padding: 10px 12px;
+  background: rgba(16, 185, 129, 0.03);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-xs);
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.security-row {
+.integrity-row {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.sec-label {
-  font-size: 0.7rem;
+.int-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
   color: var(--primary);
-  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
-.sec-val {
+.checksum-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.int-code {
   font-size: 0.75rem;
   color: var(--text-secondary);
+  font-family: var(--font-mono);
   word-break: break-all;
-  font-family: monospace;
 }
 
-.checksum-val {
+.sha-code {
   color: #a7f3d0;
 }
 
-.modal-footer {
+.modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 6px;
 }
 </style>

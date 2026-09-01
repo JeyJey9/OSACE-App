@@ -1,19 +1,30 @@
 <template>
-  <div class="login-page">
-    <div class="login-card glass-panel animate-fade-in">
-      <div class="brand-hero">
-        <div class="brand-logo-large">
-          <span>⚡</span>
+  <div class="login-wrapper">
+    <div class="login-box panel animate-fade-in">
+      <!-- Brand Header -->
+      <div class="brand-header">
+        <div class="brand-logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="logo-icon">
+            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+            <path d="M12 10v6"></path>
+            <path d="m9 13 3-3 3 3"></path>
+          </svg>
         </div>
-        <h1>O.S.A.C.E. Drive</h1>
-        <p class="brand-subtitle">Arhivă Instituțională & Documente Securizate</p>
+        <h2>O.S.A.C.E. Drive</h2>
+        <p class="brand-description">Arhivă Instituțională & Documente Securizate</p>
       </div>
 
-      <div v-if="errorMessage" class="error-banner">
-        <span>⚠️</span>
-        <p>{{ errorMessage }}</p>
+      <!-- Error Alert -->
+      <div v-if="errorMessage" class="error-alert">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>{{ errorMessage }}</span>
       </div>
 
+      <!-- Form -->
       <form @submit.prevent="handleLogin" class="login-form">
         <div class="form-group">
           <label for="email">Adresă Email</label>
@@ -41,14 +52,14 @@
           />
         </div>
 
-        <button type="submit" class="btn btn-primary btn-block" :disabled="isLoading">
-          <span v-if="isLoading">Se verifică datele...</span>
-          <span v-else>Autentificare în Arhivă</span>
+        <button type="submit" class="btn btn-primary btn-submit" :disabled="isLoading">
+          <span v-if="isLoading">Se verifică...</span>
+          <span v-else>Autentificare</span>
         </button>
       </form>
 
-      <div class="login-footer">
-        <p>Autentificare securizată bazată pe contul tău din aplicația mobilă O.S.A.C.E.</p>
+      <div class="login-hint">
+        <span>Conectare unificată prin contul tău din platforma O.S.A.C.E.</span>
       </div>
     </div>
   </div>
@@ -90,94 +101,97 @@ async function handleLogin() {
 </script>
 
 <style scoped>
-.login-page {
+.login-wrapper {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at top center, rgba(16, 185, 129, 0.12) 0%, transparent 60%), var(--bg-main);
-  padding: 24px;
+  background: var(--bg-app);
+  padding: 20px;
 }
 
-.login-card {
+.login-box {
   width: 100%;
-  max-width: 440px;
-  padding: 36px 32px;
+  max-width: 380px;
+  padding: 32px 28px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-lg);
 }
 
-.brand-hero {
+.brand-header {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
-.brand-logo-large {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 16px;
+.brand-logo {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-  border-radius: var(--radius-lg);
-  font-size: 1.8rem;
-  box-shadow: 0 0 25px var(--primary-glow);
+  background: var(--primary-subtle);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  color: var(--primary);
 }
 
-.brand-hero h1 {
-  font-size: 1.6rem;
-  margin-bottom: 6px;
+.brand-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 4px;
 }
 
-.brand-subtitle {
-  font-size: 0.85rem;
+.brand-description {
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 
-.error-banner {
+.error-alert {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-radius: var(--radius-md);
-  color: #fca5a5;
-  font-size: 0.85rem;
-  margin-bottom: 20px;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--danger-subtle);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  border-radius: var(--radius-sm);
+  color: #fb7185;
+  font-size: 0.75rem;
+  margin-bottom: 16px;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .form-group label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-secondary);
 }
 
-.btn-block {
+.btn-submit {
   width: 100%;
-  padding: 12px;
-  margin-top: 8px;
+  padding: 9px;
+  margin-top: 4px;
 }
 
-.login-footer {
+.login-hint {
   text-align: center;
-  margin-top: 24px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border-color);
-  font-size: 0.75rem;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.6875rem;
   color: var(--text-muted);
   line-height: 1.4;
 }

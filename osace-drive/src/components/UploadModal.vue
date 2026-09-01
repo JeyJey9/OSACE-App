@@ -1,19 +1,28 @@
 <template>
   <div class="modal-overlay" @click.self="$emit('close')">
-    <div class="modal-box glass-panel animate-fade-in">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <span class="modal-emoji">📤</span>
-          <h3>Încarcă Document în Arhivă</h3>
+    <div class="modal-dialog panel animate-fade-in">
+      <div class="modal-head">
+        <div class="modal-title-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-primary">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <h3>Încărcare Document în Arhivă</h3>
         </div>
-        <button class="btn btn-ghost btn-sm" @click="$emit('close')">✕</button>
+        <button class="btn btn-ghost btn-sm btn-icon-only" @click="$emit('close')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="modal-form">
-        <!-- Drag & Drop Zone -->
+      <form @submit.prevent="handleSubmit" class="modal-body">
+        <!-- Dropzone -->
         <div 
-          class="dropzone" 
-          :class="{ 'dropzone-active': isDragging, 'has-file': selectedFile }"
+          class="dropzone-area" 
+          :class="{ 'is-dragging': isDragging, 'has-selection': selectedFile }"
           @dragover.prevent="isDragging = true"
           @dragleave.prevent="isDragging = false"
           @drop.prevent="handleDrop"
@@ -22,42 +31,49 @@
           <input 
             type="file" 
             ref="fileInput" 
-            class="hidden-input" 
+            class="hidden-file-input" 
             @change="handleFileSelect"
           />
 
-          <div v-if="!selectedFile" class="dropzone-content">
-            <span class="drop-icon">📁</span>
-            <p class="drop-title">Trage fișierul aici sau <span>alege din calculator</span></p>
-            <p class="drop-subtitle">PDF, Word, Excel, PowerPoint, Imagini, Arhive ZIP (Max 50MB)</p>
+          <div v-if="!selectedFile" class="dropzone-idle">
+            <svg class="dropzone-svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+              <path d="M12 12v9"></path>
+              <path d="m16 16-4-4-4 4"></path>
+            </svg>
+            <p class="dropzone-prompt">Trage fișierul aici sau <span class="highlight">alege din calculator</span></p>
+            <span class="dropzone-hint">PDF, Word, Excel, PowerPoint, ZIP, Imagini (Până la 50MB)</span>
           </div>
 
-          <div v-else class="selected-file-info">
-            <span class="file-icon">📄</span>
-            <div class="file-details">
-              <span class="file-name">{{ selectedFile.name }}</span>
-              <span class="file-size">{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</span>
+          <div v-else class="file-preview-pill">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-primary">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <div class="file-pill-meta">
+              <span class="pill-name">{{ selectedFile.name }}</span>
+              <span class="pill-size">{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</span>
             </div>
             <button type="button" class="btn btn-ghost btn-sm" @click.stop="selectedFile = null">Schimbă</button>
           </div>
         </div>
 
         <!-- Form fields -->
-        <div class="form-group">
-          <label>Nume Document (Opțional)</label>
+        <div class="form-field">
+          <label>Denumire Document</label>
           <input 
             type="text" 
             v-model="customName" 
-            placeholder="Ex: Regulament de Ordine Interioara 2025" 
+            placeholder="Lasă gol pentru numele original sau introdu un titlu clar" 
             class="input-control"
           />
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
+        <div class="form-grid">
+          <div class="form-field">
             <label>Departament</label>
             <select v-model="department" class="input-control">
-              <option value="">(Implicit din folder)</option>
+              <option value="">(Moștenit din folder)</option>
               <option value="Board">Board / Conducere</option>
               <option value="IT">IT</option>
               <option value="HR">HR</option>
@@ -67,7 +83,7 @@
             </select>
           </div>
 
-          <div class="form-group">
+          <div class="form-field">
             <label>An Academic</label>
             <input 
               type="text" 
@@ -78,38 +94,38 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label>Tag-uri (separate prin virgulă)</label>
+        <div class="form-field">
+          <label>Tag-uri de căutare</label>
           <input 
             type="text" 
             v-model="tags" 
-            placeholder="statut, regulament, sedinta" 
+            placeholder="statut, regulament, pv_sedinta" 
             class="input-control"
           />
         </div>
 
-        <div class="form-group">
+        <div class="form-field">
           <label>Descriere sau Note</label>
           <textarea 
             v-model="description" 
             rows="2" 
-            placeholder="Detalii suplimentare despre document..." 
+            placeholder="Context sau descriere opțională..." 
             class="input-control"
           ></textarea>
         </div>
 
-        <div v-if="uploadProgress > 0 && uploadProgress < 100" class="upload-progress-wrapper">
-          <div class="progress-bar-fill" :style="{ width: uploadProgress + '%' }"></div>
-          <span class="progress-text">Se încarcă în Google Drive... {{ uploadProgress }}%</span>
+        <div v-if="uploadProgress > 0 && uploadProgress < 100" class="upload-meter">
+          <div class="upload-meter-bar" :style="{ width: uploadProgress + '%' }"></div>
+          <span class="upload-meter-text">Se transmite către Google Drive... {{ uploadProgress }}%</span>
         </div>
 
-        <div class="modal-footer">
+        <div class="modal-actions">
           <button type="button" class="btn btn-secondary" @click="$emit('close')" :disabled="isUploading">
             Anulează
           </button>
           <button type="submit" class="btn btn-primary" :disabled="!selectedFile || isUploading">
             <span v-if="isUploading">Se încarcă...</span>
-            <span v-else>Încarcă Documentul</span>
+            <span v-else>Salvează în Arhivă</span>
           </button>
         </div>
       </form>
@@ -169,7 +185,7 @@ async function handleSubmit() {
     if (tags.value.trim()) formData.append('tags', tags.value.trim());
     if (description.value.trim()) formData.append('description', description.value.trim());
 
-    uploadProgress.value = 40;
+    uploadProgress.value = 35;
 
     const response = await api.post('/archive/documents/upload', formData, {
       headers: {
@@ -199,176 +215,182 @@ async function handleSubmit() {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 999;
-  padding: 20px;
+  padding: 16px;
 }
 
-.modal-box {
+.modal-dialog {
   width: 100%;
-  max-width: 540px;
-  padding: 24px;
+  max-width: 500px;
   background: var(--bg-surface);
-  border: 1px solid var(--border-color-hover);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
 }
 
-.modal-header {
+.modal-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-default);
 }
 
-.modal-title-group {
+.modal-title-wrap {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.modal-title-group h3 {
-  font-size: 1.15rem;
+.modal-title-wrap h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
-.modal-emoji {
-  font-size: 1.3rem;
+.text-primary {
+  color: var(--primary);
 }
 
-.modal-form {
+.modal-body {
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
-.dropzone {
-  border: 2px dashed rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-md);
-  padding: 24px;
+.dropzone-area {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 20px;
   text-align: center;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.02);
-  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.01);
+  transition: all 0.15s ease;
 }
 
-.dropzone:hover, .dropzone-active {
+.dropzone-area:hover, .dropzone-area.is-dragging {
   border-color: var(--primary);
-  background: var(--primary-glow);
+  background: var(--primary-subtle);
 }
 
-.dropzone.has-file {
+.dropzone-area.has-selection {
   border-style: solid;
-  border-color: var(--primary);
-  background: rgba(16, 185, 129, 0.05);
+  border-color: var(--primary-border);
+  background: var(--primary-subtle);
 }
 
-.hidden-input {
+.hidden-file-input {
   display: none;
 }
 
-.drop-icon {
-  font-size: 2rem;
-  display: block;
-  margin-bottom: 8px;
+.dropzone-svg {
+  color: var(--text-muted);
+  margin-bottom: 6px;
 }
 
-.drop-title {
-  font-size: 0.9rem;
+.dropzone-prompt {
+  font-size: 0.8125rem;
   color: var(--text-primary);
   font-weight: 500;
 }
 
-.drop-title span {
+.highlight {
   color: var(--primary);
   text-decoration: underline;
 }
 
-.drop-subtitle {
-  font-size: 0.75rem;
+.dropzone-hint {
+  display: block;
+  font-size: 0.6875rem;
   color: var(--text-muted);
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
-.selected-file-info {
+.file-preview-pill {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   text-align: left;
 }
 
-.file-icon {
-  font-size: 1.8rem;
-}
-
-.file-details {
+.file-pill-meta {
   flex: 1;
+  min-width: 0;
 }
 
-.file-name {
+.pill-name {
   display: block;
+  font-size: 0.8125rem;
   font-weight: 600;
-  font-size: 0.9rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.file-size {
+.pill-size {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
-.form-group {
+.form-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
-.form-group label {
+.form-field label {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-secondary);
 }
 
-.form-row {
+.form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
-.upload-progress-wrapper {
+.upload-meter {
   position: relative;
-  height: 28px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: var(--radius-sm);
+  height: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-xs);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.progress-bar-fill {
+.upload-meter-bar {
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+  background: var(--primary);
   transition: width 0.2s ease;
 }
 
-.progress-text {
+.upload-meter-text {
   position: relative;
   z-index: 2;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 700;
-  color: #fff;
+  color: #042f20;
 }
 
-.modal-footer {
+.modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 6px;
 }
 </style>

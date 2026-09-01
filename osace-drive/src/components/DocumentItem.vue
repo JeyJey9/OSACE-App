@@ -1,38 +1,39 @@
 <template>
-  <div class="document-item glass-panel">
-    <div class="doc-icon-container" :class="'icon-' + getFileCategory(doc.file_extension)">
-      <span class="doc-badge-ext">{{ (doc.file_extension || '').replace('.', '').toUpperCase() || 'FILE' }}</span>
+  <div class="doc-row" :class="{ 'is-downloading': isDownloading }">
+    <!-- File Type Icon -->
+    <div class="doc-icon-badge" :class="'type-' + getFileCategory(doc.file_extension)">
+      <span class="ext-label">{{ formatExtension(doc.file_extension) }}</span>
     </div>
 
-    <div class="doc-main">
-      <div class="doc-title-row">
-        <h4 class="doc-name" :title="doc.name" @click="$emit('inspect', doc)">{{ doc.name }}</h4>
+    <!-- Main Title & Meta -->
+    <div class="doc-info" @click="$emit('inspect', doc)">
+      <div class="doc-name-line">
+        <span class="doc-name" :title="doc.name">{{ doc.name }}</span>
         <span v-if="doc.academic_year" class="badge badge-general">{{ doc.academic_year }}</span>
         <span v-if="doc.department_id" class="badge badge-department">{{ doc.department_id }}</span>
       </div>
 
-      <div class="doc-meta-row">
-        <span class="doc-size">{{ formatFileSize(doc.size_bytes) }}</span>
-        <span class="meta-dot">•</span>
-        <span class="doc-uploader" v-if="doc.uploaded_by_name">
-          Încărcat de <strong>{{ doc.uploaded_by_name }}</strong>
-        </span>
-        <span class="meta-dot">•</span>
-        <span class="doc-date">{{ formatDate(doc.created_at) }}</span>
-      </div>
-
-      <div v-if="doc.tags && doc.tags.length > 0" class="doc-tags-row">
-        <span v-for="tag in doc.tags" :key="tag" class="doc-tag">#{{ tag }}</span>
+      <div class="doc-meta-line">
+        <span>{{ formatFileSize(doc.size_bytes) }}</span>
+        <span class="sep">•</span>
+        <span v-if="doc.uploaded_by_name">De {{ doc.uploaded_by_name }}</span>
+        <span class="sep">•</span>
+        <span>{{ formatDate(doc.created_at) }}</span>
+        <template v-if="doc.tags && doc.tags.length > 0">
+          <span class="sep">•</span>
+          <span v-for="tag in doc.tags" :key="tag" class="doc-tag">#{{ tag }}</span>
+        </template>
       </div>
     </div>
 
+    <!-- Actions -->
     <div class="doc-actions">
       <button 
-        class="btn btn-ghost btn-sm" 
-        title="Detalii & Istoric"
-        @click="$emit('inspect', doc)"
+        class="btn btn-ghost btn-sm btn-icon-only" 
+        title="Detalii & Integritate"
+        @click.stop="$emit('inspect', doc)"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="16" x2="12" y2="12"></line>
           <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -44,10 +45,11 @@
         :href="doc.drive_web_view_link" 
         target="_blank" 
         rel="noopener noreferrer" 
-        class="btn btn-ghost btn-sm" 
+        class="btn btn-ghost btn-sm btn-icon-only" 
         title="Deschide în Google Drive"
+        @click.stop
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
           <polyline points="15 3 21 3 21 9"></polyline>
           <line x1="10" y1="14" x2="21" y2="3"></line>
@@ -55,26 +57,26 @@
       </a>
 
       <button 
-        class="btn btn-primary btn-sm" 
+        class="btn btn-secondary btn-sm" 
         :disabled="isDownloading"
-        @click="handleDownload"
+        @click.stop="handleDownload"
         title="Descarcă pe calculator"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
           <polyline points="7 10 12 15 17 10"></polyline>
           <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
-        <span>Descarcă</span>
+        <span>{{ isDownloading ? 'Se descarcă...' : 'Descarcă' }}</span>
       </button>
 
       <button 
         v-if="canDelete" 
-        class="btn btn-danger btn-sm" 
+        class="btn btn-ghost btn-sm btn-icon-only text-danger" 
         title="Șterge document"
-        @click="$emit('delete', doc)"
+        @click.stop="$emit('delete', doc)"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="3 6 5 6 21 6"></polyline>
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
         </svg>
@@ -102,13 +104,19 @@ defineEmits(['inspect', 'delete']);
 
 const isDownloading = ref(false);
 
+function formatExtension(ext) {
+  if (!ext) return 'DOC';
+  const clean = ext.replace('.', '').toUpperCase();
+  return clean.length > 4 ? clean.substring(0, 4) : clean;
+}
+
 function getFileCategory(ext) {
   if (!ext) return 'generic';
   const clean = ext.toLowerCase().replace('.', '');
   if (['pdf'].includes(clean)) return 'pdf';
   if (['doc', 'docx'].includes(clean)) return 'word';
   if (['xls', 'xlsx', 'csv'].includes(clean)) return 'excel';
-  if (['ppt', 'pptx'].includes(clean)) return 'powerpoint';
+  if (['ppt', 'pptx'].includes(clean)) return 'ppt';
   if (['zip', 'rar', '7z', 'gz'].includes(clean)) return 'archive';
   if (['png', 'jpg', 'jpeg', 'webp', 'svg'].includes(clean)) return 'image';
   return 'generic';
@@ -145,7 +153,7 @@ async function handleDownload() {
     window.URL.revokeObjectURL(blobUrl);
   } catch (err) {
     console.error('Eroare la descărcarea documentului:', err);
-    alert('Nu s-a putut descărca documentul. Verifică permisiunile.');
+    alert('Nu s-a putut descărca documentul.');
   } finally {
     isDownloading.value = false;
   }
@@ -153,58 +161,61 @@ async function handleDownload() {
 </script>
 
 <style scoped>
-.document-item {
+.doc-row {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 18px;
-  border-radius: var(--radius-md);
-  transition: all 0.2s ease;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
 }
 
-.document-item:hover {
+.doc-row:hover {
   background: var(--bg-surface-elevated);
-  border-color: var(--border-color-hover);
+  border-color: var(--border-strong);
 }
 
-.doc-icon-container {
-  width: 44px;
-  height: 44px;
+.doc-icon-badge {
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
-  font-weight: 800;
-  font-size: 0.65rem;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
 }
 
-.icon-pdf { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-.icon-word { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
-.icon-excel { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-.icon-powerpoint { background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
-.icon-archive { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
-.icon-image { background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
-.icon-generic { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+.type-pdf { background: rgba(244, 63, 94, 0.1); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.2); }
+.type-word { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); }
+.type-excel { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+.type-ppt { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+.type-archive { background: rgba(168, 85, 247, 0.1); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.2); }
+.type-image { background: rgba(236, 72, 153, 0.1); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.2); }
+.type-generic { background: rgba(113, 113, 122, 0.1); color: #a1a1aa; border: 1px solid rgba(113, 113, 122, 0.2); }
 
-.doc-main {
+.doc-info {
   flex: 1;
   min-width: 0;
+  cursor: pointer;
 }
 
-.doc-title-row {
+.doc-name-line {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .doc-name {
-  font-size: 0.95rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-primary);
-  cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -212,42 +223,33 @@ async function handleDownload() {
 
 .doc-name:hover {
   color: var(--primary);
-  text-decoration: underline;
 }
 
-.doc-meta-row {
+.doc-meta-line {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--text-muted);
 }
 
-.doc-uploader strong {
-  color: var(--text-secondary);
-}
-
-.meta-dot {
-  color: var(--text-muted);
-}
-
-.doc-tags-row {
-  display: flex;
-  gap: 6px;
-  margin-top: 4px;
+.sep {
+  opacity: 0.4;
 }
 
 .doc-tag {
-  font-size: 0.7rem;
-  color: var(--accent);
-  background: rgba(99, 102, 241, 0.08);
-  padding: 1px 6px;
-  border-radius: 4px;
+  color: #a5b4fc;
+  font-size: 0.6875rem;
 }
 
 .doc-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+}
+
+.text-danger:hover {
+  color: var(--danger);
+  background: var(--danger-subtle);
 }
 </style>

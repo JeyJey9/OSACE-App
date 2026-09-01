@@ -22,7 +22,7 @@
               class="btn btn-secondary btn-sm"
               @click="showNewFolderModal = true"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                 <line x1="12" y1="11" x2="12" y2="17"></line>
                 <line x1="9" y1="14" x2="15" y2="14"></line>
@@ -35,7 +35,7 @@
               class="btn btn-primary btn-sm"
               @click="showUploadModal = true"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
@@ -46,7 +46,7 @@
         </div>
 
         <!-- Search Active Banner -->
-        <div v-if="searchQuery" class="search-indicator-bar glass-panel animate-fade-in">
+        <div v-if="searchQuery" class="search-banner panel animate-fade-in">
           <span>Rezultate căutare pentru: <strong>"{{ searchQuery }}"</strong> ({{ searchResults.length }} găsite)</span>
           <button class="btn btn-ghost btn-sm" @click="clearSearch">Resetează căutarea</button>
         </div>
@@ -54,17 +54,20 @@
         <!-- Loading state -->
         <div v-if="isLoading" class="loading-state">
           <div class="spinner"></div>
-          <p>Se încarcă arhiva...</p>
+          <span>Se accesează arhiva...</span>
         </div>
 
-        <!-- Main Content (Folders & Documents) -->
+        <!-- Main Content -->
         <div v-else class="content-scrollable">
           <!-- Search Results View -->
-          <div v-if="searchQuery" class="documents-section">
-            <div v-if="searchResults.length === 0" class="empty-state">
-              <span class="empty-emoji">🔍</span>
-              <h3>Niciun document găsit</h3>
-              <p>Încearcă un alt termen de căutare.</p>
+          <div v-if="searchQuery" class="section-block">
+            <div v-if="searchResults.length === 0" class="empty-placeholder">
+              <svg class="empty-svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <h4>Niciun document găsit</h4>
+              <p>Încearcă un alt cuvânt cheie sau verifică ortografia.</p>
             </div>
             <div v-else class="documents-list">
               <DocumentItem 
@@ -81,10 +84,11 @@
           <!-- Normal Explorer View -->
           <div v-else>
             <!-- Subfolders Section -->
-            <div v-if="folders.length > 0" class="folders-section">
-              <h3 class="section-title">
-                {{ isRoot ? 'Categorii Principale' : 'Subfoldere' }}
-              </h3>
+            <div v-if="folders.length > 0" class="section-block">
+              <div class="section-head">
+                <span class="section-title">{{ isRoot ? 'Categorii Principale' : 'Directoare' }}</span>
+                <span class="section-count">{{ folders.length }}</span>
+              </div>
               <div class="folders-grid">
                 <FolderCard 
                   v-for="folder in folders" 
@@ -96,8 +100,11 @@
             </div>
 
             <!-- Documents Section -->
-            <div v-if="documents.length > 0" class="documents-section">
-              <h3 class="section-title">Documente ({{ documents.length }})</h3>
+            <div v-if="documents.length > 0" class="section-block">
+              <div class="section-head">
+                <span class="section-title">Fișiere & Documente</span>
+                <span class="section-count">{{ documents.length }}</span>
+              </div>
               <div class="documents-list">
                 <DocumentItem 
                   v-for="doc in documents" 
@@ -111,28 +118,22 @@
             </div>
 
             <!-- Empty State for Empty Folder or Fresh Archive -->
-            <div v-if="folders.length === 0 && documents.length === 0" class="empty-state glass-panel">
-              <span class="empty-emoji">📂</span>
-              <h3 v-if="isRoot">Arhiva este neinițializată</h3>
-              <h3 v-else>Acest folder este gol</h3>
+            <div v-if="folders.length === 0 && documents.length === 0" class="empty-placeholder panel">
+              <svg class="empty-svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+              </svg>
+              <h4 v-if="isRoot">Arhiva este neinițializată</h4>
+              <h4 v-else>Acest director este gol</h4>
               
-              <p v-if="isRoot">Apasă pe butonul de mai jos pentru a genera automat structura de foldere O.S.A.C.E.</p>
-              <p v-else>Poți încărca primul document folosind butonul „Încarcă Document”.</p>
+              <p v-if="isRoot">Apasă pe butonul de mai jos pentru a genera structura oficială de foldere O.S.A.C.E.</p>
+              <p v-else>Poți încărca un document în acest director folosind butonul de mai sus.</p>
 
-              <div class="empty-actions">
+              <div class="empty-actions" v-if="isRoot && isAdmin">
                 <button 
-                  v-if="isRoot && isAdmin" 
                   class="btn btn-primary"
                   @click="handleInitStructure"
                 >
-                  ⚡ Inițializează Structura Implicită
-                </button>
-                <button 
-                  v-else-if="canUpload" 
-                  class="btn btn-primary"
-                  @click="showUploadModal = true"
-                >
-                  📤 Încarcă Primul Document
+                  Inițializează Structura Implicită
                 </button>
               </div>
             </div>
@@ -227,15 +228,12 @@ const breadcrumbsList = computed(() => {
 async function loadData() {
   isLoading.value = true;
   try {
-    // 1. Incarcam folderele de top pentru sidebar
     const topRes = await api.get('/archive/folders');
     topLevelFolders.value = topRes.data;
 
-    // 2. Incarcam statistici
     const statsRes = await api.get('/archive/stats');
     archiveStats.value = statsRes.data;
 
-    // 3. Incarcam folderul curent
     if (currentFolderId.value) {
       const folderRes = await api.get(`/archive/folders/${currentFolderId.value}`);
       currentFolder.value = folderRes.data.folder;
@@ -267,7 +265,6 @@ async function handleInitStructure() {
     isLoading.value = true;
     await api.post('/archive/init-structure');
     await loadData();
-    alert('Structura oficială a fost creată cu succes!');
   } catch (err) {
     console.error('Eroare la initializare structura:', err);
     alert(err.response?.data?.error || 'Eroare la initializarea structurii.');
@@ -352,8 +349,8 @@ onMounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 24px 32px;
-  background: var(--bg-main);
+  padding: 18px 24px;
+  background: var(--bg-app);
   overflow-y: auto;
 }
 
@@ -362,52 +359,64 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
-.search-indicator-bar {
+.search-banner {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 18px;
-  margin-bottom: 20px;
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
+  padding: 8px 14px;
+  margin-bottom: 16px;
+  font-size: 0.8125rem;
+  background: var(--bg-surface-elevated);
+}
+
+.section-block {
+  margin-bottom: 24px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .section-title {
-  font-size: 0.85rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
-  margin-bottom: 14px;
 }
 
-.folders-section {
-  margin-bottom: 32px;
+.section-count {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
 }
 
 .folders-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.documents-section {
-  margin-bottom: 32px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
 }
 
 .documents-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .loading-state {
@@ -415,48 +424,50 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 20px;
-  gap: 16px;
+  padding: 60px 20px;
+  gap: 12px;
+  font-size: 0.8125rem;
   color: var(--text-muted);
 }
 
 .spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
   border-top-color: var(--primary);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.6s linear infinite;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-.empty-state {
+.empty-placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 24px;
+  padding: 48px 24px;
   text-align: center;
-  border-radius: var(--radius-lg);
 }
 
-.empty-emoji {
-  font-size: 3rem;
-  margin-bottom: 12px;
-}
-
-.empty-state h3 {
-  font-size: 1.25rem;
-  margin-bottom: 6px;
-}
-
-.empty-state p {
-  font-size: 0.875rem;
+.empty-svg {
   color: var(--text-muted);
-  max-width: 420px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.empty-placeholder h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.empty-placeholder p {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  max-width: 380px;
+  margin-bottom: 16px;
 }
 </style>

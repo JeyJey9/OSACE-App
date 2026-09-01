@@ -8,29 +8,35 @@
       <main class="logs-main">
         <div class="logs-header">
           <div>
-            <h2>Jurnal de Audit & Securitate Arhivă</h2>
-            <p class="logs-sub">Istoricul complet al accesărilor, descărcărilor și modificărilor din Google Drive</p>
+            <h2>Jurnal de Audit & Activitate</h2>
+            <p class="logs-sub">Istoricul operațiunilor de descărcare, încărcare și gestionare din arhivă</p>
           </div>
           <button class="btn btn-secondary btn-sm" @click="loadLogs" :disabled="isLoading">
-            🔄 Reîmprospătează
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 2v6h-6"></path>
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+              <path d="M3 22v-6h6"></path>
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+            </svg>
+            <span>Reîmprospătează</span>
           </button>
         </div>
 
         <div v-if="isLoading" class="loading-state">
           <div class="spinner"></div>
-          <p>Se încarcă jurnalele...</p>
+          <span>Se accesează jurnalele...</span>
         </div>
 
-        <div v-else class="logs-table-container glass-panel">
+        <div v-else class="logs-table-container panel">
           <table class="logs-table">
             <thead>
               <tr>
-                <th>Data & Ora</th>
-                <th>Acțiune</th>
+                <th>Timestamp</th>
+                <th>Operațiune</th>
                 <th>Utilizator</th>
-                <th>Element Afectat</th>
+                <th>Țintă</th>
                 <th>Adresă IP</th>
-                <th>Rezultat</th>
+                <th>Stare</th>
               </tr>
             </thead>
             <tbody>
@@ -45,12 +51,22 @@
                   </span>
                 </td>
                 <td class="cell-user">
-                  <strong>{{ log.user_name || 'Sistem' }}</strong>
+                  <span class="user-name">{{ log.user_name || 'Sistem' }}</span>
                   <span class="user-email">{{ log.user_email }}</span>
                 </td>
                 <td class="cell-target">
-                  <span v-if="log.document_name">📄 {{ log.document_name }}</span>
-                  <span v-else-if="log.folder_name">📁 {{ log.folder_name }}</span>
+                  <span v-if="log.document_name" class="target-doc">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    </svg>
+                    {{ log.document_name }}
+                  </span>
+                  <span v-else-if="log.folder_name" class="target-folder">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    {{ log.folder_name }}
+                  </span>
                   <span v-else class="text-muted">-</span>
                 </td>
                 <td class="cell-ip">
@@ -58,7 +74,7 @@
                 </td>
                 <td>
                   <span class="status-indicator" :class="log.result === 'success' ? 'status-ok' : 'status-err'">
-                    {{ log.result === 'success' ? 'Succes' : 'Refuzat/Eroare' }}
+                    {{ log.result === 'success' ? 'Succes' : 'Refuzat' }}
                   </span>
                 </td>
               </tr>
@@ -72,15 +88,15 @@
               :disabled="currentPage <= 1"
               @click="goToPage(currentPage - 1)"
             >
-              ← Pagina anterioară
+              ← Anterior
             </button>
-            <span class="page-indicator">Pagina {{ currentPage }} din {{ totalPages }} ({{ totalLogs }} acțiuni)</span>
+            <span class="page-indicator">Pagina {{ currentPage }} din {{ totalPages }} ({{ totalLogs }} înregistrări)</span>
             <button 
               class="btn btn-ghost btn-sm" 
               :disabled="currentPage >= totalPages"
               @click="goToPage(currentPage + 1)"
             >
-              Pagina următoare →
+              Următor →
             </button>
           </div>
         </div>
@@ -129,7 +145,6 @@ function formatDate(dateStr) {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
   });
 }
 
@@ -163,8 +178,8 @@ onMounted(() => {
 
 .logs-main {
   flex: 1;
-  padding: 24px 32px;
-  background: var(--bg-main);
+  padding: 18px 24px;
+  background: var(--bg-app);
   overflow-y: auto;
 }
 
@@ -172,76 +187,100 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .logs-header h2 {
-  font-size: 1.4rem;
-  margin-bottom: 4px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 2px;
 }
 
 .logs-sub {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 
 .logs-table-container {
   overflow-x: auto;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
 }
 
 .logs-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   text-align: left;
 }
 
 .logs-table th {
-  padding: 14px 18px;
+  padding: 10px 14px;
   background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-default);
   color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   letter-spacing: 0.05em;
 }
 
 .logs-table td {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
   color: var(--text-primary);
 }
 
 .cell-date {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
+  font-family: var(--font-mono);
   white-space: nowrap;
 }
 
 .cell-user {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 0.8125rem;
 }
 
 .user-email {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--text-muted);
 }
 
-.cell-ip code {
+.cell-target span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.75rem;
+}
+
+.target-doc {
+  color: var(--text-primary);
+}
+
+.target-folder {
+  color: #38bdf8;
+}
+
+.cell-ip code {
+  font-size: 0.6875rem;
   color: var(--text-muted);
   background: rgba(255, 255, 255, 0.04);
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
 }
 
 .status-indicator {
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
 }
 
 .status-ok {
@@ -254,7 +293,7 @@ onMounted(() => {
 
 .empty-cell {
   text-align: center;
-  padding: 40px !important;
+  padding: 30px !important;
   color: var(--text-muted);
 }
 
@@ -262,12 +301,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 20px;
-  border-top: 1px solid var(--border-color);
+  padding: 10px 16px;
+  border-top: 1px solid var(--border-default);
 }
 
 .page-indicator {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 
@@ -276,18 +315,19 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 20px;
-  gap: 16px;
+  padding: 60px 20px;
+  gap: 12px;
+  font-size: 0.8125rem;
   color: var(--text-muted);
 }
 
 .spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
   border-top-color: var(--primary);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.6s linear infinite;
 }
 
 @keyframes spin {

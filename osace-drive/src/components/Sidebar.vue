@@ -1,43 +1,57 @@
 <template>
-  <aside class="sidebar glass-panel">
+  <aside class="sidebar">
+    <!-- Quick Nav -->
     <div class="sidebar-section">
-      <span class="section-title">Navigare Rapidă</span>
-      <nav class="sidebar-nav">
-        <router-link to="/" class="nav-item" :class="{ 'active': isRootActive }">
-          <span class="nav-emoji">🏛️</span>
-          <span>Toate Folderele</span>
+      <span class="section-label">Arhivă</span>
+      <nav class="nav-list">
+        <router-link to="/" class="nav-row" :class="{ 'active': isRootActive }">
+          <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+          </svg>
+          <span class="nav-label">Toate Directoarele</span>
         </router-link>
 
         <a 
           v-for="folder in topFolders" 
           :key="folder.id" 
           href="#"
-          class="nav-item"
+          class="nav-row"
           :class="{ 'active': currentFolderId === folder.id }"
           @click.prevent="$emit('navigate', folder.id)"
         >
-          <span class="nav-emoji">{{ getFolderEmoji(folder.category) }}</span>
-          <span class="nav-text">{{ folder.name }}</span>
-          <span v-if="folder.documents_count" class="nav-count">{{ folder.documents_count }}</span>
+          <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
+          </svg>
+          <span class="nav-label">{{ folder.name }}</span>
+          <span v-if="folder.documents_count" class="nav-badge">{{ folder.documents_count }}</span>
         </a>
       </nav>
     </div>
 
+    <!-- Admin Tools -->
     <div class="sidebar-section" v-if="isAdmin">
-      <span class="section-title">Administrare</span>
-      <nav class="sidebar-nav">
-        <button class="nav-item nav-btn" @click="$emit('init-structure')">
-          <span class="nav-emoji">⚡</span>
-          <span>Inițializează Structura</span>
+      <span class="section-label">Administrare</span>
+      <nav class="nav-list">
+        <button class="nav-row nav-btn" @click="$emit('init-structure')">
+          <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+          <span class="nav-label">Reinițializează Foldere</span>
         </button>
-        <router-link to="/logs" class="nav-item">
-          <span class="nav-emoji">📜</span>
-          <span>Jurnal de Audit</span>
+        <router-link to="/logs" class="nav-row">
+          <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          <span class="nav-label">Jurnal Activitate</span>
         </router-link>
       </nav>
     </div>
 
-    <div class="sidebar-footer">
+    <!-- Storage Widget -->
+    <div class="sidebar-bottom">
       <StorageMeter :stats="stats" />
     </div>
   </aside>
@@ -50,7 +64,7 @@ import StorageMeter from './StorageMeter.vue';
 
 const route = useRoute();
 
-const props = defineProps({
+defineProps({
   topFolders: {
     type: Array,
     default: () => [],
@@ -74,97 +88,90 @@ const currentFolderId = computed(() => {
 const isRootActive = computed(() => {
   return route.name === 'root-explorer' && !route.params.id;
 });
-
-function getFolderEmoji(category) {
-  switch (category) {
-    case 'governance': return '📜';
-    case 'department': return '🏢';
-    case 'financial': return '💰';
-    case 'project': return '🚀';
-    case 'event': return '🎉';
-    case 'export': return '📦';
-    default: return '📁';
-  }
-}
 </script>
 
 <style scoped>
 .sidebar {
-  width: 260px;
-  min-height: calc(100vh - 65px);
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border-color);
-  border-radius: 0;
-  padding: 20px 16px;
+  width: 230px;
+  min-height: calc(100vh - 54px);
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-default);
+  padding: 16px 12px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .sidebar-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
-.section-title {
-  font-size: 0.7rem;
+.section-label {
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
-  padding: 0 10px;
+  padding: 0 8px;
 }
 
-.sidebar-nav {
+.nav-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-.nav-item {
+.nav-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text-secondary);
   text-decoration: none;
-  border-radius: var(--radius-md);
-  transition: all 0.2s ease;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
 }
 
-.nav-item:hover {
+.nav-row:hover {
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
 }
 
-.nav-item.active {
-  background: rgba(16, 185, 129, 0.12);
+.nav-row.active {
+  background: rgba(16, 185, 129, 0.1);
   color: var(--primary);
   font-weight: 600;
-  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
-.nav-emoji {
-  font-size: 1.1rem;
+.nav-svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
 }
 
-.nav-text {
+.nav-row:hover .nav-svg, .nav-row.active .nav-svg {
+  color: inherit;
+}
+
+.nav-label {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.nav-count {
-  font-size: 0.75rem;
+.nav-badge {
+  font-size: 0.6875rem;
   font-weight: 600;
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.06);
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
 }
 
 .nav-btn {
@@ -176,7 +183,7 @@ function getFolderEmoji(category) {
   font-family: inherit;
 }
 
-.sidebar-footer {
+.sidebar-bottom {
   margin-top: auto;
 }
 </style>
