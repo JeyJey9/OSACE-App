@@ -53,9 +53,9 @@ module.exports = (pool, verifyToken, verifyAdmin, verifyManager) => {
   });
 
   // =========================================================================
-  // 3. STATISTICI GENERALE ARHIVA (Admin & Manager)
+  // 3. STATISTICI GENERALE ARHIVA (Toti membrii autentificati)
   // =========================================================================
-  router.get('/stats', [verifyToken, verifyManager], async (req, res) => {
+  router.get('/stats', verifyToken, async (req, res) => {
     try {
       const stats = await archiveService.getArchiveStats(pool);
       return res.json(stats);

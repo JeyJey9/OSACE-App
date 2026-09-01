@@ -27,10 +27,10 @@ async function checkFolderAccess(pool, userId, role, folderId, requiredAction = 
   // 1. Administratorii au acces total
   if (role === 'admin') return true;
 
-  // 2. Daca este folder radacina / general (null), verificam permisiunea generala
+  // 2. Daca este folder radacina / general (null)
   if (!folderId) {
     if (requiredAction === 'view') {
-      return role === 'coordonator' || await checkGlobalPermission(pool, userId, role, ARCHIVE_PERMISSIONS.CAN_VIEW_ARCHIVE);
+      return true; // Toti membrii autentificati pot vedea radacina
     }
     if (requiredAction === 'upload') {
       return role === 'coordonator' || await checkGlobalPermission(pool, userId, role, ARCHIVE_PERMISSIONS.CAN_UPLOAD_ARCHIVE);
@@ -50,7 +50,7 @@ async function checkFolderAccess(pool, userId, role, folderId, requiredAction = 
 
   const folder = folderRes.rows[0];
 
-  // 4. Folderul financiar este protejat special (doar admin sau permisiune explicita)
+  // 4. Folderul financiar/confidential este protejat special (doar admin sau permisiune explicita)
   if (folder.category === 'financial') {
     const permCheck = await pool.query(
       'SELECT 1 FROM archive_folder_permissions WHERE user_id = $1 AND folder_id = $2 AND permission IN ($3, $4)',
@@ -73,18 +73,19 @@ async function checkFolderAccess(pool, userId, role, folderId, requiredAction = 
   );
   if (explicitCheck.rowCount > 0) return true;
 
-  // 7. Coordonatorii au acces implicit la foldere non-financiare daca au permisiunea generala
-  if (role === 'coordonator') {
-    if (requiredAction === 'view') return true;
-    if (requiredAction === 'upload') return true;
-    if (requiredAction === 'delete') {
-      return await checkGlobalPermission(pool, userId, role, ARCHIVE_PERMISSIONS.CAN_DELETE_ARCHIVE);
-    }
+  // 7. Drepturi de vizualizare: oricare membru autentificat are acces view la foldere non-financiare
+  if (requiredAction === 'view') {
+    return true;
   }
 
-  // 8. Voluntarii au nevoie de permisiunea globala de vizualizare
-  if (requiredAction === 'view') {
-    return await checkGlobalPermission(pool, userId, role, ARCHIVE_PERMISSIONS.CAN_VIEW_ARCHIVE);
+  // 8. Drepturi de upload/scriere: coordonatorii sau cei cu permisiune
+  if (requiredAction === 'upload') {
+    return role === 'coordonator' || await checkGlobalPermission(pool, userId, role, ARCHIVE_PERMISSIONS.CAN_UPLOAD_ARCHIVE);
+  }
+
+  // 9. Drepturi de stergere / management: doar admin, coordonator cu CAN_DELETE sau permisiune explicita
+  if (requiredAction === 'delete' || requiredAction === 'manage') {
+    return role === 'admin' || (role === 'coordonator' && await checkGlobalPermission(pool, userId, role, ARCHIVE_PERMISSIONS.CAN_DELETE_ARCHIVE));
   }
 
   return false;
