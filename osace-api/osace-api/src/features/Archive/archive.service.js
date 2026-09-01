@@ -311,12 +311,12 @@ async function updateFolder(pool, userId, role, folderId, { name, category, depa
   );
 
   // Daca s-a schimbat calea logica, actualizam si toti descendentii
-  if (oldPath !== newPath) {
+  if (oldPath && oldPath !== newPath) {
     await pool.query(
       `UPDATE archive_folders
-       SET logical_path = $1 || SUBSTRING(logical_path FROM $2)
-       WHERE logical_path LIKE $3`,
-      [newPath, oldPath.length + 1, `${oldPath}/%`]
+       SET logical_path = $1 || COALESCE(SUBSTR(logical_path, LENGTH($2) + 1), '')
+       WHERE logical_path LIKE $2 || '/%'`,
+      [newPath, oldPath]
     );
   }
 
