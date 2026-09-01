@@ -90,7 +90,7 @@ export default function UpdateModal({ visible, isRequired, updateUrl, latestVers
           <Text style={styles.modalDescription}>
             {isRequired
               ? "Pentru a continua să folosești aplicația OSACE și să înregistrezi orele de voluntariat, este necesar să descarci ultima versiune din store."
-              : "Am adăugat un nou Selector de Teme în profil și optimizări de performanță! Actualizează acum."}
+              : "Am adăugat un nou Selector de Teme în profil, un Clasament îmbunătățit cu poziția ta și medalii aurii/argintii/bronz, și optimizări de performanță! Actualizează acum."}
           </Text>
 
           {/* Secțiune Butoane */}
