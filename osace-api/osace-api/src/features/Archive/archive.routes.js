@@ -155,6 +155,7 @@ module.exports = (pool, verifyToken, verifyAdmin, verifyManager) => {
     try {
       const { userId, role } = req.user;
       const folderId = parseInt(req.params.id, 10);
+      console.log(`[ArchiveRoute] PUT /folders/${folderId} by user ${userId} (${role}):`, req.body);
 
       if (isNaN(folderId)) {
         return res.status(400).json({ error: 'ID folder invalid.' });
@@ -188,6 +189,7 @@ module.exports = (pool, verifyToken, verifyAdmin, verifyManager) => {
     try {
       const { userId, role } = req.user;
       const folderId = parseInt(req.params.id, 10);
+      console.log(`[ArchiveRoute] DELETE /folders/${folderId} by user ${userId} (${role})`);
 
       if (isNaN(folderId)) {
         return res.status(400).json({ error: 'ID folder invalid.' });

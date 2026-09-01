@@ -123,7 +123,8 @@ async function handleSubmit() {
     emit('close');
   } catch (err) {
     console.error('Eroare la modificare folder:', err);
-    alert(err.response?.data?.error || 'Eroare la modificarea folderului.');
+    const msg = err.response?.data?.error || (err.response?.status ? `Eroare HTTP ${err.response.status}: ${err.response.statusText || 'Rută negăsită'}` : err.message);
+    alert(msg || 'Eroare la modificarea folderului.');
   } finally {
     isSubmitting.value = false;
   }
@@ -139,7 +140,8 @@ async function handleDelete() {
     emit('close');
   } catch (err) {
     console.error('Eroare la stergere folder:', err);
-    alert(err.response?.data?.error || 'Nu s-a putut șterge folderul.');
+    const msg = err.response?.data?.error || (err.response?.status ? `Eroare HTTP ${err.response.status}` : err.message);
+    alert(msg || 'Nu s-a putut șterge folderul.');
   } finally {
     isSubmitting.value = false;
   }
