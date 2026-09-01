@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import LoginView from '../views/LoginView.vue';
 import ExplorerView from '../views/ExplorerView.vue';
 import LogsView from '../views/LogsView.vue';
+import TrashView from '../views/TrashView.vue';
 
 const routes = [
   {
@@ -21,6 +22,12 @@ const routes = [
     path: '/folder/:id',
     name: 'folder-explorer',
     component: ExplorerView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/trash',
+    name: 'trash',
+    component: TrashView,
     meta: { requiresAuth: true },
   },
   {

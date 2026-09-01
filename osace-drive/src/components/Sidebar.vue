@@ -47,11 +47,19 @@
         </nav>
       </div>
 
-      <!-- Admin Tools -->
-      <div class="sidebar-section" v-if="isAdmin">
-        <span class="section-label">Administrare</span>
+      <!-- Admin & Manager Tools -->
+      <div class="sidebar-section" v-if="isAdmin || isManager">
+        <span class="section-label">Gestiune</span>
         <nav class="nav-list">
-          <router-link to="/logs" class="nav-row" @click="$emit('close')">
+          <router-link to="/trash" class="nav-row" @click="$emit('close')">
+            <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <span class="nav-label">Coș de Reciclare</span>
+          </router-link>
+
+          <router-link v-if="isAdmin" to="/logs" class="nav-row" @click="$emit('close')">
             <svg class="nav-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
@@ -102,6 +110,14 @@ const emit = defineEmits(['navigate', 'close']);
 const currentFolderId = computed(() => {
   return route.params.id ? parseInt(route.params.id, 10) : null;
 });
+
+const user = computed(() => {
+  const userStr = localStorage.getItem('userData');
+  if (!userStr) return null;
+  try { return JSON.parse(userStr); } catch (e) { return null; }
+});
+
+const isManager = computed(() => ['admin', 'coordonator'].includes(user.value?.role));
 
 const isRootActive = computed(() => {
   return route.name === 'root-explorer' && !route.params.id;

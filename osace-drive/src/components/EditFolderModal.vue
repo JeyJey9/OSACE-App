@@ -58,14 +58,32 @@
         </div>
 
         <div class="modal-actions">
-          <button 
-            type="button" 
-            class="btn btn-danger btn-sm delete-btn" 
-            @click="handleDelete" 
-            :disabled="isSubmitting"
-          >
-            Șterge Director
-          </button>
+          <div class="left-actions">
+            <button 
+              type="button" 
+              class="btn btn-danger btn-sm delete-btn" 
+              @click="handleDelete" 
+              :disabled="isSubmitting"
+            >
+              Șterge
+            </button>
+
+            <button 
+              v-if="isAdmin"
+              type="button" 
+              class="btn btn-secondary btn-sm" 
+              @click="$emit('permissions', folder)"
+              title="Gestionează utilizatorii cu acces pe acest folder"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <span>Permisiuni</span>
+            </button>
+          </div>
 
           <div class="right-actions">
             <button type="button" class="btn btn-secondary" @click="$emit('close')" :disabled="isSubmitting">
@@ -73,7 +91,7 @@
             </button>
             <button type="submit" class="btn btn-primary" :disabled="!name.trim() || isSubmitting">
               <span v-if="isSubmitting">Se salvează...</span>
-              <span v-else>Salvează Modificările</span>
+              <span v-else>Salvează</span>
             </button>
           </div>
         </div>
@@ -83,7 +101,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import api from '../services/api';
 
 const props = defineProps({
@@ -93,7 +111,15 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['close', 'updated', 'deleted']);
+const emit = defineEmits(['close', 'updated', 'deleted', 'permissions']);
+
+const user = computed(() => {
+  const userStr = localStorage.getItem('userData');
+  if (!userStr) return null;
+  try { return JSON.parse(userStr); } catch (e) { return null; }
+});
+
+const isAdmin = computed(() => user.value?.role === 'admin');
 
 const name = ref(props.folder.name || '');
 const category = ref(props.folder.category || 'project');

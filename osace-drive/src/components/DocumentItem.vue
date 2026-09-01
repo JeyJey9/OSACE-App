@@ -30,6 +30,17 @@
     <div class="doc-actions">
       <button 
         class="btn btn-ghost btn-sm btn-icon-only" 
+        title="Previzualizează"
+        @click.stop="$emit('preview', doc)"
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>
+
+      <button 
+        class="btn btn-ghost btn-sm btn-icon-only" 
         title="Detalii & Integritate"
         @click.stop="$emit('inspect', doc)"
       >
@@ -100,7 +111,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['inspect', 'delete']);
+defineEmits(['inspect', 'preview', 'delete']);
 
 const isDownloading = ref(false);
 

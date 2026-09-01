@@ -632,32 +632,244 @@ async function searchDocuments(pool, userId, role, { query, category, department
 }
 
 /**
- * Statistici generale despre stocarea arhivei
+ * Previzualizeaza un document inline (fara fortare de download)
  */
-async function getArchiveStats(pool) {
-  const [docStats, folderStats, catStats] = await Promise.all([
-    pool.query(`
-      SELECT COUNT(*)::int as total_documents,
-             COALESCE(SUM(size_bytes), 0)::bigint as total_size_bytes
-      FROM archive_documents
-      WHERE status = 'active'
-    `),
-    pool.query(`SELECT COUNT(*)::int as total_folders FROM archive_folders`),
-    pool.query(`
-      SELECT category, COUNT(*)::int as count, COALESCE(SUM(size_bytes), 0)::bigint as size_bytes
-      FROM archive_documents
-      WHERE status = 'active'
-      GROUP BY category
-      ORDER BY count DESC
-    `),
-  ]);
+async function previewDocument(pool, userId, role, documentId, ip = null) {
+  const docRes = await pool.query(
+    `SELECT d.*, f.id as folder_id
+     FROM archive_documents d
+     LEFT JOIN archive_folders f ON d.folder_id = f.id
+     WHERE d.id = $1 AND d.status = 'active'`,
+    [documentId]
+  );
+
+  if (docRes.rows.length === 0) {
+    throw new DocumentNotFoundError(documentId);
+  }
+
+  const doc = docRes.rows[0];
+  if (doc.folder_id) {
+    const canView = await checkFolderAccess(pool, userId, role, doc.folder_id, 'view');
+    if (!canView) {
+      throw new ArchivePermissionDeniedError('previzualizarea acestui document');
+    }
+  }
+
+  const stream = await googleDriveService.downloadFileStream(doc.drive_file_id);
+
+  await logArchiveAccess(pool, {
+    documentId: doc.id,
+    folderId: doc.folder_id,
+    userId,
+    action: ARCHIVE_ACTIONS.DOCUMENT_PREVIEW,
+    ip,
+    details: { driveFileId: doc.drive_file_id, name: doc.name },
+  });
 
   return {
-    totalDocuments: docStats.rows[0].total_documents,
-    totalSizeBytes: docStats.rows[0].total_size_bytes,
-    totalFolders: folderStats.rows[0].total_folders,
-    categories: catStats.rows,
+    stream,
+    document: doc,
   };
+}
+
+/**
+ * Returneaza toate documentele din Cosul de Reciclare (status = 'deleted')
+ */
+async function getTrashDocuments(pool, userId, role) {
+  if (role !== 'admin' && role !== 'coordonator') {
+    throw new ArchivePermissionDeniedError('accesarea cosului de reciclare');
+  }
+
+  const res = await pool.query(
+    `SELECT d.id, d.name, d.original_name, d.mime_type, d.file_extension, d.size_bytes, 
+            d.category, d.department_id, d.academic_year, d.status, d.created_at, d.updated_at,
+            f.name as folder_name, f.id as folder_id,
+            u.display_name as uploaded_by_name
+     FROM archive_documents d
+     LEFT JOIN archive_folders f ON d.folder_id = f.id
+     LEFT JOIN users u ON d.uploaded_by = u.id
+     WHERE d.status = 'deleted'
+     ORDER BY d.updated_at DESC`
+  );
+
+  return res.rows;
+}
+
+/**
+ * Restaureaza un document din Cosul de Reciclare
+ */
+async function restoreDocument(pool, userId, role, documentId) {
+  const docRes = await pool.query('SELECT * FROM archive_documents WHERE id = $1 AND status = \'deleted\'', [documentId]);
+  if (docRes.rows.length === 0) {
+    throw new DocumentNotFoundError(documentId);
+  }
+
+  const doc = docRes.rows[0];
+  if (role !== 'admin' && role !== 'coordonator' && doc.uploaded_by !== userId) {
+    throw new ArchivePermissionDeniedError('restaurarea acestui document');
+  }
+
+  // Restaureaza din trash pe Google Drive
+  try {
+    await googleDriveService.untrashFile(doc.drive_file_id);
+  } catch (driveErr) {
+    console.warn('[ArchiveService] Untrash Drive warning:', driveErr.message);
+  }
+
+  // Activeaza in DB
+  const updateRes = await pool.query(
+    `UPDATE archive_documents SET status = 'active', updated_at = NOW() WHERE id = $1 RETURNING *`,
+    [documentId]
+  );
+
+  await logArchiveAccess(pool, {
+    documentId: doc.id,
+    folderId: doc.folder_id,
+    userId,
+    action: ARCHIVE_ACTIONS.DOCUMENT_RESTORE,
+    details: { name: doc.name },
+  });
+
+  return updateRes.rows[0];
+}
+
+/**
+ * Sterge definitiv un document din Google Drive si din baza de date
+ */
+async function permanentDeleteDocument(pool, userId, role, documentId) {
+  const docRes = await pool.query('SELECT * FROM archive_documents WHERE id = $1', [documentId]);
+  if (docRes.rows.length === 0) {
+    throw new DocumentNotFoundError(documentId);
+  }
+
+  const doc = docRes.rows[0];
+  if (role !== 'admin') {
+    throw new ArchivePermissionDeniedError('stergerea definitiva');
+  }
+
+  // 1. Sterge din Google Drive definitiv
+  try {
+    await googleDriveService.deleteFile(doc.drive_file_id, true);
+  } catch (driveErr) {
+    console.warn('[ArchiveService] Permanent delete Drive warning:', driveErr.message);
+  }
+
+  // 2. Sterge din DB
+  await pool.query('DELETE FROM archive_documents WHERE id = $1', [documentId]);
+
+  await logArchiveAccess(pool, {
+    documentId: doc.id,
+    folderId: doc.folder_id,
+    userId,
+    action: ARCHIVE_ACTIONS.DOCUMENT_PERMANENT_DELETE,
+    details: { name: doc.name, driveFileId: doc.drive_file_id },
+  });
+
+  return { message: 'Documentul a fost sters definitiv.' };
+}
+
+/**
+ * Goleste tot Cosul de Reciclare (stergere definitiva a tuturor documentelor deleted)
+ */
+async function emptyTrash(pool, userId, role) {
+  if (role !== 'admin') {
+    throw new ArchivePermissionDeniedError('golirea cosului de reciclare');
+  }
+
+  const trashDocs = await pool.query('SELECT id, drive_file_id, name FROM archive_documents WHERE status = \'deleted\'');
+  
+  for (const doc of trashDocs.rows) {
+    try {
+      await googleDriveService.deleteFile(doc.drive_file_id, true);
+    } catch (e) {
+      console.warn(`[ArchiveService] Could not permanently delete ${doc.drive_file_id}:`, e.message);
+    }
+  }
+
+  await pool.query('DELETE FROM archive_documents WHERE status = \'deleted\'');
+
+  await logArchiveAccess(pool, {
+    userId,
+    action: ARCHIVE_ACTIONS.TRASH_EMPTY,
+    details: { count: trashDocs.rowCount },
+  });
+
+  return { message: 'Cosul de reciclare a fost golit.', count: trashDocs.rowCount };
+}
+
+/**
+ * Returneaza permisiunile explicite pe un folder
+ */
+async function getFolderPermissions(pool, userId, role, folderId) {
+  if (role !== 'admin') {
+    throw new ArchivePermissionDeniedError('vizualizarea permisiunilor');
+  }
+
+  const res = await pool.query(
+    `SELECT p.id, p.user_id, p.permission, p.created_at,
+            u.display_name, u.email, u.role
+     FROM archive_folder_permissions p
+     JOIN users u ON p.user_id = u.id
+     WHERE p.folder_id = $1
+     ORDER BY p.created_at ASC`,
+    [folderId]
+  );
+
+  return res.rows;
+}
+
+/**
+ * Acorda o permisiune explicita pe un folder
+ */
+async function grantFolderPermission(pool, userId, role, folderId, targetUserId, permission) {
+  if (role !== 'admin') {
+    throw new ArchivePermissionDeniedError('modificarea permisiunilor');
+  }
+
+  const validPerms = ['view', 'upload', 'edit', 'delete', 'manage'];
+  if (!validPerms.includes(permission)) {
+    throw new Error(`Permisiune invalida. Permise: ${validPerms.join(', ')}`);
+  }
+
+  const insertRes = await pool.query(
+    `INSERT INTO archive_folder_permissions (user_id, folder_id, permission, granted_by)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (user_id, folder_id, permission) DO UPDATE SET created_at = NOW()
+     RETURNING *`,
+    [targetUserId, folderId, permission, userId]
+  );
+
+  await logArchiveAccess(pool, {
+    folderId,
+    userId,
+    action: ARCHIVE_ACTIONS.PERMISSION_GRANT,
+    details: { targetUserId, permission },
+  });
+
+  return insertRes.rows[0];
+}
+
+/**
+ * Revoca permisiunea unui utilizator pe un folder
+ */
+async function revokeFolderPermission(pool, userId, role, folderId, targetUserId) {
+  if (role !== 'admin') {
+    throw new ArchivePermissionDeniedError('revocarea permisiunilor');
+  }
+
+  await pool.query(
+    'DELETE FROM archive_folder_permissions WHERE folder_id = $1 AND user_id = $2',
+    [folderId, targetUserId]
+  );
+
+  await logArchiveAccess(pool, {
+    folderId,
+    userId,
+    action: ARCHIVE_ACTIONS.PERMISSION_REVOKE,
+    details: { targetUserId },
+  });
+
+  return { message: 'Permisiune revocata.' };
 }
 
 module.exports = {
@@ -670,8 +882,17 @@ module.exports = {
   deleteFolder,
   uploadDocument,
   downloadDocument,
+  previewDocument,
   deleteDocument,
+  getTrashDocuments,
+  restoreDocument,
+  permanentDeleteDocument,
+  emptyTrash,
+  getFolderPermissions,
+  grantFolderPermission,
+  revokeFolderPermission,
   searchDocuments,
   getArchiveStats,
 };
+
 

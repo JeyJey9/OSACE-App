@@ -298,7 +298,49 @@ module.exports = (pool, verifyToken, verifyAdmin, verifyManager) => {
   });
 
   // =========================================================================
-  // 9. STERGERE DOCUMENT (Soft Delete)
+  // 8B. PREVIZUALIZARE DOCUMENT INLINE
+  // GET /api/archive/documents/:id/preview
+  // =========================================================================
+  router.get('/documents/:id/preview', verifyToken, async (req, res) => {
+    try {
+      const { userId, role } = req.user;
+      const documentId = parseInt(req.params.id, 10);
+
+      if (isNaN(documentId)) {
+        return res.status(400).json({ error: 'ID document invalid.' });
+      }
+
+      const clientIp = req.ip || req.connection.remoteAddress;
+      const { stream, document } = await archiveService.previewDocument(pool, userId, role, documentId, clientIp);
+
+      const safeFilename = sanitizeFileName(document.name || document.original_name);
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(safeFilename)}"`);
+      res.setHeader('Content-Type', document.mime_type || 'application/octet-stream');
+      if (document.size_bytes) {
+        res.setHeader('Content-Length', document.size_bytes);
+      }
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+
+      stream.on('error', (streamErr) => {
+        console.error('[ArchiveRoute] Error in preview stream:', streamErr);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Eroare la transmiterea fluxului de previzualizare.' });
+        }
+      });
+
+      stream.pipe(res);
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error(`[ArchiveRoute] Error in preview document ${req.params.id}:`, err);
+      return res.status(500).json({ error: 'Eroare la previzualizarea documentului.' });
+    }
+  });
+
+  // =========================================================================
+  // 9. STERGERE DOCUMENT (Soft Delete -> Cos de Reciclare)
   // DELETE /api/archive/documents/:id
   // =========================================================================
   router.delete('/documents/:id', verifyToken, async (req, res) => {
@@ -322,6 +364,142 @@ module.exports = (pool, verifyToken, verifyAdmin, verifyManager) => {
   });
 
   // =========================================================================
+  // 9B. COS DE RECICLARE (Trash Management)
+  // =========================================================================
+  router.get('/trash', [verifyToken, verifyManager], async (req, res) => {
+    try {
+      const { userId, role } = req.user;
+      const docs = await archiveService.getTrashDocuments(pool, userId, role);
+      return res.json(docs);
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error('[ArchiveRoute] Error in GET /trash:', err);
+      return res.status(500).json({ error: 'Eroare la preluarea documentelor din cos.' });
+    }
+  });
+
+  router.post('/documents/:id/restore', [verifyToken, verifyManager], async (req, res) => {
+    try {
+      const { userId, role } = req.user;
+      const documentId = parseInt(req.params.id, 10);
+
+      if (isNaN(documentId)) {
+        return res.status(400).json({ error: 'ID document invalid.' });
+      }
+
+      const restored = await archiveService.restoreDocument(pool, userId, role, documentId);
+      return res.json({ message: 'Documentul a fost restaurat cu succes.', document: restored });
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error(`[ArchiveRoute] Error restoring document ${req.params.id}:`, err);
+      return res.status(500).json({ error: err.message || 'Eroare la restaurarea documentului.' });
+    }
+  });
+
+  router.delete('/documents/:id/permanent', [verifyToken, verifyAdmin], async (req, res) => {
+    try {
+      const { userId, role } = req.user;
+      const documentId = parseInt(req.params.id, 10);
+
+      if (isNaN(documentId)) {
+        return res.status(400).json({ error: 'ID document invalid.' });
+      }
+
+      const result = await archiveService.permanentDeleteDocument(pool, userId, role, documentId);
+      return res.json(result);
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error(`[ArchiveRoute] Error permanent deleting document ${req.params.id}:`, err);
+      return res.status(500).json({ error: err.message || 'Eroare la stergerea definitiva.' });
+    }
+  });
+
+  router.delete('/trash/empty', [verifyToken, verifyAdmin], async (req, res) => {
+    try {
+      const { userId, role } = req.user;
+      const result = await archiveService.emptyTrash(pool, userId, role);
+      return res.json(result);
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error('[ArchiveRoute] Error emptying trash:', err);
+      return res.status(500).json({ error: err.message || 'Eroare la golirea cosului de reciclare.' });
+    }
+  });
+
+  // =========================================================================
+  // 9C. PERMISIUNI GRANULARE FOLDERE (Admin Only)
+  // =========================================================================
+  router.get('/folders/:id/permissions', [verifyToken, verifyAdmin], async (req, res) => {
+    try {
+      const { userId, role } = req.user;
+      const folderId = parseInt(req.params.id, 10);
+
+      if (isNaN(folderId)) {
+        return res.status(400).json({ error: 'ID folder invalid.' });
+      }
+
+      const permissions = await archiveService.getFolderPermissions(pool, userId, role, folderId);
+      return res.json(permissions);
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error('[ArchiveRoute] Error in GET /folders/:id/permissions:', err);
+      return res.status(500).json({ error: 'Eroare la preluarea permisiunilor folderului.' });
+    }
+  });
+
+  router.post('/folders/:id/permissions', [verifyToken, verifyAdmin], async (req, res) => {
+    try {
+      const { userId, role } = req.user;
+      const folderId = parseInt(req.params.id, 10);
+      const { targetUserId, permission } = req.body;
+
+      if (isNaN(folderId) || !targetUserId || !permission) {
+        return res.status(400).json({ error: 'Date incomplete pentru acordarea permisiunii.' });
+      }
+
+      const perm = await archiveService.grantFolderPermission(pool, userId, role, folderId, parseInt(targetUserId, 10), permission);
+      return res.status(201).json({ message: 'Permisiune acordata cu succes.', permission: perm });
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error('[ArchiveRoute] Error in POST /folders/:id/permissions:', err);
+      return res.status(500).json({ error: err.message || 'Eroare la acordarea permisiunii.' });
+    }
+  });
+
+  router.delete('/folders/:id/permissions/:targetUserId', [verifyToken, verifyAdmin], async (req, res) => {
+    try {
+      const { userId, role } = req.user;
+      const folderId = parseInt(req.params.id, 10);
+      const targetUserId = parseInt(req.params.targetUserId, 10);
+
+      if (isNaN(folderId) || isNaN(targetUserId)) {
+        return res.status(400).json({ error: 'Parametri invalizi.' });
+      }
+
+      const result = await archiveService.revokeFolderPermission(pool, userId, role, folderId, targetUserId);
+      return res.json(result);
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error('[ArchiveRoute] Error in DELETE /folders/:id/permissions:', err);
+      return res.status(500).json({ error: err.message || 'Eroare la revocarea permisiunii.' });
+    }
+  });
+
+  // =========================================================================
   // 10. CAUTARE DOCUMENT (Full-text & Filter)
   // GET /api/archive/search?q=statut&category=governance&year=2025-2026
   // =========================================================================
@@ -330,7 +508,7 @@ module.exports = (pool, verifyToken, verifyAdmin, verifyManager) => {
       const { userId, role } = req.user;
       const { q, category, departmentId, year, limit, offset } = req.query;
 
-      const parsedLimit = Math.min(parseInt(limit, 10) || 50, 100); // max 100 per page for safety
+      const parsedLimit = Math.min(parseInt(limit, 10) || 50, 100);
       const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
 
       const results = await archiveService.searchDocuments(pool, userId, role, {

@@ -76,6 +76,7 @@
                 :key="doc.id" 
                 :doc="doc" 
                 :can-delete="canDelete"
+                @preview="previewDocument(doc)"
                 @inspect="inspectDocument(doc)"
                 @delete="deleteDocument(doc)"
               />
@@ -114,6 +115,7 @@
                   :key="doc.id" 
                   :doc="doc" 
                   :can-delete="canDelete"
+                  @preview="previewDocument(doc)"
                   @inspect="inspectDocument(doc)"
                   @delete="deleteDocument(doc)"
                 />
@@ -183,12 +185,25 @@
       @close="editingFolder = null"
       @updated="handleFolderUpdated"
       @deleted="handleFolderDeleted"
+      @permissions="folder => { editingFolder = null; permissionsFolder = folder; }"
     />
 
     <DocumentDetailsModal 
       v-if="inspectedDoc" 
       :doc="inspectedDoc"
       @close="inspectedDoc = null"
+    />
+
+    <DocumentPreviewModal
+      v-if="previewingDoc"
+      :doc="previewingDoc"
+      @close="previewingDoc = null"
+    />
+
+    <FolderPermissionsModal
+      v-if="permissionsFolder"
+      :folder="permissionsFolder"
+      @close="permissionsFolder = null"
     />
   </div>
 </template>
@@ -205,6 +220,8 @@ import UploadModal from '../components/UploadModal.vue';
 import NewFolderModal from '../components/NewFolderModal.vue';
 import EditFolderModal from '../components/EditFolderModal.vue';
 import DocumentDetailsModal from '../components/DocumentDetailsModal.vue';
+import DocumentPreviewModal from '../components/DocumentPreviewModal.vue';
+import FolderPermissionsModal from '../components/FolderPermissionsModal.vue';
 import api from '../services/api';
 
 const route = useRoute();
@@ -224,6 +241,8 @@ const showUploadModal = ref(false);
 const showNewFolderModal = ref(false);
 const editingFolder = ref(null);
 const inspectedDoc = ref(null);
+const previewingDoc = ref(null);
+const permissionsFolder = ref(null);
 const isMobileSidebarOpen = ref(false);
 
 const user = computed(() => {
@@ -292,6 +311,10 @@ function navigateToFolder(id) {
 
 function inspectDocument(doc) {
   inspectedDoc.value = doc;
+}
+
+function previewDocument(doc) {
+  previewingDoc.value = doc;
 }
 
 async function deleteDocument(doc) {

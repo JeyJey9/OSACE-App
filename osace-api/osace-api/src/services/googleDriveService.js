@@ -269,6 +269,22 @@ async function renameFolder(folderId, newName) {
   return response.data;
 }
 
+/**
+ * Restaureaza un fisier din Trash in Google Drive
+ * @param {string} fileId - ID-ul fisierului din Drive
+ * @returns {Promise<Object>}
+ */
+async function untrashFile(fileId) {
+  const drive = ensureDrive();
+  const response = await drive.files.update({
+    fileId,
+    resource: { trashed: false },
+    fields: 'id, name, trashed',
+    supportsAllDrives: true,
+  });
+  return response.data;
+}
+
 module.exports = {
   createFolder,
   findFolder,
@@ -280,5 +296,7 @@ module.exports = {
   moveFile,
   listFolder,
   renameFolder,
+  untrashFile,
 };
+
 
