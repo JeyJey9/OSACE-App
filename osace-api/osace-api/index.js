@@ -21,6 +21,7 @@ const badgeRoutes = require('./src/features/Badge/badge.routes');
 const leaderboardRoutes = require('./src/features/Leaderboard/leaderboard.routes');
 const verificationRoutes = require('./src/features/StudentVerification/verification.routes');
 const configRoutes = require('./src/features/Config/config.routes');
+const archiveRoutes = require('./src/features/Archive/archive.routes');
 const { startCheckoutWorker } = require('./src/scripts/checkoutWorker');
 
 const app = express();
@@ -43,16 +44,24 @@ const pool = new Pool({
 const allowedOrigins = [
   'https://osace.ro',
   'http://localhost:8081',
-  'http://localhost:5173', // Vite default port
+  'http://localhost:5173', // Vite default port (app)
+  'http://localhost:5174', // Vite port (drive)
   'https://api.osace.ro',
   'https://app.osace.ro',
+  'https://drive.osace.ro',
   'http://100.79.43.92:8081'
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
     // !origin sau 'null' permite cererile de pe dispozitive mobile (Expo Go/WebViews) sau Postman
-    if (!origin || origin === 'null' || allowedOrigins.indexOf(origin) !== -1) {
+    if (
+      !origin || 
+      origin === 'null' || 
+      allowedOrigins.indexOf(origin) !== -1 ||
+      /^http:\/\/localhost:\d+$/.test(origin) ||
+      /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)
+    ) {
       callback(null, true);
     } else {
       console.error("CORS blocat pentru origin-ul:", origin);
@@ -117,6 +126,7 @@ app.use('/api/badges', badgeRoutes(pool, verifyToken));
 app.use('/api/leaderboard', leaderboardRoutes(pool, verifyToken));
 app.use('/api/verification', verificationRoutes(pool, verifyToken, verifyAdmin));
 app.use('/api/config', configRoutes());
+app.use('/api/archive', archiveRoutes(pool, verifyToken, verifyAdmin, verifyManager));
 
 // Ruta rădăcină
 app.get('/', (req, res) => {

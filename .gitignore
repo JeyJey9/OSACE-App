@@ -78,10 +78,12 @@ osace-map/
 /osace-map/
 productiondevelopmentprocess.txt
 
-## 5. Reguli Specifice Web (osace-web)
+## 5. Reguli Specifice Web (osace-web & osace-drive)
 #######################################################
 /osace-web/dist/
 /osace-web/node_modules/
+/osace-drive/dist/
+/osace-drive/node_modules/
 
 ## 6. Project Analysis & Tracking Files
 #######################################################
