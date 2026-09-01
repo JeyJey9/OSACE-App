@@ -6,12 +6,45 @@ const path = require('path');
 const API_DOMAIN = 'https://api.osace.ro'; // URL-ul API-ului
 const { checkBadgesOnLike, checkBadgesOnComment } = require('../../features/Badge/badge.service'); // S-ar putea să trebuiască să ajustezi calea '../'
 
+const googleDriveService = require('../../services/googleDriveService');
+
 // --- Exportăm Rutele ---
 module.exports = (pool, verifyToken, verifyManager) => {
   const fs = require('fs/promises'); // Modul necesar pentru ștergerea fișierelor
 
   // ======================================================
-  // ## POST /sync-instagram (Sincronizare postări de pe Instagram @o.s.a.c.e)
+  // ## GET /media/:driveFileId (Streaming permanent imagini postări din Google Drive)
+  // ======================================================
+  router.get('/media/:driveFileId', async (req, res) => {
+    const { driveFileId } = req.params;
+
+    if (!driveFileId || driveFileId.length < 5) {
+      return res.status(400).send('ID media invalid.');
+    }
+
+    try {
+      const stream = await googleDriveService.downloadFileStream(driveFileId);
+
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+
+      stream.on('error', (err) => {
+        console.error('[PostsMedia] Stream error:', err.message);
+        if (!res.headersSent) {
+          res.status(404).send('Imagine indisponibila.');
+        }
+      });
+
+      stream.pipe(res);
+    } catch (err) {
+      console.error(`[PostsMedia] Error loading media ${driveFileId}:`, err.message);
+      res.status(404).send('Imagine negasita.');
+    }
+  });
+
+  // ======================================================
+  // ## POST /sync-instagram (Sincronizare postări de pe Instagram @o.s.a.c.e cu stocare pe Google Drive)
   // ======================================================
   router.post('/sync-instagram', [verifyToken, verifyManager], async (req, res) => {
     const creatorId = req.user.userId;
@@ -74,9 +107,18 @@ module.exports = (pool, verifyToken, verifyManager) => {
     }
 
     let syncedCount = 0;
+    let repairedCount = 0;
     const client = await pool.connect();
 
     try {
+      // 1. Asigurăm folderul dedicat pentru media Instagram în Google Drive
+      let igFolder = null;
+      try {
+        igFolder = await googleDriveService.ensureFolderPath('04_Instagram_Media');
+      } catch (driveInitErr) {
+        console.warn('[IG Sync] Nu s-a putut crea folderul 04_Instagram_Media pe Drive:', driveInitErr.message);
+      }
+
       await client.query('BEGIN');
 
       for (const item of mediaItems) {
@@ -85,13 +127,52 @@ module.exports = (pool, verifyToken, verifyManager) => {
         const caption = (item.caption || '') + `\n\n📸 Vezi pe Instagram: ${item.permalink}`;
         const postDate = item.timestamp || new Date();
 
-        // Verificăm dacă postarea cu acest link există deja în DB ca să nu o duplicăm
+        // 2. Verificăm dacă postarea există deja
         const check = await client.query(
-          `SELECT id FROM posts WHERE description LIKE $1`,
+          `SELECT p.id, pi.image_url 
+           FROM posts p 
+           LEFT JOIN post_images pi ON pi.post_id = p.id 
+           WHERE p.description LIKE $1`,
           [`%${item.permalink}%`]
         );
 
+        let persistentImageUrl = item.media_url;
+
+        // 3. Dacă postarea e nouă SAU are un link vechi/expirat Instagram, descărcăm imaginea pe Google Drive
+        const needsDownload = check.rows.length === 0 || 
+          (check.rows[0].image_url && (check.rows[0].image_url.includes('cdninstagram.com') || !check.rows[0].image_url.includes('/api/posts/media/')));
+
+        if (needsDownload) {
+          try {
+            const imgRes = await axios.get(item.media_url, {
+              responseType: 'arraybuffer',
+              timeout: 15000,
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+            });
+
+            const buffer = Buffer.from(imgRes.data);
+            const mimeType = imgRes.headers['content-type'] || 'image/jpeg';
+            const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
+            const filename = `ig_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
+
+            const driveFile = await googleDriveService.uploadFile({
+              name: filename,
+              mimeType,
+              body: buffer,
+              parentFolderId: igFolder ? igFolder.id : undefined,
+              description: `Instagram media @o.s.a.c.e - ${item.permalink}`,
+            });
+
+            if (driveFile && driveFile.id) {
+              persistentImageUrl = `${API_DOMAIN}/api/posts/media/${driveFile.id}`;
+            }
+          } catch (uploadErr) {
+            console.warn('[IG Sync] Avertisment download/upload imagine:', uploadErr.message);
+          }
+        }
+
         if (check.rows.length === 0) {
+          // Inserare postare nouă
           const newPost = await client.query(
             `INSERT INTO posts (creator_id, description, created_at) VALUES ($1, $2, $3) RETURNING id`,
             [creatorId, caption, postDate]
@@ -100,17 +181,34 @@ module.exports = (pool, verifyToken, verifyManager) => {
 
           await client.query(
             `INSERT INTO post_images (post_id, image_url, sort_order) VALUES ($1, $2, 0)`,
-            [postId, item.media_url]
+            [postId, persistentImageUrl]
           );
           syncedCount++;
+        } else if (needsDownload && persistentImageUrl.includes('/api/posts/media/')) {
+          // Reparare postare existentă cu imagine salvată pe Drive
+          const existingPostId = check.rows[0].id;
+          await client.query(
+            `UPDATE post_images SET image_url = $1 WHERE post_id = $2`,
+            [persistentImageUrl, existingPostId]
+          );
+          repairedCount++;
         }
       }
 
       await client.query('COMMIT');
-      if (syncedCount > 0) {
-        await logAction(pool, creatorId, 'POST_SYNC_INSTAGRAM', 'post', null, { synced_count: syncedCount });
+
+      if (syncedCount > 0 || repairedCount > 0) {
+        await logAction(pool, creatorId, 'POST_SYNC_INSTAGRAM', 'post', null, { 
+          synced_count: syncedCount, 
+          repaired_count: repairedCount 
+        });
       }
-      res.json({ message: `Sincronizare reușită! S-au importat ${syncedCount} postări noi de pe @o.s.a.c.e.`, synced_count: syncedCount });
+
+      res.json({ 
+        message: `Sincronizare reușită! ${syncedCount} postări noi importate, ${repairedCount} postări reparate și salvate pe Google Drive.`, 
+        synced_count: syncedCount,
+        repaired_count: repairedCount 
+      });
     } catch (dbErr) {
       await client.query('ROLLBACK');
       console.error('Eroare DB la import Instagram:', dbErr);
@@ -119,8 +217,6 @@ module.exports = (pool, verifyToken, verifyManager) => {
       client.release();
     }
   });
-
-
 
   router.get('/:id/comments', verifyToken, async (req, res) => {
     const { id } = req.params; // ID-ul postării
