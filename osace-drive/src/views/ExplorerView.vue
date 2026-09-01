@@ -94,7 +94,9 @@
                   v-for="folder in folders" 
                   :key="folder.id" 
                   :folder="folder" 
+                  :can-edit="isAdmin || isCoordinator"
                   @open="openFolder(folder)"
+                  @edit="editingFolder = folder"
                 />
               </div>
             </div>
@@ -157,6 +159,14 @@
       @created="handleFolderCreated"
     />
 
+    <EditFolderModal
+      v-if="editingFolder"
+      :folder="editingFolder"
+      @close="editingFolder = null"
+      @updated="handleFolderUpdated"
+      @deleted="handleFolderDeleted"
+    />
+
     <DocumentDetailsModal 
       v-if="inspectedDoc" 
       :doc="inspectedDoc"
@@ -175,6 +185,7 @@ import FolderCard from '../components/FolderCard.vue';
 import DocumentItem from '../components/DocumentItem.vue';
 import UploadModal from '../components/UploadModal.vue';
 import NewFolderModal from '../components/NewFolderModal.vue';
+import EditFolderModal from '../components/EditFolderModal.vue';
 import DocumentDetailsModal from '../components/DocumentDetailsModal.vue';
 import api from '../services/api';
 
@@ -193,6 +204,7 @@ const searchResults = ref([]);
 
 const showUploadModal = ref(false);
 const showNewFolderModal = ref(false);
+const editingFolder = ref(null);
 const inspectedDoc = ref(null);
 
 const user = computed(() => {
@@ -301,6 +313,22 @@ function handleDocumentUploaded(newDoc) {
 
 function handleFolderCreated(newFolder) {
   folders.value.push(newFolder);
+}
+
+function handleFolderUpdated(updatedFolder) {
+  const idx = folders.value.findIndex(f => f.id === updatedFolder.id);
+  if (idx !== -1) {
+    folders.value[idx] = updatedFolder;
+  }
+  const topIdx = topLevelFolders.value.findIndex(f => f.id === updatedFolder.id);
+  if (topIdx !== -1) {
+    topLevelFolders.value[topIdx] = updatedFolder;
+  }
+}
+
+function handleFolderDeleted(deletedId) {
+  folders.value = folders.value.filter(f => f.id !== deletedId);
+  topLevelFolders.value = topLevelFolders.value.filter(f => f.id !== deletedId);
 }
 
 async function handleSearch(q) {

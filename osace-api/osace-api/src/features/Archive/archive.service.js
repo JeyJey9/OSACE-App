@@ -259,6 +259,120 @@ async function createSubfolder(pool, userId, role, { name, parentId = null, cate
 }
 
 /**
+ * Modifica un folder existent (redenumire, schimbare categorie/departament)
+ */
+async function updateFolder(pool, userId, role, folderId, { name, category, departmentId }) {
+  const folderRes = await pool.query('SELECT * FROM archive_folders WHERE id = $1', [folderId]);
+  if (folderRes.rows.length === 0) {
+    throw new FolderNotFoundError(folderId);
+  }
+
+  const folder = folderRes.rows[0];
+
+  // Verificam permisiunea
+  if (role !== 'admin') {
+    const canManage = await checkFolderAccess(pool, userId, role, folderId, 'manage');
+    if (!canManage && folder.created_by !== userId) {
+      throw new ArchivePermissionDeniedError('modificarea acestui folder');
+    }
+  }
+
+  const newName = name && name.trim() ? name.trim() : folder.name;
+  const newCategory = category || folder.category;
+  const newDepartment = departmentId !== undefined ? departmentId : folder.department_id;
+
+  // Daca s-a schimbat numele, actualizam in Google Drive
+  if (newName !== folder.name) {
+    try {
+      await googleDriveService.renameFolder(folder.drive_folder_id, newName);
+    } catch (driveErr) {
+      console.warn('[ArchiveService] Eroare la redenumire folder pe Drive:', driveErr.message);
+    }
+  }
+
+  // Recalculam logical_path
+  let parentPath = '';
+  if (folder.parent_id) {
+    const parentRes = await pool.query('SELECT logical_path FROM archive_folders WHERE id = $1', [folder.parent_id]);
+    if (parentRes.rows.length > 0) {
+      parentPath = parentRes.rows[0].logical_path;
+    }
+  }
+  const oldPath = folder.logical_path;
+  const newPath = parentPath ? `${parentPath}/${newName}` : `/${newName}`;
+
+  // Actualizam folderul
+  const updateRes = await pool.query(
+    `UPDATE archive_folders
+     SET name = $1, logical_path = $2, category = $3, department_id = $4, updated_at = NOW()
+     WHERE id = $5
+     RETURNING *`,
+    [newName, newPath, newCategory, newDepartment, folderId]
+  );
+
+  // Daca s-a schimbat calea logica, actualizam si toti descendentii
+  if (oldPath !== newPath) {
+    await pool.query(
+      `UPDATE archive_folders
+       SET logical_path = $1 || SUBSTRING(logical_path FROM $2)
+       WHERE logical_path LIKE $3`,
+      [newPath, oldPath.length + 1, `${oldPath}/%`]
+    );
+  }
+
+  await logArchiveAccess(pool, {
+    folderId,
+    userId,
+    action: ARCHIVE_ACTIONS.FOLDER_UPDATE,
+    details: { oldName: folder.name, newName, oldPath, newPath },
+  });
+
+  return updateRes.rows[0];
+}
+
+/**
+ * Sterge un folder din arhiva
+ */
+async function deleteFolder(pool, userId, role, folderId) {
+  const folderRes = await pool.query('SELECT * FROM archive_folders WHERE id = $1', [folderId]);
+  if (folderRes.rows.length === 0) {
+    throw new FolderNotFoundError(folderId);
+  }
+
+  const folder = folderRes.rows[0];
+
+  if (folder.is_system_folder && role !== 'admin') {
+    throw new ArchivePermissionDeniedError('stergerea folderelor de sistem');
+  }
+
+  if (role !== 'admin') {
+    const canManage = await checkFolderAccess(pool, userId, role, folderId, 'manage');
+    if (!canManage && folder.created_by !== userId) {
+      throw new ArchivePermissionDeniedError('stergerea acestui folder');
+    }
+  }
+
+  // Stergem/mutam in Trash pe Google Drive
+  try {
+    await googleDriveService.deleteFile(folder.drive_folder_id, false);
+  } catch (driveErr) {
+    console.warn('[ArchiveService] Nu s-a putut sterge folderul din Drive:', driveErr.message);
+  }
+
+  // Stergem din DB
+  await pool.query('DELETE FROM archive_folders WHERE id = $1', [folderId]);
+
+  await logArchiveAccess(pool, {
+    folderId,
+    userId,
+    action: ARCHIVE_ACTIONS.FOLDER_DELETE,
+    details: { name: folder.name, driveFolderId: folder.drive_folder_id },
+  });
+
+  return { message: 'Folderul a fost sters cu succes.' };
+}
+
+/**
  * Incarca un document in arhiva (Google Drive + DB metadata)
  */
 async function uploadDocument(pool, userId, role, file, metadata = {}) {
@@ -552,9 +666,12 @@ module.exports = {
   getFolders,
   getFolderContents,
   createSubfolder,
+  updateFolder,
+  deleteFolder,
   uploadDocument,
   downloadDocument,
   deleteDocument,
   searchDocuments,
   getArchiveStats,
 };
+

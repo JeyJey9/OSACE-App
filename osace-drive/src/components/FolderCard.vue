@@ -21,6 +21,19 @@
         </span>
       </div>
     </div>
+
+    <button 
+      v-if="canEdit" 
+      class="btn btn-ghost btn-sm btn-icon-only edit-folder-btn" 
+      title="Editează / Șterge Director"
+      @click.stop="$emit('edit', folder)"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="1"></circle>
+        <circle cx="19" cy="12" r="1"></circle>
+        <circle cx="5" cy="12" r="1"></circle>
+      </svg>
+    </button>
   </div>
 </template>
 
@@ -30,9 +43,13 @@ defineProps({
     type: Object,
     required: true,
   },
+  canEdit: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['open']);
+defineEmits(['open', 'edit']);
 
 function formatCategory(cat) {
   const map = {

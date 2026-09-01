@@ -252,6 +252,23 @@ async function listFolder(folderId, options = {}) {
   return response.data;
 }
 
+/**
+ * Redenumeste un folder din Google Drive
+ * @param {string} folderId - ID-ul folderului din Drive
+ * @param {string} newName - Noul nume al folderului
+ * @returns {Promise<Object>}
+ */
+async function renameFolder(folderId, newName) {
+  const drive = ensureDrive();
+  const response = await drive.files.update({
+    fileId: folderId,
+    resource: { name: newName },
+    fields: 'id, name, modifiedTime',
+    supportsAllDrives: true,
+  });
+  return response.data;
+}
+
 module.exports = {
   createFolder,
   findFolder,
@@ -262,4 +279,6 @@ module.exports = {
   deleteFile,
   moveFile,
   listFolder,
+  renameFolder,
 };
+

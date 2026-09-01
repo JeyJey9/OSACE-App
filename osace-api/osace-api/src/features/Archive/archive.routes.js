@@ -147,6 +147,64 @@ module.exports = (pool, verifyToken, verifyAdmin, verifyManager) => {
   });
 
   // =========================================================================
+  // 6B. EDITARE FOLDER (Admin sau Coordonator)
+  // PUT /api/archive/folders/:id
+  // Body: { name, category, departmentId }
+  // =========================================================================
+  router.put('/folders/:id', [verifyToken, verifyManager], async (req, res) => {
+    try {
+      const { userId, role } = req.user;
+      const folderId = parseInt(req.params.id, 10);
+
+      if (isNaN(folderId)) {
+        return res.status(400).json({ error: 'ID folder invalid.' });
+      }
+
+      const { name, category, departmentId } = req.body;
+      const updatedFolder = await archiveService.updateFolder(pool, userId, role, folderId, {
+        name,
+        category,
+        departmentId,
+      });
+
+      return res.json({
+        message: 'Folderul a fost actualizat cu succes.',
+        folder: updatedFolder,
+      });
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error('[ArchiveRoute] Error in PUT /folders/:id:', err);
+      return res.status(500).json({ error: err.message || 'Eroare la modificarea folderului.' });
+    }
+  });
+
+  // =========================================================================
+  // 6C. STERGERE FOLDER (Admin sau Coordonator)
+  // DELETE /api/archive/folders/:id
+  // =========================================================================
+  router.delete('/folders/:id', [verifyToken, verifyManager], async (req, res) => {
+    try {
+      const { userId, role } = req.user;
+      const folderId = parseInt(req.params.id, 10);
+
+      if (isNaN(folderId)) {
+        return res.status(400).json({ error: 'ID folder invalid.' });
+      }
+
+      const result = await archiveService.deleteFolder(pool, userId, role, folderId);
+      return res.json(result);
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message, code: err.code });
+      }
+      console.error('[ArchiveRoute] Error in DELETE /folders/:id:', err);
+      return res.status(500).json({ error: err.message || 'Eroare la stergerea folderului.' });
+    }
+  });
+
+  // =========================================================================
   // 7. INCARCARE DOCUMENT NOU (Multipart form-data)
   // POST /api/archive/documents/upload
   // Fields: file, folderId, name, category, departmentId, eventId, academicYear, description, tags
