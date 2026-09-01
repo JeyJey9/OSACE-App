@@ -10,7 +10,6 @@
         :is-open="isMobileSidebarOpen"
         @close="isMobileSidebarOpen = false"
         @navigate="navigateToFolder"
-        @init-structure="handleInitStructure"
       />
 
       <main class="explorer-main">
@@ -88,7 +87,7 @@
             <!-- Subfolders Section -->
             <div v-if="folders.length > 0" class="section-block">
               <div class="section-head">
-                <span class="section-title">{{ isRoot ? 'Categorii Principale' : 'Directoare' }}</span>
+                <span class="section-title">{{ isRoot ? 'Directoare' : 'Subdirectoare' }}</span>
                 <span class="section-count">{{ folders.length }}</span>
               </div>
               <div class="folders-grid">
@@ -121,23 +120,40 @@
               </div>
             </div>
 
-            <!-- Empty State for Empty Folder or Fresh Archive -->
+            <!-- Empty State -->
             <div v-if="folders.length === 0 && documents.length === 0" class="empty-placeholder panel">
               <svg class="empty-svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
                 <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
               </svg>
-              <h4 v-if="isRoot">Arhiva este neinițializată</h4>
+              <h4 v-if="isRoot">Arhiva este liberă</h4>
               <h4 v-else>Acest director este gol</h4>
               
-              <p v-if="isRoot">Apasă pe butonul de mai jos pentru a genera structura oficială de foldere O.S.A.C.E.</p>
-              <p v-else>Poți încărca un document în acest director folosind butonul de mai sus.</p>
+              <p v-if="isRoot">Nu există încă directoare create. Creează primul director sau încarcă direct fișiere.</p>
+              <p v-else>Poți crea subdirectoare sau încărca documente în acest folder.</p>
 
-              <div class="empty-actions" v-if="isRoot && isAdmin">
+              <div class="empty-actions" v-if="canUpload">
+                <button 
+                  class="btn btn-secondary"
+                  @click="showNewFolderModal = true"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    <line x1="12" y1="11" x2="12" y2="17"></line>
+                    <line x1="9" y1="14" x2="15" y2="14"></line>
+                  </svg>
+                  <span>Creează Director</span>
+                </button>
+
                 <button 
                   class="btn btn-primary"
-                  @click="handleInitStructure"
+                  @click="showUploadModal = true"
                 >
-                  Inițializează Structura Implicită
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  <span>Încarcă Document</span>
                 </button>
               </div>
             </div>
@@ -272,20 +288,6 @@ function openFolder(folder) {
 
 function navigateToFolder(id) {
   router.push(`/folder/${id}`);
-}
-
-async function handleInitStructure() {
-  if (!confirm('Vrei să inițializezi automat structura oficială de foldere O.S.A.C.E.?')) return;
-  try {
-    isLoading.value = true;
-    await api.post('/archive/init-structure');
-    await loadData();
-  } catch (err) {
-    console.error('Eroare la initializare structura:', err);
-    alert(err.response?.data?.error || 'Eroare la initializarea structurii.');
-  } finally {
-    isLoading.value = false;
-  }
 }
 
 function inspectDocument(doc) {
