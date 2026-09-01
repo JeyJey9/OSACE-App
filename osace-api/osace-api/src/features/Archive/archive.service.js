@@ -872,6 +872,35 @@ async function revokeFolderPermission(pool, userId, role, folderId, targetUserId
   return { message: 'Permisiune revocata.' };
 }
 
+/**
+ * Statistici generale despre stocarea arhivei
+ */
+async function getArchiveStats(pool) {
+  const [docStats, folderStats, catStats] = await Promise.all([
+    pool.query(`
+      SELECT COUNT(*)::int as total_documents,
+             COALESCE(SUM(size_bytes), 0)::bigint as total_size_bytes
+      FROM archive_documents
+      WHERE status = 'active'
+    `),
+    pool.query(`SELECT COUNT(*)::int as total_folders FROM archive_folders`),
+    pool.query(`
+      SELECT category, COUNT(*)::int as count, COALESCE(SUM(size_bytes), 0)::bigint as size_bytes
+      FROM archive_documents
+      WHERE status = 'active'
+      GROUP BY category
+      ORDER BY count DESC
+    `),
+  ]);
+
+  return {
+    totalDocuments: docStats.rows[0].total_documents,
+    totalSizeBytes: docStats.rows[0].total_size_bytes,
+    totalFolders: folderStats.rows[0].total_folders,
+    categories: catStats.rows,
+  };
+}
+
 module.exports = {
   logArchiveAccess,
   initDefaultFolderStructure,
