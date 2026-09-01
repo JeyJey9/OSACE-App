@@ -48,7 +48,7 @@ module.exports = (pool, verifyToken, verifyManager) => {
   // ======================================================
   router.post('/sync-instagram', [verifyToken, verifyManager], async (req, res) => {
     const creatorId = req.user.userId;
-    const token = (req.body && req.body.accessToken) || process.env.INSTAGRAM_ACCESS_TOKEN;
+    const token = ((req.body && req.body.accessToken) || process.env.INSTAGRAM_ACCESS_TOKEN || 'IGAAPBrJ8JllRBZAFlmTXRYYlpCWFNCZAEV1QTJGYUZA2dUNMLXZAtNnJFVzBBR0p4MW12Nl9rTUZABMUw2dlBoNmZArME96a0pRZAUlJaGp5SzZAObDB0M3VYLWp0TllRZA21XR3JQWjdKdTJQWDcyWkVDeXVCLVlVOUEzV0lvOWNBVy13RQZDZD').trim();
     const axios = require('axios');
 
     let mediaItems = [];
@@ -76,9 +76,11 @@ module.exports = (pool, verifyToken, verifyManager) => {
           }
           nextPageUrl = igRes.data?.paging?.next || null;
           params = {}; // Paging URL contain params already
+          if (mediaItems.length >= 100) break;
         }
+        console.log(`[IG Sync] Graph API a returnat ${mediaItems.length} postări.`);
       } catch (err) {
-        console.warn('[IG Sync] Token Graph API error:', err.message);
+        console.warn('[IG Sync] Token Graph API error:', err.message, err.response?.data);
       }
     }
 
@@ -102,7 +104,7 @@ module.exports = (pool, verifyToken, verifyManager) => {
 
     if (mediaItems.length === 0) {
       return res.status(400).json({ 
-        error: 'Nu s-au putut prelua postările de pe Instagram @o.s.a.c.e. Poți adăuga link-uri Instagram direct când creezi o postare.' 
+        error: 'Nu s-au putut prelua postările de pe Instagram @o.s.a.c.e. Verifică token-ul de acces sau conexiunea.' 
       });
     }
 
