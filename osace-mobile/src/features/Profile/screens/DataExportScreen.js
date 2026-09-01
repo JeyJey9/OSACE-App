@@ -11,10 +11,9 @@ import { useNavigation } from '@react-navigation/native';
 import api from '../../../services/api';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
-import { Asset } from 'expo-asset';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
+import { OSACE_LOGO_SRC } from '../../../constants/osaceLogo';
 
 export default function DataExportScreen() {
   const { colors, isDark } = useThemeColor();
@@ -46,13 +45,7 @@ export default function DataExportScreen() {
   const generatePDF = async () => {
     setLoading(true);
     try {
-      // Load logo as base64 so expo-print can embed it
-      const asset = Asset.fromModule(require('../../../assets/osace.png'));
-      await asset.downloadAsync();
-      const logoBase64 = await FileSystem.readAsStringAsync(asset.localUri, {
-        encoding: 'base64',
-      });
-      const logoSrc = `data:image/png;base64,${logoBase64}`;
+      const logoSrc = OSACE_LOGO_SRC;
 
       const { data } = await api.get('/api/profile/my-data');
 

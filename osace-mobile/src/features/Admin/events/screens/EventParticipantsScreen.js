@@ -22,7 +22,7 @@ import Toast from 'react-native-toast-message';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
-import { Asset } from 'expo-asset';
+import { OSACE_LOGO_SRC } from '../../../../constants/osaceLogo';
 
 import ScreenContainer from '../../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../../constants/useThemeColor';
@@ -241,10 +241,7 @@ export default function EventParticipantsScreen() {
   const handleExportPDF = async () => {
     setExporting(true);
     try {
-      const asset = Asset.fromModule(require('../../../../assets/osace.png'));
-      await asset.downloadAsync();
-      const logoBase64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: 'base64' });
-      const logoSrc = `data:image/png;base64,${logoBase64}`;
+      const logoSrc = OSACE_LOGO_SRC;
 
       const currentDate = format(new Date(), 'dd.MM.yyyy', { locale: ro });
       const totalHours = participants
