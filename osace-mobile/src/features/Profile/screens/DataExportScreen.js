@@ -1,7 +1,7 @@
 import React, { useState, useLayoutEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Alert, ScrollView,
+  ActivityIndicator, Alert, ScrollView, Switch,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +23,29 @@ export default function DataExportScreen() {
   const [loading, setLoading] = useState(false);
   const BLUE = isDark ? '#4A90E2' : '#1566B9';
 
+  // Submeniu Opțiuni Export (personalizare raport)
+  const [includeProfile, setIncludeProfile] = useState(true);
+  const [includeEvents, setIncludeEvents] = useState(true);
+  const [includeContributions, setIncludeContributions] = useState(true);
+  const [includeBadges, setIncludeBadges] = useState(true);
+  const [includeSignature, setIncludeSignature] = useState(true);
+
+  const selectedCount = [
+    includeProfile,
+    includeEvents,
+    includeContributions,
+    includeBadges,
+    includeSignature,
+  ].filter(Boolean).length;
+
+  const toggleAll = (state) => {
+    setIncludeProfile(state);
+    setIncludeEvents(state);
+    setIncludeContributions(state);
+    setIncludeBadges(state);
+    setIncludeSignature(state);
+  };
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
@@ -43,6 +66,11 @@ export default function DataExportScreen() {
   }, [navigation, colors.textPrimary]);
 
   const generatePDF = async () => {
+    if (selectedCount === 0) {
+      Alert.alert('Atenție', 'Te rugăm să selectezi cel puțin o secțiune pentru a genera raportul.');
+      return;
+    }
+
     setLoading(true);
     try {
       const logoSrc = OSACE_LOGO_SRC;
@@ -53,8 +81,8 @@ export default function DataExportScreen() {
       const joinDate = format(new Date(data.user.created_at.replace(' ', 'T')), 'dd.MM.yyyy', { locale: ro });
 
       const totalHours = [
-        ...data.events_attended.filter(e => e.confirmation_status === 'attended'),
-        ...data.special_contributions,
+        ...(includeEvents ? data.events_attended.filter(e => e.confirmation_status === 'attended') : []),
+        ...(includeContributions ? data.special_contributions : []),
       ].reduce((sum, e) => sum + (parseFloat(e.awarded_hours) || 0), 0);
 
       const eventsRows = data.events_attended.map(e => `
@@ -86,12 +114,33 @@ export default function DataExportScreen() {
         </tr>
       `).join('');
 
+      const fullName = `${data.user.first_name || ''} ${data.user.last_name || ''}`.trim() || data.user.display_name;
+
+      // Construim lista de activități ca bullet points
+      const attendedEvents = data.events_attended.filter(e => e.confirmation_status === 'attended');
+      const eventsBullets = attendedEvents.map(e => {
+        const eventDate = e.start_time ? format(new Date(e.start_time.replace(' ', 'T')), 'dd.MM.yyyy') : '';
+        const hours = parseFloat(e.awarded_hours || 0).toFixed(1);
+        return `<li><strong>${e.title}</strong>${e.category ? ` (${e.category})` : ''}${eventDate ? ` — ${eventDate}` : ''} — <em>${hours} ore</em></li>`;
+      }).join('\n');
+
+      const contribBullets = data.special_contributions.map(c => {
+        const cDate = format(new Date(c.created_at.replace(' ', 'T')), 'dd.MM.yyyy');
+        const hours = parseFloat(c.awarded_hours || 0).toFixed(1);
+        return `<li><strong>${c.title}</strong>${c.description ? ` — ${c.description}` : ''} — ${cDate} — <em>${hours} ore</em></li>`;
+      }).join('\n');
+
+      const badgeBullets = data.badges.map(b => {
+        const bDate = format(new Date(b.earned_at.replace(' ', 'T')), 'dd.MM.yyyy');
+        return `<li><strong>${b.name}</strong>${b.description ? ` — ${b.description}` : ''} (${bDate})</li>`;
+      }).join('\n');
+
       const html = `
 <!DOCTYPE html>
 <html lang="ro">
 <head>
   <meta charset="UTF-8"/>
-  <title>Export Date Personale OSACE</title>
+  <title>Adeverință Voluntariat OSACE</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -100,219 +149,127 @@ export default function DataExportScreen() {
       font-size: 11pt;
       color: #222;
       background: #fff;
-      padding: 1.8cm 2cm;
+      padding: 0.8cm 1.2cm;
     }
 
-    /* ── HEADER OFICIAL OSACE ── */
     .org-title {
       text-align: center;
-      font-size: 10.5pt;
+      font-size: 9.5pt;
       font-weight: bold;
       text-transform: uppercase;
-      line-height: 1.4;
-      margin-bottom: 14px;
+      line-height: 1.3;
+      margin-bottom: 10px;
       color: #111;
     }
 
     .header-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
-
     .header-table td {
       border: none;
       padding: 0;
       vertical-align: middle;
       background: transparent !important;
     }
-
-    .col-left {
-      width: 32%;
-      font-size: 8.5pt;
-      line-height: 1.6;
-      color: #333;
-    }
-
-    .col-center {
-      width: 36%;
-      text-align: center;
-    }
-
-    .col-center img {
-      width: 140px;
-      height: auto;
-    }
-
-    .col-right {
-      width: 32%;
-      font-size: 8.5pt;
-      line-height: 1.6;
-      text-align: right;
-      color: #333;
-    }
-
-    .col-right a { color: #1566B9; text-decoration: none; }
+    .col-left { width: 33%; font-size: 7.5pt; color: #444; line-height: 1.3; text-align: left; }
+    .col-center { width: 34%; text-align: center; }
+    .col-center img { max-height: 150px; max-width: 360px; display: inline-block; }
+    .col-right { width: 33%; font-size: 7.5pt; color: #444; line-height: 1.3; text-align: right; }
 
     .header-divider-thick {
-      border: none;
-      border-top: 2.5px solid #111;
-      margin: 10px 0 3px 0;
+      border: none; border-top: 2px solid #111;
+      margin-top: 6px; margin-bottom: 2px;
     }
-
     .header-divider-thin {
-      border: none;
-      border-top: 1px solid #111;
-      margin: 0 0 16px 0;
+      border: none; border-top: 0.5px solid #111;
+      margin-bottom: 14px;
     }
 
-    /* ── DOCUMENT METADATA ── */
     .doc-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 22px;
-      font-size: 10pt;
+      display: flex; justify-content: space-between;
+      font-size: 8.5pt; color: #555; margin-bottom: 14px;
     }
+    .doc-nr { font-weight: bold; color: #222; }
 
-    .doc-nr { font-weight: bold; }
-
-    /* ── TITLE ── */
     .doc-title {
-      text-align: center;
-      font-size: 16pt;
-      font-weight: bold;
-      letter-spacing: 0.5px;
+      text-align: center; font-size: 15pt; font-weight: bold;
+      letter-spacing: 1.5px; margin-bottom: 18px; color: #111;
       text-transform: uppercase;
-      margin-bottom: 4px;
-      color: #1566B9;
     }
 
-    .doc-subtitle {
-      text-align: center;
-      font-size: 9pt;
-      color: #666;
-      margin-bottom: 22px;
+    .attestation-text {
+      font-size: 10.5pt; color: #222; line-height: 1.7;
+      margin-bottom: 16px; text-align: justify;
+    }
+    .attestation-text strong { color: #111; }
+
+    .section-label {
+      font-size: 10pt; font-weight: bold; color: #1e293b;
+      margin-top: 16px; margin-bottom: 6px;
+      border-bottom: 1px solid #cbd5e1;
+      padding-bottom: 3px;
     }
 
-    /* ── RGPD BOX ── */
-    .rgpd-box {
-      border: 1px solid #dcdcdc;
-      border-left: 4px solid #1566B9;
-      padding: 10px 14px;
-      margin-bottom: 22px;
-      font-size: 9pt;
-      line-height: 1.5;
-      background: #f8fafc;
-      border-radius: 4px;
+    ul.activity-list {
+      list-style: none; padding: 0; margin: 0 0 10px 0;
+    }
+    ul.activity-list li {
+      font-size: 9.5pt; color: #334155; line-height: 1.5;
+      padding: 3px 0 3px 14px; position: relative;
+    }
+    ul.activity-list li::before {
+      content: "•";
+      position: absolute; left: 0; color: #1566B9; font-weight: bold;
+    }
+    ul.activity-list li em {
+      color: #15803d; font-style: normal; font-weight: 600;
     }
 
-    /* ── VOLUNTEER CARD ── */
-    .volunteer-card {
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 14px 18px;
-      margin-bottom: 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #f8fafc;
+    .total-box {
+      margin-top: 12px; padding: 8px 14px;
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;
+      font-size: 10pt; color: #1e293b;
+    }
+    .total-box strong { color: #1566B9; font-size: 13pt; }
+
+    .empty-note {
+      font-size: 9pt; color: #94a3b8; font-style: italic; padding: 4px 0;
     }
 
-    .volunteer-card .info { line-height: 1.8; font-size: 10pt; }
-    .volunteer-card .info .name { font-size: 13pt; font-weight: bold; color: #111; }
-    .volunteer-card .info .sub { font-size: 9pt; color: #555; }
-    .volunteer-card .totals { text-align: right; }
-    .volunteer-card .totals .hours-num { font-size: 26pt; font-weight: bold; line-height: 1; color: #1566B9; }
-    .volunteer-card .totals .hours-lbl { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5px; color: #666; margin-top: 2px; }
-
-    /* ── SECTION ── */
-    .section { margin-bottom: 24px; }
-    .section-title {
-      font-size: 10pt;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-bottom: 2px solid #1566B9;
-      padding-bottom: 4px;
-      margin-bottom: 10px;
-      color: #1566B9;
-    }
-
-    /* ── TABLE ── */
-    table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 0; }
-    th {
-      border: 1px solid #cbd5e1;
-      padding: 7px 10px;
-      background: #f1f5f9;
-      color: #334155;
-      text-align: left;
-      font-size: 8pt;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    td { border: 1px solid #cbd5e1; padding: 7px 10px; color: #334155; }
-    tr:nth-child(even) td { background: #f8fafc; }
-
-    .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 8pt; font-weight: bold; }
-    .pill.green { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-    .pill.gray  { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
-
-    .empty-note { font-style: italic; color: #94a3b8; font-size: 9pt; padding: 6px 0; }
-
-    /* ── SIGNATURE BLOCK ── */
     .sig-block {
-      margin-top: 45px;
-      display: flex;
-      justify-content: flex-end;
+      margin-top: 36px; display: flex; justify-content: flex-end;
     }
-
     .sig-inner {
-      text-align: center;
-      width: 220px;
-      font-size: 10pt;
-      line-height: 1.6;
+      width: 220px; text-align: center;
+      border-top: 1px dashed #94a3b8; padding-top: 6px;
     }
+    .sig-role { font-size: 8.5pt; font-weight: bold; color: #1e293b; }
+    .sig-name { font-size: 8.5pt; color: #475569; margin-top: 2px; }
+    .sig-line { font-size: 7pt; color: #94a3b8; margin-top: 28px; }
 
-    .sig-inner .sig-role { font-weight: bold; color: #111; }
-    .sig-inner .sig-name { font-size: 10pt; font-weight: 600; margin-top: 2px; }
-    .sig-inner .sig-line {
-      border-top: 1px solid #111;
-      margin-top: 45px;
-      padding-top: 4px;
-      font-size: 8.5pt;
-      color: #555;
-    }
-
-    /* ── FOOTER ── */
     .footer {
-      margin-top: 30px;
-      border-top: 1px solid #e2e8f0;
-      padding-top: 10px;
-      font-size: 8pt;
-      color: #64748b;
-      text-align: center;
-      line-height: 1.6;
+      margin-top: 30px; border-top: 0.5px solid #e2e8f0; padding-top: 6px;
+      font-size: 7pt; color: #94a3b8; text-align: center; line-height: 1.3;
     }
 
     @page {
-      size: A4;
-      margin: 1.5cm;
+      size: A4 portrait;
+      margin: 1cm;
     }
 
-    .volunteer-card, .rgpd-box, .sig-block, .section-title, tr {
+    .sig-block, .section-label, li {
       page-break-inside: avoid;
     }
   </style>
 </head>
 <body>
 
-  <!-- TITLE HEADER -->
   <div class="org-title">
     ORGANIZAȚIA STUDENȚILOR DIN FACULTATEA DE AUTOMATICĂ, CALCULATOARE ȘI ELECTRONICĂ (O.S.A.C.E.)
   </div>
 
-  <!-- THREE COLUMN HEADER -->
   <table class="header-table">
     <tr>
       <td class="col-left">
@@ -335,90 +292,45 @@ export default function DataExportScreen() {
   <hr class="header-divider-thick"/>
   <hr class="header-divider-thin"/>
 
-  <!-- DOCUMENT METADATA -->
   <div class="doc-meta">
     <div class="doc-nr">Nr. ________ / ${exportDate}</div>
     <div>Craiova, România</div>
   </div>
 
-  <!-- DOCUMENT TITLE -->
-  <div class="doc-title">EXPORT DATE PERSONALE</div>
-  <div class="doc-subtitle">Conform Regulamentului (UE) 2016/679 (RGPD), Art. 15 — Dreptul de Acces</div>
+  <div class="doc-title">Adeverință Voluntariat</div>
 
-  <!-- RGPD NOTICE -->
-  <div class="rgpd-box">
-    <strong>Informare RGPD:</strong> Acest document conține toate datele personale pe care O.S.A.C.E. le deține despre
-    membrul menționat mai jos. Documentul este extras în mod securizat din baza de date oficială a organizației.
+  <p class="attestation-text">
+    Prin prezenta, <strong>Organizația Studenților din Facultatea de Automatică, Calculatoare și Electronică (O.S.A.C.E.)</strong> atestă că voluntarul
+    <strong>${fullName}</strong>${data.user.email ? ` (${data.user.email})` : ''}, membru din data de <strong>${joinDate}</strong>,
+    a participat la următoarele activități de voluntariat în cadrul organizației, acumulând un total de <strong>${totalHours.toFixed(1)} ore de voluntariat</strong>:
+  </p>
+
+  ${includeEvents && attendedEvents.length > 0 ? `
+  <div class="section-label">Activități de Voluntariat (${attendedEvents.length})</div>
+  <ul class="activity-list">
+    ${eventsBullets}
+  </ul>
+  ` : ''}
+
+  ${includeContributions && data.special_contributions.length > 0 ? `
+  <div class="section-label">Contribuții Speciale & Proiecte (${data.special_contributions.length})</div>
+  <ul class="activity-list">
+    ${contribBullets}
+  </ul>
+  ` : ''}
+
+  ${includeBadges && data.badges.length > 0 ? `
+  <div class="section-label">Realizări & Distincții (${data.badges.length})</div>
+  <ul class="activity-list">
+    ${badgeBullets}
+  </ul>
+  ` : ''}
+
+  <div class="total-box">
+    Total ore de voluntariat acumulate: <strong>${totalHours.toFixed(1)} ore</strong>
   </div>
 
-  <!-- VOLUNTEER INFO CARD -->
-  <div class="volunteer-card">
-    <div class="info">
-      <div class="name">${data.user.first_name || ''} ${data.user.last_name || ''}</div>
-      <div class="sub">Utilizator: @${data.user.display_name} &nbsp;·&nbsp; Email: ${data.user.email}</div>
-      <div class="sub">Rol: ${data.user.role?.toUpperCase()} &nbsp;·&nbsp; Membru din: ${joinDate}</div>
-      <div class="sub">Status verificare student: ${data.user.student_verification_status || 'N/A'}</div>
-    </div>
-    <div class="totals">
-      <div class="hours-num">${totalHours.toFixed(1)}</div>
-      <div class="hours-lbl">ore voluntariat total</div>
-    </div>
-  </div>
-
-  <!-- EVENTS SECTION -->
-  <div class="section">
-    <div class="section-title">I. Activități de Voluntariat (${data.events_attended.length})</div>
-    ${data.events_attended.length > 0 ? `
-      <table>
-        <thead>
-          <tr>
-            <th>Denumire Activitate</th>
-            <th>Categorie</th>
-            <th>Data</th>
-            <th style="text-align:center">Status / Ore</th>
-          </tr>
-        </thead>
-        <tbody>${eventsRows}</tbody>
-      </table>
-    ` : '<p class="empty-note">Nicio activitate înregistrată.</p>'}
-  </div>
-
-  <!-- CONTRIBUTIONS SECTION -->
-  <div class="section">
-    <div class="section-title">II. Contribuții Speciale (${data.special_contributions.length})</div>
-    ${data.special_contributions.length > 0 ? `
-      <table>
-        <thead>
-          <tr>
-            <th>Titlu</th>
-            <th>Descriere</th>
-            <th>Data</th>
-            <th style="text-align:center">Ore</th>
-          </tr>
-        </thead>
-        <tbody>${contribRows}</tbody>
-      </table>
-    ` : '<p class="empty-note">Nicio contribuție specială acordată.</p>'}
-  </div>
-
-  <!-- BADGES SECTION -->
-  <div class="section">
-    <div class="section-title">III. Realizări (Badge-uri) (${data.badges.length})</div>
-    ${data.badges.length > 0 ? `
-      <table>
-        <thead>
-          <tr>
-            <th>Denumire Badge</th>
-            <th>Descriere</th>
-            <th>Data Acordării</th>
-          </tr>
-        </thead>
-        <tbody>${badgeRows}</tbody>
-      </table>
-    ` : '<p class="empty-note">Niciun badge acordat.</p>'}
-  </div>
-
-  <!-- SIGNATURE BLOCK -->
+  ${includeSignature ? `
   <div class="sig-block">
     <div class="sig-inner">
       <div class="sig-role">Președinte O.S.A.C.E.,</div>
@@ -426,8 +338,8 @@ export default function DataExportScreen() {
       <div class="sig-line">Semnătură și Ștampilă</div>
     </div>
   </div>
+  ` : ''}
 
-  <!-- FOOTER -->
   <div class="footer">
     Document generat automat de aplicația OSACE &nbsp;·&nbsp; www.osace.ro<br/>
     CUI: 14277339 &nbsp;·&nbsp; B-dul. Decebal Nr. 107, Craiova, Dolj
@@ -457,6 +369,49 @@ export default function DataExportScreen() {
 
   const s = createStyles(colors, isDark, insets, BLUE);
 
+  const sectionsList = [
+    {
+      id: 'profile',
+      icon: 'person-outline',
+      title: 'Informații Profil & Cont',
+      desc: 'Nume, email, username, rol și totalul de ore acumulate.',
+      state: includeProfile,
+      setter: setIncludeProfile,
+    },
+    {
+      id: 'events',
+      icon: 'calendar-outline',
+      title: 'Activități de Voluntariat',
+      desc: 'Evenimentele la care ai participat, categorii și ore validate.',
+      state: includeEvents,
+      setter: setIncludeEvents,
+    },
+    {
+      id: 'contributions',
+      icon: 'star-outline',
+      title: 'Contribuții Speciale & Task-uri',
+      desc: 'Ore și merite speciale acordate de conducere.',
+      state: includeContributions,
+      setter: setIncludeContributions,
+    },
+    {
+      id: 'badges',
+      icon: 'ribbon-outline',
+      title: 'Insigne & Badge-uri',
+      desc: 'Toate distincțiile și realizările deblocate în asociație.',
+      state: includeBadges,
+      setter: setIncludeBadges,
+    },
+    {
+      id: 'signature',
+      icon: 'shield-checkmark-outline',
+      title: 'Semnătură & Ștampilă Oficială',
+      desc: 'Bloc oficial de autentificare O.S.A.C.E. pentru dosare/adeverințe.',
+      state: includeSignature,
+      setter: setIncludeSignature,
+    },
+  ];
+
   return (
     <ScrollView style={s.container} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
       {/* Hero */}
@@ -466,42 +421,73 @@ export default function DataExportScreen() {
         </View>
         <Text style={s.heroTitle}>Exportul Datelor Tale</Text>
         <Text style={s.heroSub}>
-          Conform RGPD (Art. 15), ai dreptul să accesezi toate datele personale pe care OSACE le deține despre tine.
+          Personalizează secțiunile pe care dorești să le incluzi în raportul oficial PDF.
         </Text>
       </View>
 
-      {/* What's included */}
+      {/* Submeniu de Personalizare */}
       <View style={s.card}>
-        <Text style={s.cardTitle}>Ce conține PDF-ul</Text>
-        {[
-          ['person-outline', 'Datele contului tău (nume, email, rol)'],
-          ['calendar-outline', 'Toate activitățile la care ai participat'],
-          ['star-outline', 'Contribuțiile speciale acordate'],
-          ['ribbon-outline', 'Badge-urile câștigate'],
-          ['time-outline', 'Total ore de voluntariat acumulate'],
-        ].map(([icon, label]) => (
-          <View key={icon} style={s.featureRow}>
-            <View style={s.featureIcon}>
-              <Ionicons name={icon} size={18} color={BLUE} />
-            </View>
-            <Text style={s.featureText}>{label}</Text>
+        <View style={s.cardHeader}>
+          <View>
+            <Text style={s.cardTitle}>Secțiuni Raport</Text>
+            <Text style={s.cardSub}>{selectedCount} din 5 secțiuni selectate</Text>
           </View>
+          <View style={s.quickActions}>
+            <TouchableOpacity onPress={() => toggleAll(true)} style={s.quickBtn}>
+              <Text style={s.quickBtnText}>Toate</Text>
+            </TouchableOpacity>
+            <Text style={{ color: colors.textSecondary, opacity: 0.4 }}>|</Text>
+            <TouchableOpacity onPress={() => toggleAll(false)} style={s.quickBtn}>
+              <Text style={s.quickBtnText}>Niciuna</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={s.divider} />
+
+        {sectionsList.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            activeOpacity={0.8}
+            onPress={() => item.setter(!item.state)}
+            style={[s.toggleRow, item.state && s.toggleRowActive]}
+          >
+            <View style={[s.toggleIconBox, item.state && { backgroundColor: BLUE + '20' }]}>
+              <Ionicons name={item.icon} size={20} color={item.state ? BLUE : colors.textSecondary} />
+            </View>
+
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={[s.toggleTitle, item.state && { color: colors.textPrimary }]}>{item.title}</Text>
+              <Text style={s.toggleDesc}>{item.desc}</Text>
+            </View>
+
+            <Switch
+              value={item.state}
+              onValueChange={item.setter}
+              trackColor={{ false: isDark ? '#333' : '#e2e8f0', true: BLUE + '70' }}
+              thumbColor={item.state ? BLUE : isDark ? '#888' : '#f4f3f4'}
+            />
+          </TouchableOpacity>
         ))}
       </View>
 
       {/* GDPR notice */}
       <View style={s.gdprCard}>
-        <Ionicons name="shield-checkmark-outline" size={20} color="#f39c12" />
+        <Ionicons name="lock-closed-outline" size={20} color="#f39c12" />
         <Text style={s.gdprText}>
-          PDF-ul este generat în timp real din datele tale actuale și conține o marcă temporală pentru a dovedi autenticitatea.
+          Documentul este generat securizat pe baza datelor tale active și conține marca temporală oficială O.S.A.C.E.
         </Text>
       </View>
 
       {/* Generate button */}
       <TouchableOpacity
-        style={[s.btn, { backgroundColor: BLUE, shadowColor: BLUE }, loading && { opacity: 0.7 }]}
+        style={[
+          s.btn,
+          { backgroundColor: BLUE, shadowColor: BLUE },
+          (loading || selectedCount === 0) && { opacity: 0.6 },
+        ]}
         onPress={generatePDF}
-        disabled={loading}
+        disabled={loading || selectedCount === 0}
       >
         {loading ? (
           <>
@@ -511,15 +497,14 @@ export default function DataExportScreen() {
         ) : (
           <>
             <Ionicons name="download-outline" size={22} color="white" />
-            <Text style={s.btnText}>Generează & Descarcă PDF</Text>
+            <Text style={s.btnText}>Descarcă Raportul Personalizat</Text>
           </>
         )}
       </TouchableOpacity>
 
       <Text style={s.legalNote}>
-        Drept garantat de Regulamentul (UE) 2016/679 (RGPD), Art. 15 — Dreptul de acces.{'\n'}
-        Pentru ștergerea contului:{' '}
-        <Text style={{ color: BLUE, fontWeight: '700' }}>Profil → Setări cont → Șterge cont</Text>
+        Conform Regulamentului (UE) 2016/679 (RGPD), Art. 15 — Dreptul de acces.{'\n'}
+        Document recunoscut oficial de asociația O.S.A.C.E.
       </Text>
     </ScrollView>
   );
@@ -528,40 +513,65 @@ export default function DataExportScreen() {
 const createStyles = (colors, isDark, insets, BLUE) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20, paddingBottom: insets.bottom + 40 },
-  hero: { alignItems: 'center', paddingVertical: 28, gap: 12 },
+  hero: { alignItems: 'center', paddingVertical: 20, gap: 10 },
   heroIcon: {
-    width: 88, height: 88, borderRadius: 28,
+    width: 80, height: 80, borderRadius: 24,
     backgroundColor: BLUE + '15', justifyContent: 'center', alignItems: 'center',
     borderWidth: 1.5, borderColor: BLUE + '30',
   },
-  heroTitle: { fontSize: 24, fontWeight: '900', color: colors.textPrimary, textAlign: 'center' },
-  heroSub: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, paddingHorizontal: 8 },
+  heroTitle: { fontSize: 22, fontWeight: '900', color: colors.textPrimary, textAlign: 'center' },
+  heroSub: { fontSize: 13.5, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, paddingHorizontal: 12 },
   card: {
-    backgroundColor: colors.card, borderRadius: 20, padding: 20,
-    marginBottom: 16, gap: 14,
+    backgroundColor: colors.card, borderRadius: 20, padding: 18,
+    marginBottom: 16,
     borderWidth: isDark ? 1 : 0, borderColor: 'rgba(255,255,255,0.07)',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: isDark ? 0.2 : 0.06, shadowRadius: 10, elevation: 3,
   },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  featureIcon: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: BLUE + '15', justifyContent: 'center', alignItems: 'center',
+  cardHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  featureText: { fontSize: 14, color: colors.textSecondary, flex: 1, lineHeight: 20 },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: colors.textPrimary },
+  cardSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  quickActions: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10,
+  },
+  quickBtn: { paddingHorizontal: 4 },
+  quickBtnText: { fontSize: 11.5, fontWeight: '700', color: BLUE },
+  divider: {
+    height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+    marginVertical: 14,
+  },
+  toggleRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 10, paddingHorizontal: 8,
+    borderRadius: 14, marginBottom: 4,
+  },
+  toggleRowActive: {
+    backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
+  },
+  toggleIconBox: {
+    width: 38, height: 38, borderRadius: 11,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9',
+    justifyContent: 'center', alignItems: 'center',
+    marginRight: 12,
+  },
+  toggleTitle: { fontSize: 13.5, fontWeight: '700', color: colors.textSecondary, marginBottom: 2 },
+  toggleDesc: { fontSize: 11, color: colors.textSecondary, lineHeight: 15 },
   gdprCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
     backgroundColor: isDark ? 'rgba(243,156,18,0.12)' : '#FEF9E7',
-    borderRadius: 14, padding: 16, marginBottom: 24,
+    borderRadius: 14, padding: 14, marginBottom: 20,
     borderWidth: 1, borderColor: 'rgba(243,156,18,0.3)',
   },
-  gdprText: { flex: 1, fontSize: 13, color: isDark ? '#f0c070' : '#7D5C00', lineHeight: 20 },
+  gdprText: { flex: 1, fontSize: 12.5, color: isDark ? '#f0c070' : '#7D5C00', lineHeight: 18 },
   btn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 10, height: 58, borderRadius: 18,
+    gap: 10, height: 56, borderRadius: 18,
     shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
-    marginBottom: 20,
+    marginBottom: 18,
   },
-  btnText: { color: 'white', fontSize: 16, fontWeight: '800' },
-  legalNote: { fontSize: 11.5, color: colors.textSecondary, textAlign: 'center', lineHeight: 18 },
+  btnText: { color: 'white', fontSize: 15, fontWeight: '800' },
+  legalNote: { fontSize: 11, color: colors.textSecondary, textAlign: 'center', lineHeight: 16 },
 });
