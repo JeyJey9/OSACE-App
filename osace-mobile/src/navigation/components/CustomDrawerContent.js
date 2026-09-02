@@ -8,7 +8,7 @@ import api from '../../services/api';
 
 import { useThemeColor } from '../../constants/useThemeColor';
 import ThemeToggleSwitch from '../../components/ThemeToggleSwitch';
-import { APP_VERSION } from '../../constants/Version';
+import { APP_VERSION, PATCH_NOTES } from '../../constants/Version';
 
 export default function CustomDrawerContent(props) {
   const { user, logout } = useAuth();
@@ -177,26 +177,38 @@ export default function CustomDrawerContent(props) {
         {/* EASTER EGG VERSION NUMBER */}
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={handleVersionTap}
+          onPress={() => {
+            setShowDevNotes(true);
+            handleVersionTap();
+          }}
           style={{
             marginTop: 10,
-            paddingVertical: 5,
+            paddingVertical: 6,
+            paddingHorizontal: 12,
             alignItems: 'center',
-            opacity: 0.6
+            backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+            borderRadius: 12,
+            alignSelf: 'center',
           }}
         >
-          <Text style={{
-            color: colors.textSecondary,
-            fontSize: 12,
-            fontWeight: '500',
-            letterSpacing: 0.5
-          }}>
-            Versiune: {APP_VERSION}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="sparkles" size={12} color={STANDARD_BLUE} />
+            <Text style={{
+              color: colors.textPrimary,
+              fontSize: 12,
+              fontWeight: '600',
+              letterSpacing: 0.5
+            }}>
+              Versiune: V{APP_VERSION}
+            </Text>
+            <View style={{ backgroundColor: STANDARD_BLUE + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+              <Text style={{ color: STANDARD_BLUE, fontSize: 10, fontWeight: '700' }}>PATCH NOTES</Text>
+            </View>
+          </View>
         </TouchableOpacity>
       </View>
 
-      {/* DEV NOTES MEME MODAL */}
+      {/* PATCH NOTES & DEV NOTES MODAL */}
       <Modal
         visible={showDevNotes}
         transparent={true}
@@ -205,23 +217,69 @@ export default function CustomDrawerContent(props) {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Image
-              source={require('../../assets/nerd_meme.png')}
-              style={styles.memeImage}
-              resizeMode="contain"
-            />
-            <Text style={styles.modalTitle}>Dev Notes</Text>
-            <Text style={styles.modalText}>
-              Developed out of passion for- hai că crecă...{'\n'}
-              Sper să vă placă.{'\n\n'}
-              <Text style={{ fontWeight: 'bold' }}>@george_1613</Text>{'\n'}
-              Versiune: V{APP_VERSION}
-            </Text>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ backgroundColor: STANDARD_BLUE + '20', padding: 6, borderRadius: 10 }}>
+                  <Ionicons name="rocket-outline" size={20} color={STANDARD_BLUE} />
+                </View>
+                <View>
+                  <Text style={styles.modalTitle}>Ce este nou în V{APP_VERSION}</Text>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary }}>Patch Notes & Schimbări Recente</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setShowDevNotes(false)} hitSlop={10}>
+                <Ionicons name="close-circle" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Scrollable Content */}
+            <ScrollView style={{ maxHeight: 380, width: '100%' }} showsVerticalScrollIndicator={false}>
+              {PATCH_NOTES && PATCH_NOTES.length > 0 && (
+                <View style={{ gap: 12 }}>
+                  {PATCH_NOTES.map((patch, pIdx) => (
+                    <View key={pIdx} style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '700', color: STANDARD_BLUE }}>Versiunea {patch.version}</Text>
+                          {pIdx === 0 && (
+                            <View style={{ backgroundColor: '#10B98120', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                              <Text style={{ color: '#10B981', fontSize: 9, fontWeight: '800' }}>CURENTĂ</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={{ fontSize: 11, color: colors.textSecondary }}>{patch.date}</Text>
+                      </View>
+
+                      {patch.items.map((item, iIdx) => (
+                        <Text key={iIdx} style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 18, marginBottom: 4 }}>
+                          • {item}
+                        </Text>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Dev easter egg credits */}
+              <View style={{ alignItems: 'center', marginTop: 14, paddingTop: 10, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
+                <Image
+                  source={require('../../assets/nerd_meme.png')}
+                  style={styles.memeImage}
+                  resizeMode="contain"
+                />
+                <Text style={{ fontSize: 11, color: colors.textSecondary, textAlign: 'center', lineHeight: 16 }}>
+                  Dezvoltat cu pasiune pentru membrii și voluntarii O.S.A.C.E.{'\n'}
+                  <Text style={{ fontWeight: 'bold', color: colors.textPrimary }}>@george_1613</Text> • Build V{APP_VERSION}
+                </Text>
+              </View>
+            </ScrollView>
+
             <TouchableOpacity
-              style={styles.modalCloseButton}
+              style={[styles.modalCloseButton, { width: '100%', marginTop: 12 }]}
               onPress={() => setShowDevNotes(false)}
             >
-              <Text style={styles.modalCloseText}>Nice</Text>
+              <Text style={styles.modalCloseText}>Super, am înțeles!</Text>
             </TouchableOpacity>
           </View>
         </View>

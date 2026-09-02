@@ -2,7 +2,7 @@
   "expo": {
     "name": "OSACE",
     "slug": "osace-mobile",
-    "version": "2.1.2",
+    "version": "2.2.6",
     "orientation": "portrait",
     "icon": "./src/assets/osace.png",
     "userInterfaceStyle": "automatic",
@@ -52,7 +52,7 @@
       }
     },
     "android": {
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/osace.png",
         "backgroundColor": "#ffffff"

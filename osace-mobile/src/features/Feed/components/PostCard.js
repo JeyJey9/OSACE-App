@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   ScrollView,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import Animated, {
@@ -72,6 +73,7 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
+  const [status, setStatus] = useState({});
 
   // ─── Animated values ──────────────────────────────────────────────────────
   const heartScale = useSharedValue(1);
@@ -202,7 +204,9 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
 
   const isVideoUrl = (url) => {
     if (!url) return false;
-    return /\.(mp4|mov|m4v|webm)(\?.*)?$/i.test(url);
+    if (/\.(mp4|mov|m4v|webm)(\?.*)?$/i.test(url)) return true;
+    if (item.description && /instagram\.com\/(reel|tv)\//i.test(item.description)) return true;
+    return false;
   };
 
   const igMatch = item.instagram_url || item.description?.match(/https?:\/\/(www\.)?instagram\.com\/(p|reel|tv)\/[a-zA-Z0-9_\-\.]+/i)?.[0];
@@ -215,6 +219,8 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
     }
   };
 
+  const displayName = (igMatch || !item.creator_name || item.creator_name.toLowerCase().includes('david')) ? 'O.S.A.C.E.' : item.creator_name;
+
   return (
     <View style={styles.card}>
 
@@ -226,7 +232,7 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
             <Image source={require('../../../assets/osace.png')} style={styles.avatar} />
           </View>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.creatorName}>{item.creator_name}</Text>
+            <Text style={styles.creatorName}>{displayName}</Text>
             <Text style={styles.timestamp}>{formatRelativeDate(item.created_at)}</Text>
           </View>
         </View>
@@ -261,26 +267,33 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
               scrollEnabled={imageCount > 1}
               style={{ width: cardWidth }}
             >
-              {item.image_urls.map((url, index) => (
-                isVideoUrl(url) ? (
-                  <View key={index} style={{ width: cardWidth, height: cardWidth, backgroundColor: colors.card, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
-                    {/* Blurred backdrop matching video colors */}
-                    <Image
-                      source={{ uri: url }}
-                      style={[StyleSheet.absoluteFillObject, { opacity: 0.45 }]}
-                      blurRadius={25}
-                      resizeMode="cover"
-                    />
+              {item.image_urls.map((url, index) => {
+                const isVideo = isVideoUrl(url);
+                const mediaUri = isVideo && url.includes('/media/') && !url.endsWith('.mp4') ? `${url}.mp4` : url;
+
+                const isBuffering = !status?.isLoaded || status?.isBuffering;
+
+                return isVideo ? (
+                  <View key={index} style={{ width: cardWidth, height: cardWidth, backgroundColor: '#000', overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
                     {/* Full uncropped video with Instagram-style autoplay */}
                     <Video
-                      source={{ uri: url }}
+                      source={{ uri: mediaUri }}
                       style={{ width: '100%', height: '100%' }}
                       useNativeControls={false}
                       resizeMode={ResizeMode.CONTAIN}
                       isLooping
                       isMuted={isMuted}
                       shouldPlay={isVisible}
+                      onPlaybackStatusUpdate={setStatus}
+                      onError={(err) => console.warn(`[PostCard #${item.id} Video Error] URI: ${mediaUri} ->`, err)}
                     />
+
+                    {/* Buffering Indicator */}
+                    {isBuffering && isVisible && (
+                      <View style={[StyleSheet.absoluteFillObject, { justifyContent: 'center', alignItems: 'center' }]} pointerEvents="none">
+                        <ActivityIndicator size="small" color="#fff" />
+                      </View>
+                    )}
 
                     {/* Instagram-style Mute/Unmute toggle button */}
                     <TouchableOpacity
@@ -305,10 +318,11 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
                       source={{ uri: url }}
                       style={{ width: '100%', height: '100%' }}
                       resizeMode="contain"
+                      onError={(e) => console.warn(`[PostCard #${item.id} Image Error] URL: ${url} ->`, e.nativeEvent?.error)}
                     />
                   </View>
-                )
-              ))}
+                );
+              })}
             </ScrollView>
           </GestureDetector>
 

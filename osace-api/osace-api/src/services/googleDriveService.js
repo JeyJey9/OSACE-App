@@ -80,7 +80,11 @@ async function ensureFolderPath(pathSegments, rootFolderId = null) {
   let currentParentId = rootFolderId || config.rootFolderId;
   let lastFolder = null;
 
-  for (const segment of pathSegments) {
+  const segments = Array.isArray(pathSegments)
+    ? pathSegments
+    : (typeof pathSegments === 'string' ? pathSegments.split('/').filter(Boolean) : []);
+
+  for (const segment of segments) {
     if (!segment || !segment.trim()) continue;
     const cleanSegment = segment.trim();
 
@@ -161,19 +165,35 @@ async function getFileMetadata(fileId) {
 /**
  * Descarca un fisier ca stream din Google Drive
  * @param {string} fileId - ID-ul fisierului din Drive
- * @returns {Promise<ReadableStream>} Fluxul de descarcare
+ * @param {Object} [options] - Optiuni suplimentare (headers pentru Range requests, fullResponse)
+ * @returns {Promise<ReadableStream|Object>} Fluxul de descarcare sau obiectul cu stream + headers
  */
-async function downloadFileStream(fileId) {
+async function downloadFileStream(fileId, options = {}) {
   const drive = ensureDrive();
 
+  const requestOptions = {
+    fileId,
+    alt: 'media',
+    supportsAllDrives: true,
+  };
+
+  const axiosOptions = { responseType: 'stream' };
+  if (options.headers) {
+    axiosOptions.headers = options.headers;
+  }
+
   const response = await drive.files.get(
-    {
-      fileId,
-      alt: 'media',
-      supportsAllDrives: true,
-    },
-    { responseType: 'stream' }
+    requestOptions,
+    axiosOptions
   );
+
+  if (options.fullResponse) {
+    return {
+      stream: response.data,
+      headers: response.headers,
+      status: response.status,
+    };
+  }
 
   return response.data;
 }

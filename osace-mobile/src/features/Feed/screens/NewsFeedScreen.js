@@ -176,10 +176,10 @@ export default function NewsFeedScreen() {
             data={posts}
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
-            renderItem={({ item }) => (
+            renderItem={({ item, index }) => (
               <PostCard
                 item={item}
-                isVisible={viewableItemIds.includes(item.id)}
+                isVisible={viewableItemIds.length === 0 ? index === 0 : viewableItemIds.includes(item.id)}
                 onPostUpdate={onPostUpdate}
                 onPostDelete={onPostDelete}
                 currentUserRole={user?.role}
