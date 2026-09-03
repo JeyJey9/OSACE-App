@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, ScrollView, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, ScrollView, Modal, Pressable, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -67,6 +67,59 @@ export default function CustomDrawerContent(props) {
       ]
     );
   };
+
+  const handleFeedback = (type) => {
+    const isAndroid = Platform.OS === 'android';
+    const osInfo = `${Platform.OS} ${Platform.Version}`;
+    const email = 'developers@osace.ro';
+
+    let subject, body;
+
+    if (type === 'bug') {
+      subject = `[BUG V${APP_VERSION}] - Descriere scurtă a problemei`;
+      body = [
+        '--- Informații Tehnice (te rugăm să nu ștergi) ---',
+        `Versiune Aplicație: ${APP_VERSION}`,
+        `Sistem de operare: ${osInfo}`,
+        `Utilizator: @${user?.display_name || 'necunoscut'}`,
+        '---------------------------------------------------',
+        '',
+        'Ce s-a întâmplat:',
+        '[Scrie aici problema întâmpinată...]',
+        '',
+        'Pași pentru reproducere:',
+        '1. Am deschis ecranul...',
+        '2. Am apăsat pe...',
+        '',
+        '(Opțional: Poți atașa capturi de ecran la acest email)',
+      ].join('\n');
+    } else {
+      subject = `[SUGESTIE V${APP_VERSION}] - Ideea mea pentru OSACE App`;
+      body = [
+        'Descrierea ideii / funcționalității dorite:',
+        '[Ce ți-ar plăcea să adăugăm în aplicație?]',
+        '',
+        'De ce crezi că ar fi utilă:',
+        '[Cum ar ajuta voluntarii sau asociația?]',
+      ].join('\n');
+    }
+
+    const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    Linking.canOpenURL(mailto).then((supported) => {
+      if (supported) {
+        Linking.openURL(mailto);
+      } else {
+        Alert.alert(
+          'Nicio aplicație de email',
+          `Trimite manual un email la ${email}`,
+          [{ text: 'OK' }]
+        );
+      }
+    });
+  };
+
+  const [showFeedbackMenu, setShowFeedbackMenu] = React.useState(false);
 
   const currentRouteName = props.state.routeNames[props.state.index];
 
@@ -163,7 +216,91 @@ export default function CustomDrawerContent(props) {
             <CustomDrawerItem label="Dashboard Statistici" icon="stats-chart" navigateTo="Statistics" activeIconColor="#8e44ad" />
           </View>
         )}
+        {/* Feedback & Asistență */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>FEEDBACK</Text>
+          <TouchableOpacity
+            style={styles.drawerItem}
+            onPress={() => setShowFeedbackMenu(true)}
+          >
+            <View style={[styles.iconContainer, { backgroundColor: isDark ? 'rgba(39, 174, 96, 0.15)' : 'rgba(39, 174, 96, 0.1)' }]}>
+              <Ionicons name="chatbubble-ellipses-outline" size={20} color="#27ae60" />
+            </View>
+            <Text style={styles.drawerItemLabel}>Feedback & Asistență</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+
+      {/* FEEDBACK TYPE PICKER MODAL */}
+      <Modal
+        visible={showFeedbackMenu}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowFeedbackMenu(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowFeedbackMenu(false)}
+        >
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ backgroundColor: '#27ae6020', padding: 6, borderRadius: 10 }}>
+                  <Ionicons name="chatbubble-ellipses" size={20} color="#27ae60" />
+                </View>
+                <Text style={{ fontSize: 17, fontWeight: '800', color: colors.textPrimary }}>Feedback & Asistență</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowFeedbackMenu(false)}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 18, marginBottom: 16 }}>
+              Alege tipul de mesaj. Se va deschide aplicația ta de email cu un template pregătit.
+            </Text>
+
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+                backgroundColor: isDark ? 'rgba(231, 76, 60, 0.08)' : 'rgba(231, 76, 60, 0.06)',
+                borderWidth: 1, borderColor: isDark ? 'rgba(231, 76, 60, 0.2)' : 'rgba(231, 76, 60, 0.15)',
+                borderRadius: 14, padding: 14, marginBottom: 10,
+              }}
+              onPress={() => { setShowFeedbackMenu(false); handleFeedback('bug'); }}
+              activeOpacity={0.7}
+            >
+              <View style={{ backgroundColor: '#E74C3C20', padding: 8, borderRadius: 10 }}>
+                <Ionicons name="bug-outline" size={22} color="#E74C3C" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>Raportează o problemă</Text>
+                <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Erori, crash-uri sau probleme tehnice</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+                backgroundColor: isDark ? 'rgba(21, 102, 185, 0.08)' : 'rgba(21, 102, 185, 0.06)',
+                borderWidth: 1, borderColor: isDark ? 'rgba(21, 102, 185, 0.2)' : 'rgba(21, 102, 185, 0.15)',
+                borderRadius: 14, padding: 14,
+              }}
+              onPress={() => { setShowFeedbackMenu(false); handleFeedback('feature'); }}
+              activeOpacity={0.7}
+            >
+              <View style={{ backgroundColor: STANDARD_BLUE + '20', padding: 8, borderRadius: 10 }}>
+                <Ionicons name="bulb-outline" size={22} color={STANDARD_BLUE} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>Sugerează o idee</Text>
+                <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Idei noi sau îmbunătățiri pentru aplicație</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* 3. Footer */}
       <View style={styles.footer}>
@@ -268,7 +405,7 @@ export default function CustomDrawerContent(props) {
                   resizeMode="contain"
                 />
                 <Text style={{ fontSize: 11, color: colors.textSecondary, textAlign: 'center', lineHeight: 16 }}>
-                  Dezvoltat cu pasiune pentru membrii și voluntarii O.S.A.C.E.{'\n'}
+                  Dezvoltat pentru membrii și voluntarii O.S.A.C.E.{'\n'}
                   <Text style={{ fontWeight: 'bold', color: colors.textPrimary }}>@george_1613</Text> • Build V{APP_VERSION}
                 </Text>
               </View>
