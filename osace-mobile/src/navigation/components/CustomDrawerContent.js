@@ -192,7 +192,6 @@ export default function CustomDrawerContent(props) {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="sparkles" size={12} color={STANDARD_BLUE} />
             <Text style={{
               color: colors.textPrimary,
               fontSize: 12,
@@ -276,10 +275,15 @@ export default function CustomDrawerContent(props) {
             </ScrollView>
 
             <TouchableOpacity
-              style={[styles.modalCloseButton, { width: '100%', marginTop: 12 }]}
+              style={styles.jojoCloseButton}
               onPress={() => setShowDevNotes(false)}
+              activeOpacity={0.7}
             >
-              <Text style={styles.modalCloseText}>Super, am înțeles!</Text>
+              <Image
+                source={require('../../assets/to_be_continued.png')}
+                style={styles.jojoImage}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -452,15 +456,20 @@ const createStyles = (colors, isDark, STANDARD_BLUE) => StyleSheet.create({
     lineHeight: 20,
     marginBottom: 20,
   },
-  modalCloseButton: {
-    backgroundColor: STANDARD_BLUE,
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    borderRadius: 20,
+  jojoCloseButton: {
+    width: '100%',
+    height: 52,
+    marginTop: 14,
+    borderRadius: 14,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
-  modalCloseText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  }
+  jojoImage: {
+    width: '94%',
+    height: 40,
+  },
 });
