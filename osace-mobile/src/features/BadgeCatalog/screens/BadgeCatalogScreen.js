@@ -111,7 +111,7 @@ export default function BadgeCatalogScreen() {
         }
         ListHeaderComponent={
           <Text style={styles.headerText}>
-            Descopeă realizările pe care le-ai deblocat și ce te mai așteaptă
+            Descoperă realizările pe care le-ai deblocat și ce te mai așteaptă
           </Text>
         }
         ListEmptyComponent={
@@ -156,8 +156,14 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     borderColor: 'transparent',
   },
   badgeItemEarned: {
-    backgroundColor: colors.primary + '12',
+    backgroundColor: colors.card,
     borderColor: colors.primary,
+    borderWidth: 2,
+    shadowColor: colors.primary,
+    shadowOpacity: isDark ? 0.35 : 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   badgeIconContainer: {
     width: 65,

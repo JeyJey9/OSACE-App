@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, ImageBackground, ScrollView, Modal, Pressable, Linking, Platform, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, ImageBackground, ScrollView, Modal, Pressable, Linking, Platform, Dimensions, Animated, Easing, PanResponder } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '../../features/Auth/AuthContext';
 import api from '../../services/api';
@@ -26,11 +27,27 @@ export default function CustomDrawerContent(props) {
 
   const styles = createStyles(colors, isDark, STANDARD_BLUE);
 
-  const [tapCount, setTapCount] = React.useState(0);
-  const tapTimeoutRef = React.useRef(null);
-
   const [showDevNotes, setShowDevNotes] = React.useState(false);
-  const [showLegacyNotes, setShowLegacyNotes] = React.useState(false);
+  const [subsolStage, setSubsolStage] = React.useState(0); // 0 = ascuns, 1 = hint glisat la vedere, 2 = subsol deblocat
+  const subsolStageRef = React.useRef(0);
+  const lastDragTimeRef = React.useRef(0);
+  const scrollViewRef = React.useRef(null);
+
+  // Gesture tracking: detectează tragerea în sus fix în momentul stretch-ului nativ de Android
+  const touchStartYRef = React.useRef(0);
+  const isNearBottomRef = React.useRef(false);
+  const touchStartNearBottomRef = React.useRef(false);
+  const anchorYRef = React.useRef(null);
+  const pullDistanceRef = React.useRef(0);
+  const currentScrollYRef = React.useRef(0);
+
+  // Animația de gliding (0 = ascuns, 1 = vizibil complet)
+  const glideAnim = React.useRef(new Animated.Value(0)).current;
+
+  const updateSubsolStage = (stage) => {
+    subsolStageRef.current = stage;
+    setSubsolStage(stage);
+  };
 
   const claimEasterEggBadge = async () => {
     try {
@@ -40,22 +57,128 @@ export default function CustomDrawerContent(props) {
     }
   };
 
-  const handleVersionTap = () => {
-    setTapCount((prev) => {
-      const newCount = prev + 1;
+  const handleUnlockStage2 = () => {
+    if (subsolStageRef.current < 2) {
+      updateSubsolStage(2);
+      claimEasterEggBadge();
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch { }
+      // Glisăm discret doar cât să dezvăluim antetul și prima parte din lista veche (fără să sară direct până jos)
+      const targetY = currentScrollYRef.current + 50;
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
+      }, 120);
+    }
+  };
 
-      if (newCount >= 7) {
-        setShowDevNotes(true);
-        claimEasterEggBadge();
-        return 0; // Reset after showing
+  const handleScroll = (event) => {
+    const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+    currentScrollYRef.current = contentOffset.y;
+    const distToBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    isNearBottomRef.current = distToBottom <= 45 && contentOffset.y > 10;
+  };
+
+  const handleTouchStart = (e) => {
+    const y = e.nativeEvent.pageY;
+    touchStartYRef.current = y;
+    touchStartNearBottomRef.current = isNearBottomRef.current;
+    anchorYRef.current = isNearBottomRef.current ? y : null;
+    pullDistanceRef.current = 0;
+  };
+
+  const handleTouchMove = (e) => {
+    const currentY = e.nativeEvent.pageY;
+
+    // Când utilizatorul atinge capătul în timp ce trage, fixăm ancora de tragere
+    if (isNearBottomRef.current && anchorYRef.current === null) {
+      anchorYRef.current = currentY;
+    }
+
+    const baselineY = anchorYRef.current ?? (touchStartNearBottomRef.current ? touchStartYRef.current : null);
+    if (baselineY === null) return;
+
+    const pull = baselineY - currentY; // Pozitiv când trage în sus la capăt (în momentul stretch-ului nativ)
+    pullDistanceRef.current = pull;
+
+    if (pull > 0 && subsolStageRef.current === 0) {
+      // Glisare în timp real fix în momentul în care se produce stretch-ul nativ!
+      const progress = Math.min(Math.max(pull / 55, 0), 1);
+      glideAnim.setValue(progress);
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    const currentY = e.nativeEvent.pageY;
+    const baselineY = anchorYRef.current ?? (touchStartNearBottomRef.current ? touchStartYRef.current : null);
+    const pull = baselineY ? (baselineY - currentY) : pullDistanceRef.current;
+    anchorYRef.current = null;
+
+    const wasAtBottom = touchStartNearBottomRef.current || isNearBottomRef.current;
+
+    if (wasAtBottom && pull >= 35) {
+      const now = Date.now();
+      if (now - lastDragTimeRef.current > 350) {
+        lastDragTimeRef.current = now;
+        if (subsolStageRef.current === 0) {
+          // Primul swipe la capăt → fixează stadiul 1 și arată "Older Patch Notes"
+          updateSubsolStage(1);
+          Animated.spring(glideAnim, {
+            toValue: 1,
+            friction: 7,
+            tension: 45,
+            useNativeDriver: false,
+          }).start();
+          try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          } catch { }
+          setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }, 120);
+        } else if (subsolStageRef.current === 1) {
+          // Al doilea swipe la capăt → deblochează subsolul Minecraft
+          handleUnlockStage2();
+        }
       }
+    } else if (subsolStageRef.current === 0) {
+      // Dacă nu a tras suficient, glisează lin înapoi
+      Animated.timing(glideAnim, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: false,
+      }).start();
+    }
+  };
 
-      // Reset tap count if they stop tapping for 2 seconds
-      if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
-      tapTimeoutRef.current = setTimeout(() => setTapCount(0), 2000);
+  // Complementar: detectează swipe-uri rapide (flicks) la capăt
+  const handleScrollEndDrag = (event) => {
+    const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+    const distToBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
 
-      return newCount;
-    });
+    const now = Date.now();
+    if (now - lastDragTimeRef.current < 400) return;
+
+    if (distToBottom <= 45 && contentOffset.y > 10) {
+      lastDragTimeRef.current = now;
+
+      if (subsolStageRef.current === 0) {
+        updateSubsolStage(1);
+        Animated.spring(glideAnim, {
+          toValue: 1,
+          friction: 7,
+          tension: 45,
+          useNativeDriver: false,
+        }).start();
+        try {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        } catch { }
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 120);
+      } else if (subsolStageRef.current === 1) {
+        handleUnlockStage2();
+      }
+    }
   };
 
   const handleOpenInstagram = async () => {
@@ -244,7 +367,7 @@ export default function CustomDrawerContent(props) {
             <View style={[styles.iconContainer, { backgroundColor: isDark ? 'rgba(39, 174, 96, 0.15)' : 'rgba(39, 174, 96, 0.1)' }]}>
               <Ionicons name="chatbubble-ellipses-outline" size={20} color="#27ae60" />
             </View>
-            <Text style={styles.drawerItemLabel}>Feedback & Asistență</Text>
+            <Text style={styles.drawerItemLabel}>Help 🥹</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -257,64 +380,54 @@ export default function CustomDrawerContent(props) {
         onRequestClose={() => setShowFeedbackMenu(false)}
       >
         <Pressable
-          style={styles.modalOverlay}
+          style={styles.feedbackModalOverlay}
           onPress={() => setShowFeedbackMenu(false)}
         >
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 14 }}>
+          <Pressable style={styles.feedbackModalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.feedbackHeaderRow}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ backgroundColor: '#27ae6020', padding: 6, borderRadius: 10 }}>
-                  <Ionicons name="chatbubble-ellipses" size={20} color="#27ae60" />
+                <View style={{ backgroundColor: isDark ? 'rgba(39, 174, 96, 0.2)' : '#DCFCE7', padding: 6, borderRadius: 10 }}>
+                  <Ionicons name="chatbubble-ellipses" size={20} color={isDark ? '#4ADE80' : '#16A34A'} />
                 </View>
-                <Text style={{ fontSize: 17, fontWeight: '800', color: colors.textPrimary }}>Feedback & Asistență</Text>
+                <Text style={styles.feedbackHeaderTitle}>Feedback</Text>
               </View>
-              <TouchableOpacity onPress={() => setShowFeedbackMenu(false)}>
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              <TouchableOpacity onPress={() => setShowFeedbackMenu(false)} hitSlop={12}>
+                <Ionicons name="close-circle" size={24} color={isDark ? '#71717A' : '#94A3B8'} />
               </TouchableOpacity>
             </View>
 
-            <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 18, marginBottom: 16 }}>
-              Alege tipul de mesaj. Se va deschide aplicația ta de email cu un template pregătit.
+            <Text style={styles.feedbackSubtitle}>
+              Se va deschide aplicația de email cu un template pregătit.
             </Text>
 
             <TouchableOpacity
-              style={{
-                flexDirection: 'row', alignItems: 'center', gap: 12,
-                backgroundColor: isDark ? 'rgba(231, 76, 60, 0.08)' : 'rgba(231, 76, 60, 0.06)',
-                borderWidth: 1, borderColor: isDark ? 'rgba(231, 76, 60, 0.2)' : 'rgba(231, 76, 60, 0.15)',
-                borderRadius: 14, padding: 14, marginBottom: 10,
-              }}
+              style={styles.feedbackOptionBug}
               onPress={() => { setShowFeedbackMenu(false); handleFeedback('bug'); }}
               activeOpacity={0.7}
             >
-              <View style={{ backgroundColor: '#E74C3C20', padding: 8, borderRadius: 10 }}>
-                <Ionicons name="bug-outline" size={22} color="#E74C3C" />
+              <View style={styles.feedbackBugIconBox}>
+                <Ionicons name="bug" size={20} color={isDark ? '#F87171' : '#DC2626'} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>Raportează o problemă</Text>
-                <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Erori, crash-uri sau probleme tehnice</Text>
+                <Text style={styles.feedbackBugTitle}>Raportează o problemă</Text>
+                <Text style={styles.feedbackBugDesc}>Erori, crash-uri...</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+              <Ionicons name="chevron-forward" size={18} color={isDark ? '#FCA5A5' : '#DC2626'} />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={{
-                flexDirection: 'row', alignItems: 'center', gap: 12,
-                backgroundColor: isDark ? 'rgba(21, 102, 185, 0.08)' : 'rgba(21, 102, 185, 0.06)',
-                borderWidth: 1, borderColor: isDark ? 'rgba(21, 102, 185, 0.2)' : 'rgba(21, 102, 185, 0.15)',
-                borderRadius: 14, padding: 14,
-              }}
+              style={styles.feedbackOptionFeature}
               onPress={() => { setShowFeedbackMenu(false); handleFeedback('feature'); }}
               activeOpacity={0.7}
             >
-              <View style={{ backgroundColor: STANDARD_BLUE + '20', padding: 8, borderRadius: 10 }}>
-                <Ionicons name="bulb-outline" size={22} color={STANDARD_BLUE} />
+              <View style={styles.feedbackFeatureIconBox}>
+                <Ionicons name="bulb" size={20} color={isDark ? '#60A5FA' : '#2563EB'} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>Sugerează o idee</Text>
-                <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Idei noi sau îmbunătățiri pentru aplicație</Text>
+                <Text style={styles.feedbackFeatureTitle}>Sugerează o idee</Text>
+                <Text style={styles.feedbackFeatureDesc}>Orice idei sunt bine venite :)</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+              <Ionicons name="chevron-forward" size={18} color={isDark ? '#93C5FD' : '#2563EB'} />
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -329,12 +442,17 @@ export default function CustomDrawerContent(props) {
           <Text style={styles.logoutText}>Deconectare</Text>
         </TouchableOpacity>
 
-        {/* EASTER EGG VERSION NUMBER */}
+        {/* PATCH NOTES TRIGGER */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => {
+            updateSubsolStage(0);
+            glideAnim.setValue(0);
+            isNearBottomRef.current = false;
+            pullDistanceRef.current = 0;
+            anchorYRef.current = null;
+            currentScrollYRef.current = 0;
             setShowDevNotes(true);
-            handleVersionTap();
           }}
           style={{
             marginTop: 10,
@@ -387,26 +505,32 @@ export default function CustomDrawerContent(props) {
               </TouchableOpacity>
             </View>
 
-            {/* Scrollable Content */}
+            {/* Scrollable Content — stretch-ul nativ rămâne, tranziția se declanșează în sincron la capăt */}
             <ScrollView
+              ref={scrollViewRef}
               style={styles.modalScrollView}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 0 }}
+              overScrollMode="always"
+              bounces={true}
+              contentContainerStyle={{ paddingBottom: subsolStage === 2 ? 0 : 20 }}
+              scrollEventThrottle={16}
+              onScroll={handleScroll}
+              onScrollEndDrag={handleScrollEndDrag}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
             >
               <View style={styles.notesSection}>
                 {PATCH_NOTES && PATCH_NOTES.length > 0 && (
                   PATCH_NOTES.map((patch, pIdx) => (
                     <View key={pIdx} style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={{ fontSize: 14, fontWeight: '700', color: STANDARD_BLUE }}>Versiunea {patch.version}</Text>
-                          {pIdx === 0 && (
-                            <View style={{ backgroundColor: '#10B98120', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                              <Text style={{ color: '#10B981', fontSize: 9, fontWeight: '800' }}>CURENTĂ</Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text style={{ fontSize: 11, color: colors.textSecondary }}>{patch.date}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: STANDARD_BLUE }}>Versiunea {patch.version}</Text>
+                        {pIdx === 0 && (
+                          <View style={{ backgroundColor: '#10B98120', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                            <Text style={{ color: '#10B981', fontSize: 9, fontWeight: '800' }}>CURENTĂ</Text>
+                          </View>
+                        )}
                       </View>
 
                       {patch.items.map((item, iIdx) => (
@@ -444,36 +568,69 @@ export default function CustomDrawerContent(props) {
                   <Text style={{ fontWeight: 'bold', color: colors.textPrimary }}>@george_1613</Text> • Build V{APP_VERSION}
                 </Text>
 
-                {/* Minecraft Dig Down Toggle Button */}
-                <TouchableOpacity
-                  style={styles.digDownButton}
-                  onPress={() => setShowLegacyNotes(!showLegacyNotes)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={{ fontSize: 14 }}></Text>
-                  <Text style={styles.digDownButtonText}>
-                    {showLegacyNotes ? 'Older Patch Notes' : 'Older Patch Notes'}
-                  </Text>
-                  <Ionicons
-                    name={showLegacyNotes ? 'chevron-up' : 'chevron-down'}
-                    size={16}
-                    color="#FFFFFF"
-                  />
-                </TouchableOpacity>
+                {/* STAGE 1 GLIDING HINT: Cursă de glisare mai lungă și ultra-fluidă de jos în sus */}
+                {subsolStage !== 2 && (
+                  <Animated.View
+                    style={[
+                      styles.subtleHintContainer,
+                      {
+                        opacity: glideAnim.interpolate({
+                          inputRange: [0, 0.2, 1],
+                          outputRange: [0, 0.35, 1],
+                        }),
+                        transform: [
+                          {
+                            translateY: glideAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [48, 0], // Cursă extinsă de glisare (48px)
+                            }),
+                          },
+                          {
+                            scale: glideAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0.88, 1], // Zoom-in subtil organic
+                            }),
+                          },
+                        ],
+                        height: glideAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 42],
+                        }),
+                        marginTop: glideAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 12],
+                        }),
+                      },
+                    ]}
+                  >
+                    <TouchableOpacity
+                      activeOpacity={0.6}
+                      onPress={handleUnlockStage2}
+                      disabled={subsolStage === 0}
+                    >
+                      <Text style={styles.subtleHintText}>↓ Older Patch Notes ↓</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                )}
               </View>
 
-              {/* MINECRAFT DIRT BASEMENT (EDGE-TO-EDGE across full popup width!) */}
-              {showLegacyNotes && (
+              {/* STAGE 2: MINECRAFT DIRT BASEMENT (EDGE-TO-EDGE across full popup width!) */}
+              {subsolStage === 2 && (
                 <ImageBackground
                   source={require('../../assets/minecraft_dirt.png')}
                   resizeMode="repeat"
                   style={styles.minecraftDirtBasement}
+                  imageStyle={{ resizeMode: 'repeat' }}
                 >
                   <View style={styles.minecraftOverlay}>
                     {/* Header inside dirt */}
                     <View style={styles.minecraftHeader}>
-                      <Text style={styles.minecraftTitle}>🧍‍♂️</Text>
-                      <Text style={styles.minecraftSubtitle}>Patch notes mai vechi de V2.1</Text>
+                      <Text style={styles.minecraftSubtitle} numberOfLines={1}>
+                        <Text style={styles.minecraftTitle}>🧍 </Text>
+                      </Text>
+                      <Text style={styles.minecraftSubtitle} numberOfLines={1}>
+                        Patch notes mai vechi de V2.1
+                      </Text>
                     </View>
 
                     {/* Legacy list */}
@@ -484,7 +641,6 @@ export default function CustomDrawerContent(props) {
                             <Text style={styles.minecraftVersionText}>
                               Versiunea {patch.version}
                             </Text>
-                            <Text style={styles.minecraftDateText}>{patch.date}</Text>
                           </View>
 
                           <View style={{ gap: 4, marginTop: 6 }}>
@@ -499,7 +655,7 @@ export default function CustomDrawerContent(props) {
                     </View>
 
                     <View style={styles.minecraftFooter}>
-                      <Text style={styles.bedrockText}></Text>
+                      <Text style={styles.bedrockText}>Sloboz</Text>
                     </View>
                   </View>
                 </ImageBackground>
@@ -674,6 +830,102 @@ const createStyles = (colors, isDark, STANDARD_BLUE) => StyleSheet.create({
     shadowRadius: 8,
     overflow: 'hidden',
   },
+  feedbackModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+  },
+  feedbackModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF',
+    borderRadius: 24,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : '#E2E8F0',
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: isDark ? 0.45 : 0.15,
+    shadowRadius: 16,
+  },
+  feedbackHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 12,
+  },
+  feedbackHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: isDark ? '#FFFFFF' : '#0F172A',
+  },
+  feedbackSubtitle: {
+    fontSize: 13,
+    color: isDark ? '#A1A1AA' : '#64748B',
+    lineHeight: 18,
+    marginBottom: 18,
+  },
+  feedbackOptionBug: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: isDark ? '#271717' : '#FEF2F2',
+    borderWidth: 1.5,
+    borderColor: isDark ? '#5C2424' : '#FECACA',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    width: '100%',
+  },
+  feedbackOptionFeature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: isDark ? '#142033' : '#EFF6FF',
+    borderWidth: 1.5,
+    borderColor: isDark ? '#233F6E' : '#BFDBFE',
+    borderRadius: 16,
+    padding: 14,
+    width: '100%',
+  },
+  feedbackBugIconBox: {
+    backgroundColor: isDark ? '#3D1B1B' : '#FEE2E2',
+    borderWidth: 1,
+    borderColor: isDark ? '#6E2626' : '#FCA5A5',
+    padding: 8,
+    borderRadius: 12,
+  },
+  feedbackFeatureIconBox: {
+    backgroundColor: isDark ? '#192C4A' : '#DBEAFE',
+    borderWidth: 1,
+    borderColor: isDark ? '#264A7E' : '#93C5FD',
+    padding: 8,
+    borderRadius: 12,
+  },
+  feedbackBugTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: isDark ? '#FCA5A5' : '#991B1B',
+  },
+  feedbackBugDesc: {
+    fontSize: 12,
+    color: isDark ? '#E59898' : '#B91C1C',
+    marginTop: 2,
+  },
+  feedbackFeatureTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: isDark ? '#93C5FD' : '#1E40AF',
+  },
+  feedbackFeatureDesc: {
+    fontSize: 12,
+    color: isDark ? '#89B3E6' : '#2563EB',
+    marginTop: 2,
+  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -735,74 +987,52 @@ const createStyles = (colors, isDark, STANDARD_BLUE) => StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
-  digDownButton: {
-    flexDirection: 'row',
+  subtleHintContainer: {
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 16,
-    width: '100%',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: '#4E4E4E',
-    borderRadius: 8,
-    borderTopWidth: 2,
-    borderLeftWidth: 2,
-    borderRightWidth: 2,
-    borderBottomWidth: 4,
-    borderTopColor: '#7A7A7A',
-    borderLeftColor: '#7A7A7A',
-    borderRightColor: '#2B2B2B',
-    borderBottomColor: '#1F1F1F',
   },
-  digDownButtonText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textShadowColor: '#000000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 1,
+  subtleHintText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+    letterSpacing: 0.5,
   },
   minecraftDirtBasement: {
     width: '100%',
-    marginTop: 16,
+    marginTop: 8,
   },
   minecraftOverlay: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 22,
+    paddingTop: 8,
+    paddingBottom: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   minecraftHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
+    justifyContent: 'center',
+    marginBottom: 10,
   },
   minecraftTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#FFFF55',
-    letterSpacing: 0.5,
-    textShadowColor: '#3F3F00',
-    textShadowOffset: { width: 1.5, height: 1.5 },
-    textShadowRadius: 1,
+    fontSize: 13,
   },
   minecraftSubtitle: {
-    fontSize: 11,
-    color: '#CCCCCC',
-    marginTop: 3,
-    textShadowColor: '#000000',
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFF55',
+    letterSpacing: 0.3,
+    textShadowColor: '#3F3F00',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 1,
+    textAlign: 'center',
   },
   minecraftCard: {
     backgroundColor: 'rgba(0, 0, 0, 0.72)',
     borderRadius: 8,
     padding: 12,
-    borderWidth: 2,
-    borderTopColor: '#4A3525',
-    borderLeftColor: '#4A3525',
-    borderRightColor: '#1A120B',
-    borderBottomColor: '#1A120B',
+    borderWidth: 1.5,
+    borderColor: '#4A3525',
   },
   minecraftCardHeader: {
     flexDirection: 'row',
@@ -819,10 +1049,6 @@ const createStyles = (colors, isDark, STANDARD_BLUE) => StyleSheet.create({
     textShadowColor: '#000000',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 1,
-  },
-  minecraftDateText: {
-    fontSize: 10,
-    color: '#AAAAAA',
   },
   minecraftItemText: {
     fontSize: 11,
