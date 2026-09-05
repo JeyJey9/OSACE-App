@@ -31,19 +31,38 @@ const awardBadge = async (userId, badgeKey, pool) => {
   try {
     const cache = await loadUserBadgesToCache(userId, pool);
     if (cache.has(badgeKey)) {
-      return; // Deja deblocat (0 interogări suplimentare la baza de date)
+      return { awarded: false, reason: 'ALREADY_EARNED' };
     }
 
     const query = `
       INSERT INTO user_badges (user_id, badge_id)
       SELECT $1, id FROM badges WHERE key = $2
-      ON CONFLICT (user_id, badge_id) DO NOTHING;
+      ON CONFLICT (user_id, badge_id) DO NOTHING
+      RETURNING badge_id;
     `;
-    await pool.query(query, [userId, badgeKey]);
-    cache.add(badgeKey);
-    console.log(`[BadgeService] Verificat/Acordat ${badgeKey} pentru user ${userId}.`);
+    const result = await pool.query(query, [userId, badgeKey]);
+
+    if (result.rowCount > 0) {
+      cache.add(badgeKey);
+      const badgeInfo = await pool.query(
+        'SELECT id, name, description, icon_name, key FROM badges WHERE key = $1',
+        [badgeKey]
+      );
+      const badge = badgeInfo.rows[0];
+      console.log(`[BadgeService] Acordat cu succes ${badgeKey} pentru user ${userId}.`);
+      return { awarded: true, badge };
+    } else {
+      const badgeExists = await pool.query('SELECT 1 FROM badges WHERE key = $1', [badgeKey]);
+      if (badgeExists.rowCount === 0) {
+        console.warn(`[BadgeService] Badge-ul ${badgeKey} nu există în tabela badges!`);
+        return { awarded: false, reason: 'BADGE_NOT_FOUND' };
+      }
+      cache.add(badgeKey);
+      return { awarded: false, reason: 'ALREADY_EARNED' };
+    }
   } catch (err) {
     console.error(`[BadgeService] Eroare la acordarea badge-ului ${badgeKey} pentru user ${userId}:`, err);
+    return { awarded: false, error: err.message };
   }
 };
 

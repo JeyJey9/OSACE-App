@@ -2,6 +2,7 @@ import axios from 'axios';
 // ▼▼▼ FIX 1: Importăm SecureStore, nu AsyncStorage ▼▼▼
 import * as SecureStore from 'expo-secure-store';
 import { Alert } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 const API_URL = __DEV__
   ? 'http://100.124.204.20:3000' // Asigură-te că e 3000 aici!
@@ -35,7 +36,19 @@ export const setupAxiosInterceptors = (logoutCallback) => {
   let isAlertShown = false;
 
   api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+      // Verificăm dacă răspunsul include un badge nou deblocat
+      if (response?.data?.unlocked_badge) {
+        const badge = response.data.unlocked_badge;
+        Toast.show({
+          type: 'success',
+          text1: 'Realizare Deblocată! 🏆',
+          text2: `Badge-ul "${badge.name}" deblocat!`,
+          visibilityTime: 4000,
+        });
+      }
+      return response;
+    },
 
     async (error) => {
       const { status } = error.response || {};

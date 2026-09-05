@@ -105,7 +105,12 @@ INSERT INTO badges (name, description, icon_name, key) VALUES
 
 ('Neoprit',
  'O serie de 20 de activități consecutive. Pur și simplu de neoprit.',
- 'infinite-outline',                                                                                                        'UNSTOPPABLE')
+ 'infinite-outline',                                                                                                        'UNSTOPPABLE'),
+
+-- ── EASTER EGGS / SECRETS ───────────────────────────────────────
+('Steve',
+ 'Minecraft is based 🧍',
+ 'cube-outline',                                                                                                            'FOUND_EASTER_EGG')
 
 ON CONFLICT (key) DO UPDATE SET 
   name = EXCLUDED.name, 
