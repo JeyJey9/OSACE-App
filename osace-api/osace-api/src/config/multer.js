@@ -2,6 +2,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 // Definim locația de bază pentru toate upload-urile
 const UPLOAD_DIRECTORY = '/var/www/osace-uploads';
@@ -89,7 +90,8 @@ const studentIdStorage = multer.diskStorage({
       return cb(new Error('Utilizator neautentificat pentru upload legitimație'), null);
     }
     const ext = path.extname(file.originalname).toLowerCase();
-    const uniqueName = `student-id-${req.user.userId}-${Date.now()}${ext}`;
+    const secureToken = crypto.randomBytes(16).toString('hex');
+    const uniqueName = `student-id-${req.user.userId}-${Date.now()}-${secureToken}${ext}`;
     cb(null, uniqueName);
   }
 });

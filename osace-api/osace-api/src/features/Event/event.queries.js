@@ -56,7 +56,17 @@ const ATTENDEES_QUERY = `
 // Folosește $1 pentru eventId, $2 pentru userId
 const EVENT_DETAILS_QUERY = `
   SELECT
-    e.*, 
+    e.id,
+    e.title,
+    e.description,
+    e.start_time,
+    e.end_time,
+    e.location,
+    e.created_by,
+    e.created_at,
+    e.duration_hours,
+    e.category,
+    e.allow_overtime,
     u.display_name as coordinator_name,
     u.avatar_url as coordinator_avatar,
     (SELECT COUNT(*) FROM event_attendance WHERE event_id = e.id) as participant_count,

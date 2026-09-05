@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const { eventActionLimiter } = require('../../middleware/rateLimiter');
-const { authenticator } = require('otplib'); 
+const { authenticator } = require('otplib');
 const { logAction } = require('../../utils/auditLog');
-const { 
-  checkBadgesOnConfirmation, 
-  checkBadgesOnEventCreate, 
-  checkBadgesOnUnattend, 
+const {
+  checkBadgesOnConfirmation,
+  checkBadgesOnEventCreate,
+  checkBadgesOnUnattend,
   awardBadge,
-  checkQuickRegisterBadge 
+  checkQuickRegisterBadge
 } = require('../Badge/badge.service');
 
 // Importăm interogările SQL din fișierul helper
@@ -22,7 +22,7 @@ const {
 } = require('./event.queries');
 
 module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
-  
+
   // --- PAZNICUL UNIVERSAL DE PERMISIUNI (V2 - Granular) ---
   const checkGlobalPermission = async (userId, role, permissionKey) => {
     if (role === 'admin') return true;
@@ -50,7 +50,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
     // (Cei din echipă pot edita și scana, dar NU le dăm voie să șteargă evenimentul cu totul)
     if (requiredPermission !== 'CAN_DELETE_EVENTS') {
       const teamCheck = await pool.query(
-        "SELECT 1 FROM event_teams WHERE event_id = $1 AND user_id = $2 AND access_level = 'editor'", 
+        "SELECT 1 FROM event_teams WHERE event_id = $1 AND user_id = $2 AND access_level = 'editor'",
         [eventId, userId]
       );
       if (teamCheck.rowCount > 0) return true;
@@ -84,8 +84,8 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
   router.get('/available-coordinators', verifyToken, async (req, res) => {
     try {
       const result = await pool.query(
-    "SELECT id, display_name, first_name, last_name, email FROM users WHERE role IN ('admin', 'coordonator') ORDER BY last_name ASC"
-  );
+        "SELECT id, display_name, first_name, last_name, email FROM users WHERE role IN ('admin', 'coordonator') ORDER BY last_name ASC"
+      );
       res.json(result.rows);
     } catch (error) {
       console.error('!!! EROARE LA COORDONATORI:', error);
@@ -109,7 +109,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
     const userId = req.user.userId;
     try {
       const result = await pool.query(
-        `SELECT id, title, description, start_time, end_time, location, created_by, duration_hours, category, totp_secret, created_at 
+        `SELECT id, title, description, start_time, end_time, location, created_by, duration_hours, category, created_at 
          FROM events 
          WHERE created_by = $1 
          ORDER BY start_time DESC`,
@@ -128,7 +128,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
   router.get('/', verifyToken, async (req, res) => {
     const userId = req.user.userId;
     try {
-      const result = await pool.query(HOME_EVENTS_QUERY, [userId]); 
+      const result = await pool.query(HOME_EVENTS_QUERY, [userId]);
       res.json(result.rows);
     } catch (error) {
       console.error('Eroare la listarea evenimentelor:', error);
@@ -141,7 +141,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
     const { userId, role } = req.user;
     // NOU: Am adăugat allow_overtime și send_notification
     const { title, description, start_time, end_time, location, duration_hours, category, allow_overtime, send_notification } = req.body;
-    
+
     const canCreate = role === 'admin' || role === 'coordonator' || await checkGlobalPermission(userId, role, 'CAN_CREATE_EVENTS');
     if (!canCreate) return res.status(403).json({ error: 'Nu ai permisiunea de a crea evenimente.' });
 
@@ -151,7 +151,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
 
     const isOvertimeAllowed = allow_overtime !== false; // default true
     const secret = authenticator.generateSecret();
-    
+
     try {
       const newEvent = await pool.query(
         `INSERT INTO events (title, description, start_time, end_time, location, created_by, duration_hours, category, totp_secret, allow_overtime) 
@@ -166,14 +166,14 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
         try {
           const notificationTitle = 'Un nou eveniment disponibil!';
           const notificationBody = `Evenimentul "${title}" a fost publicat. Intră în aplicație pentru a te înscrie.`;
-          
+
           // 1. Salvăm notificarea în baza de date
           const notificationResult = await pool.query(
-            'INSERT INTO notifications (title, body) VALUES ($1, $2) RETURNING id', 
+            'INSERT INTO notifications (title, body) VALUES ($1, $2) RETURNING id',
             [notificationTitle, notificationBody]
           );
           const newNotificationId = notificationResult.rows[0].id;
-          
+
           // 2. Căutăm voluntarii și coordonatorii (excluzând adminii)
           const usersQuery = `
             SELECT u.id, pt.token 
@@ -181,8 +181,8 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
             LEFT JOIN push_tokens pt ON u.id = pt.user_id 
             WHERE u.role IN ('voluntar', 'coordonator')
           `;
-          const usersResult = await pool.query(usersQuery); 
-          
+          const usersResult = await pool.query(usersQuery);
+
           if (usersResult.rows.length > 0) {
             // 3. Asociem notificarea cu utilizatorii (pentru istoricul lor in-app)
             const userIds = [...new Set(usersResult.rows.map(user => user.id))];
@@ -190,22 +190,22 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
             const placeholders = userIds.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(', ');
             const flatParams = userIds.flatMap(id => [id, newNotificationId]);
             await pool.query(`INSERT INTO user_notifications (user_id, notification_id) VALUES ${placeholders} ON CONFLICT DO NOTHING`, flatParams);
-            
+
             // 4. Trimitere via Expo Push API
             const pushTokens = usersResult.rows.filter(user => user.token).map(user => user.token);
             if (pushTokens.length > 0) {
-              const expoMessage = { 
-                to: pushTokens, 
-                sound: 'default', 
-                title: notificationTitle, 
-                body: notificationBody, 
-                data: { _displayInForeground: true, eventId: newEvent.rows[0].id } 
+              const expoMessage = {
+                to: pushTokens,
+                sound: 'default',
+                title: notificationTitle,
+                body: notificationBody,
+                data: { _displayInForeground: true, eventId: newEvent.rows[0].id }
               };
-              
+
               await axios.post('https://api.expo.dev/v2/push/send', expoMessage, {
-                headers: { 
-                  'Accept': 'application/json', 
-                  'Accept-encoding': 'gzip, deflate', 
+                headers: {
+                  'Accept': 'application/json',
+                  'Accept-encoding': 'gzip, deflate',
                   'Content-Type': 'application/json',
                   'Authorization': `Bearer ${process.env.EXPO_ACCESS_TOKEN}`
                 }
@@ -230,7 +230,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
 
   // GET /:id/participants (Lista de admin)
   router.get('/:id/participants', verifyToken, async (req, res) => {
-    const { id } = req.params; 
+    const { id } = req.params;
     const { userId, role } = req.user;
     try {
       // Întrebăm "Paznicul" nostru inteligent dacă are permisiunea specifică
@@ -238,7 +238,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       if (!hasAccess) {
         return res.status(403).json({ error: 'Evenimentul nu a fost găsit sau nu aveți permisiunea.' });
       }
-      
+
       const participantsResult = await pool.query(PARTICIPANTS_QUERY, [id]);
       res.json(participantsResult.rows);
     } catch (error) {
@@ -332,17 +332,17 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
         [newStatus, newHours, checkInTime, checkOutTime, confirmedAt, eventIdNum, targetUserIdNum]
       );
 
-      await logAction(pool, userId, 'PARTICIPANT_UPDATE', 'event_attendance', targetUserIdNum, { 
-        eventId: eventIdNum, 
-        newStatus, 
-        newHours 
+      await logAction(pool, userId, 'PARTICIPANT_UPDATE', 'event_attendance', targetUserIdNum, {
+        eventId: eventIdNum,
+        newStatus,
+        newHours
       });
 
       if (newStatus === 'attended') {
         checkBadgesOnConfirmation(targetUserIdNum, eventIdNum, pool);
       }
 
-      return res.status(200).json({ 
+      return res.status(200).json({
         message: 'Datele participantului au fost actualizate cu succes.',
         attendance: updateResult.rows[0]
       });
@@ -356,7 +356,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
   router.get('/:id/current-code', verifyToken, async (req, res) => {
     const { id } = req.params;
     const { userId, role } = req.user;
-    
+
     try {
       const hasAccess = await checkEventAccess(id, userId, role, 'CAN_SCAN_QR_ANYWHERE');
       if (!hasAccess) {
@@ -375,13 +375,13 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       res.json({ code: token });
     } catch (error) {
       console.error('Eroare la generarea codului TOTP:', error);
-        res.status(500).json({ error: 'Eroare server.' });
+      res.status(500).json({ error: 'Eroare server.' });
     }
   });
 
   // GET /:id/attendees (Lista publică de participanți)
   router.get('/:id/attendees', verifyToken, async (req, res) => {
-    const { id } = req.params; 
+    const { id } = req.params;
     try {
       const result = await pool.query(ATTENDEES_QUERY, [id]);
       res.json(result.rows);
@@ -401,11 +401,11 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       FROM event_teams et 
       JOIN users u ON et.user_id = u.id 
        WHERE et.event_id = $1`,
-      [req.params.id]
+        [req.params.id]
       );
       res.json(result.rows);
     } catch (error) {
-      console.error('!!! EROARE LA ECHIPA EVENIMENTULUI:', error); 
+      console.error('!!! EROARE LA ECHIPA EVENIMENTULUI:', error);
       res.status(500).json({ error: 'Eroare la preluarea echipei.' });
     }
   });
@@ -414,14 +414,14 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
   router.get('/:id', verifyToken, async (req, res) => {
     const { id } = req.params;
     const { userId } = req.user;
-    
+
     try {
       const eventResult = await pool.query(EVENT_DETAILS_QUERY, [id, userId]);
 
       if (eventResult.rows.length === 0) {
         return res.status(404).json({ error: 'Evenimentul nu a fost găsit.' });
       }
-      
+
       res.json(eventResult.rows[0]);
     } catch (error) {
       console.error(`Eroare la preluarea detaliilor evenimentului ${id}:`, error);
@@ -453,28 +453,28 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
           });
         }
       }
-      
+
       const eventResult = await pool.query('SELECT * FROM events WHERE id = $1', [eventId]);
       if (eventResult.rows.length === 0) return res.status(404).json({ error: 'Evenimentul nu a fost găsit.' });
-      
+
       const event = eventResult.rows[0];
-      const creatorId = event.created_by; 
-      
+      const creatorId = event.created_by;
+
       if (new Date(event.end_time) < new Date()) {
         return res.status(400).json({ error: 'Nu te poți înscrie la un eveniment care s-a terminat.' });
       }
-      
+
       const userResult = await pool.query('SELECT display_name, email FROM users WHERE id = $1', [userId]);
       if (userResult.rows.length === 0) return res.status(404).json({ error: 'Utilizator negăsit.' });
-      
+
       const attendanceResult = await pool.query(
         `INSERT INTO event_attendance (user_id, event_id) 
          VALUES ($1, $2) 
          ON CONFLICT (user_id, event_id) DO NOTHING
-         RETURNING *`, 
+         RETURNING *`,
         [userId, eventId]
       );
-      
+
       if (attendanceResult.rows.length === 0) {
         return res.status(409).json({ message: 'Ești deja înscris la acest eveniment.' });
       }
@@ -489,7 +489,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       } catch (badgeError) {
         console.error(`[BadgeService] Eroare la verificarea 'EVENT_20_ATTENDEES' pentru event ${eventId}:`, badgeError);
       }
-      
+
       checkQuickRegisterBadge(userId, eventId, pool);
       res.status(201).json({ message: 'Înscriere reușită!', attendance: attendanceResult.rows[0] });
     } catch (error) {
@@ -497,7 +497,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       res.status(500).json({ error: 'Eroare server la înscrierea la eveniment.' });
     }
   });
-  
+
   // POST /:id/unattend (Retragere)
   router.post('/:id/unattend', verifyToken, eventActionLimiter, async (req, res) => {
     const eventId = req.params.id;
@@ -529,7 +529,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
   router.post('/:id/confirm-presence', verifyToken, async (req, res) => {
     const eventId = req.params.id;
     const userId = req.user.userId;
-    const { code } = req.body; 
+    const { code } = req.body;
 
     if (!code) return res.status(400).json({ error: 'Codul de confirmare lipsă.' });
 
@@ -537,10 +537,10 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       // 1. Preluăm datele evenimentului și statusul actual al voluntarului
       const eventResult = await pool.query('SELECT * FROM events WHERE id = $1', [eventId]);
       const attendanceResult = await pool.query(
-        'SELECT confirmation_status, check_in_time FROM event_attendance WHERE user_id = $1 AND event_id = $2', 
+        'SELECT confirmation_status, check_in_time FROM event_attendance WHERE user_id = $1 AND event_id = $2',
         [userId, eventId]
       );
-      
+
       if (eventResult.rows.length === 0) return res.status(404).json({ error: 'Eveniment negăsit.' });
       if (attendanceResult.rows.length === 0) return res.status(404).json({ error: 'Nu ești înscris la acest eveniment.' });
 
@@ -561,9 +561,9 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
            WHERE user_id = $1 AND event_id = $2`,
           [userId, eventId]
         );
-        return res.status(200).json({ 
+        return res.status(200).json({
           message: 'Check-in realizat cu succes! Spor la treabă.',
-          status: 'checked_in' 
+          status: 'checked_in'
         });
       }
 
@@ -571,17 +571,17 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       if (attendance.confirmation_status === 'checked_in') {
         const checkOutTime = new Date();
         const checkInTime = new Date(attendance.check_in_time);
-        
+
         // Anti-double-scan protection: must wait at least 5 seconds after check-in before check-out
         if (attendance.check_in_time && (checkOutTime - checkInTime) < 5000) {
-          return res.status(400).json({ 
-            error: 'Ai efectuat check-in-ul recent. Te rugăm să aștepți cel puțin 5 secunde înainte de a efectua check-out-ul.' 
+          return res.status(400).json({
+            error: 'Ai efectuat check-in-ul recent. Te rugăm să aștepți cel puțin 5 secunde înainte de a efectua check-out-ul.'
           });
         }
 
         const eventStartTime = new Date(event.start_time);
         const eventEndTime = new Date(event.end_time);
-        
+
         let awardedHours = 0;
         let isOvertime = false;
         let overtimeHours = 0;
@@ -599,7 +599,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
           // Always bounded strictly by the event schedule.
           // Early arrival and late departure are NEVER auto-awarded.
           const effectiveStart = checkInTime > eventStartTime ? checkInTime : eventStartTime;
-          const effectiveEnd   = checkOutTime < eventEndTime  ? checkOutTime : eventEndTime;
+          const effectiveEnd = checkOutTime < eventEndTime ? checkOutTime : eventEndTime;
 
           let overlapMs = Math.max(0, effectiveEnd - effectiveStart);
           awardedHours = overlapMs / (1000 * 60 * 60);
@@ -608,7 +608,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
           // How early did they arrive before the event started?
           const earlyMs = Math.max(0, eventStartTime - checkInTime);
           // How long did they stay after the event ended?
-          const lateMs  = Math.max(0, checkOutTime - eventEndTime);
+          const lateMs = Math.max(0, checkOutTime - eventEndTime);
 
           let overtimeMs = 0;
 
@@ -632,7 +632,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
         }
 
         awardedHours = Math.max(0.1, awardedHours).toFixed(2);
-        
+
         // 1. Închidem prezența
         await pool.query(
           `UPDATE event_attendance 
@@ -662,7 +662,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
           message += `\n\nS-a creat automat o cerere de Overtime pentru cele ${overtimeHours} ore suplimentare (ai depășit toleranța de 30 min).`;
         }
 
-        return res.status(200).json({ 
+        return res.status(200).json({
           message: message,
           status: 'attended',
           hours: awardedHours,
@@ -675,8 +675,8 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
         return res.status(400).json({ error: 'Ai confirmat deja prezența și plecarea pentru acest eveniment.' });
       }
 
-    // (După if-ul cu 'attended')
-      
+      // (După if-ul cu 'attended')
+
       // PLASA DE SIGURANȚĂ: Dacă statusul este null sau nerecunoscut, îl tratăm ca pe un check-in
       if (!attendance.confirmation_status || attendance.confirmation_status === null) {
         await pool.query(
@@ -685,9 +685,9 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
            WHERE user_id = $1 AND event_id = $2`,
           [userId, eventId]
         );
-        return res.status(200).json({ 
+        return res.status(200).json({
           message: 'Check-in realizat cu succes (Status corectat)! Spor la treabă.',
-          status: 'checked_in' 
+          status: 'checked_in'
         });
       }
 
@@ -743,7 +743,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
     const { id } = req.params;
     const { userId, role } = req.user;
     const { title, description, start_time, end_time, location, duration_hours, category, allow_overtime } = req.body;
-    
+
     try {
       const hasAccess = await checkEventAccess(id, userId, role, 'CAN_EDIT_EVENTS');
       if (!hasAccess) return res.status(403).json({ error: 'Nu ai permisiunea de a edita acest eveniment.' });
@@ -765,7 +765,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
   router.delete('/:id', verifyToken, async (req, res) => {
     const { id } = req.params;
     const { userId, role } = req.user;
-    
+
     try {
       const hasAccess = await checkEventAccess(id, userId, role, 'CAN_DELETE_EVENTS');
       if (!hasAccess) return res.status(403).json({ error: 'Nu ai permisiunea de a șterge acest eveniment.' });

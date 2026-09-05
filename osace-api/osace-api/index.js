@@ -54,13 +54,16 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // !origin sau 'null' permite cererile de pe dispozitive mobile (Expo Go/WebViews) sau Postman
+    const isDev = process.env.NODE_ENV !== 'production';
+    // !origin permite cererile de pe dispozitive mobile native (Expo/React Native) sau server-to-server
     if (
       !origin || 
-      origin === 'null' || 
       allowedOrigins.indexOf(origin) !== -1 ||
-      /^http:\/\/localhost:\d+$/.test(origin) ||
-      /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)
+      (isDev && (
+        origin === 'null' ||
+        /^http:\/\/localhost:\d+$/.test(origin) ||
+        /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)
+      ))
     ) {
       callback(null, true);
     } else {
@@ -91,7 +94,7 @@ function verifyToken(req, res, next) {
   const token = authHeader && authHeader.split(' ')[1];
   if (token == null) return res.status(401).json({ error: 'Acces refuzat. Token lipsă.' });
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, userPayload) => {
+  jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] }, (err, userPayload) => {
     if (err) {
       console.error('Eroare verificare JWT:', err.message);
       return res.status(403).json({ error: 'Token invalid sau expirat.' });
