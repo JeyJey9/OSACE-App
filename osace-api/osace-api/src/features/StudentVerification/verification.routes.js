@@ -23,23 +23,32 @@ module.exports = (pool, verifyToken, verifyAdmin) => {
       
       const status = userResult.rows[0].student_verification_status;
       
-      // If rejected, find the most recent rejection reason
+      // If rejected, find the most recent rejection reason and reviewer info
       let rejection_reason = null;
       let reviewed_at = null;
+      let rejected_by = null;
+      let reviewer_avatar_url = null;
       if (status === 'unverified') {
         const rejResult = await pool.query(
-          `SELECT rejection_reason, updated_at FROM student_id_verifications
-           WHERE user_id = $1 AND status = 'rejected'
-           ORDER BY updated_at DESC LIMIT 1`,
+          `SELECT siv.rejection_reason, siv.updated_at,
+                  u.display_name AS reviewer_display_name,
+                  u.avatar_url AS reviewer_avatar_url
+           FROM student_id_verifications siv
+           LEFT JOIN users u ON siv.reviewed_by = u.id
+           WHERE siv.user_id = $1 AND siv.status = 'rejected'
+           ORDER BY siv.updated_at DESC LIMIT 1`,
           [userId]
         );
         if (rejResult.rows.length > 0) {
-          rejection_reason = rejResult.rows[0].rejection_reason;
-          reviewed_at = rejResult.rows[0].updated_at;
+          const row = rejResult.rows[0];
+          rejection_reason = row.rejection_reason;
+          reviewed_at = row.updated_at;
+          rejected_by = row.reviewer_display_name || 'Admin';
+          reviewer_avatar_url = row.reviewer_avatar_url || null;
         }
       }
       
-      res.json({ status, rejection_reason, reviewed_at });
+      res.json({ status, rejection_reason, reviewed_at, rejected_by, reviewer_avatar_url });
     } catch (error) {
       console.error('[Verification] Eroare la preluarea statusului:', error);
       res.status(500).json({ error: 'Eroare server.' });
@@ -255,17 +264,28 @@ module.exports = (pool, verifyToken, verifyAdmin) => {
 
       // Send push notification
       try {
+        const adminRes = await pool.query(
+          'SELECT display_name FROM users WHERE id = $1',
+          [adminId]
+        );
+        const adminRow = adminRes.rows[0];
+        const adminName = adminRow?.display_name ? `@${adminRow.display_name}` : null;
+
         const tokenResult = await pool.query(
           'SELECT token FROM push_tokens WHERE user_id = $1 LIMIT 10',
           [request.user_id]
         );
         const tokens = tokenResult.rows.map(r => r.token).filter(Boolean);
         if (tokens.length > 0) {
+          const bodyText = adminName
+            ? `Legitimația ta a fost respinsă de ${adminName}: ${reason.trim()}. Te poți re-verifica oricând.`
+            : `Legitimația ta a fost respinsă: ${reason.trim()}. Te poți re-verifica oricând.`;
+
           await axios.post('https://api.expo.dev/v2/push/send', {
             to: tokens,
             sound: 'default',
             title: '⚠️ Verificare respinsă',
-            body: `Legitimația ta a fost respinsă: ${reason.trim()}. Te poți re-verifica oricând.`,
+            body: bodyText,
             data: { screen: 'StudentVerification' },
           }, {
             headers: {

@@ -10,6 +10,8 @@ import { useThemeColor } from '../../../constants/useThemeColor';
 import { useAuth } from '../../Auth/AuthContext';
 import api from '../../../services/api';
 import Toast from 'react-native-toast-message';
+import { format } from 'date-fns';
+import { ro } from 'date-fns/locale';
 
 export default function StudentVerificationScreen({ navigation }) {
   const { colors, isDark } = useThemeColor();
@@ -18,7 +20,7 @@ export default function StudentVerificationScreen({ navigation }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState(null);
+  const [rejectionInfo, setRejectionInfo] = useState(null);
   const BLUE = isDark ? '#4A90E2' : '#1566B9';
 
   useEffect(() => {
@@ -26,7 +28,12 @@ export default function StudentVerificationScreen({ navigation }) {
       try {
         const res = await api.get('/api/verification/my-status');
         if (res.data.status === 'unverified' && res.data.rejection_reason) {
-          setRejectionReason(res.data.rejection_reason);
+          setRejectionInfo({
+            reason: res.data.rejection_reason,
+            reviewer: res.data.rejected_by,
+            reviewerAvatar: res.data.reviewer_avatar_url,
+            reviewedAt: res.data.reviewed_at,
+          });
         }
       } catch (err) {
         console.error('[Verification] Failed to fetch status:', err);
@@ -106,13 +113,45 @@ export default function StudentVerificationScreen({ navigation }) {
           <Text style={s.heroSubtitle}>Încarcă legitimația ta pentru a putea participa la activitățile OSACE.</Text>
         </View>
 
-        {rejectionReason && (
-          <View style={[s.infoStrip, { backgroundColor: '#e74c3c15', borderColor: '#e74c3c40' }]}>
-            <Ionicons name="warning" size={20} color="#e74c3c" />
-            <View style={{ flex: 1 }}>
-              <Text style={[s.infoText, { color: '#e74c3c', fontWeight: '800', marginBottom: 2 }]}>Cerere respinsă</Text>
-              <Text style={[s.infoText, { color: isDark ? '#f8d7da' : '#c0392b' }]}>Motiv: {rejectionReason}</Text>
+        {rejectionInfo?.reason && (
+          <View style={s.rejectCard}>
+            <View style={s.rejectCardHeader}>
+              <View style={s.rejectBadge}>
+                <Ionicons name="alert-circle" size={16} color="#E53E3E" />
+                <Text style={s.rejectBadgeText}>Cerere Respinsă</Text>
+              </View>
+              {rejectionInfo.reviewedAt ? (
+                <Text style={s.rejectDateText}>
+                  {format(new Date(typeof rejectionInfo.reviewedAt === 'string' ? rejectionInfo.reviewedAt.replace(' ', 'T') : rejectionInfo.reviewedAt), 'dd MMM, HH:mm', { locale: ro })}
+                </Text>
+              ) : null}
             </View>
+
+            <View style={s.rejectReasonBox}>
+              <Text style={s.rejectReasonLabel}>MOTIVUL RESPINGERII</Text>
+              <Text style={s.rejectReasonValue}>{rejectionInfo.reason}</Text>
+            </View>
+
+            {rejectionInfo.reviewer ? (
+              <View style={s.reviewerFooter}>
+                {rejectionInfo.reviewerAvatar ? (
+                  <Image
+                    source={{ uri: `${api.defaults.baseURL}${rejectionInfo.reviewerAvatar}` }}
+                    style={s.reviewerAvatar}
+                  />
+                ) : (
+                  <View style={s.reviewerAvatarPlaceholder}>
+                    <Text style={s.reviewerAvatarInitial}>
+                      {rejectionInfo.reviewer.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                <Text style={s.reviewerFootnote}>
+                  Respins de{' '}
+                  <Text style={s.reviewerHandle}>@{rejectionInfo.reviewer}</Text>
+                </Text>
+              </View>
+            ) : null}
           </View>
         )}
 
@@ -204,6 +243,100 @@ const createStyles = (colors, isDark, insets, BLUE) => StyleSheet.create({
   heroSubtitle: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, paddingHorizontal: 10 },
   infoStrip: { flexDirection: 'row', alignItems: 'flex-start', borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 20, gap: 10 },
   infoText: { fontSize: 13, flex: 1, lineHeight: 19, fontWeight: '500' },
+  rejectCard: {
+    backgroundColor: isDark ? 'rgba(231, 76, 60, 0.12)' : '#FFF5F5',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: isDark ? 'rgba(231, 76, 60, 0.35)' : '#FED7D7',
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: '#E53E3E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: isDark ? 0.2 : 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  rejectCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  rejectBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: isDark ? 'rgba(231, 76, 60, 0.22)' : '#FED7D7',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  rejectBadgeText: {
+    color: isDark ? '#FC8181' : '#C53030',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  rejectDateText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  rejectReasonBox: {
+    backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#E53E3E',
+  },
+  rejectReasonLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: isDark ? '#FC8181' : '#E53E3E',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  rejectReasonValue: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  reviewerFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 2,
+  },
+  reviewerAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: isDark ? '#FC8181' : '#E53E3E',
+  },
+  reviewerAvatarPlaceholder: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: isDark ? 'rgba(231, 76, 60, 0.3)' : '#FED7D7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewerAvatarInitial: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: isDark ? '#FC8181' : '#C53030',
+  },
+  reviewerFootnote: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  reviewerHandle: {
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
   card: { backgroundColor: colors.card, borderRadius: 20, padding: 20, marginBottom: 16, borderWidth: isDark ? 1 : 0, borderColor: 'rgba(255,255,255,0.07)', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: isDark ? 0.25 : 0.07, shadowRadius: 16, elevation: 5 },
   sectionLabel: { fontSize: 10, fontWeight: '800', color: colors.textSecondary, letterSpacing: 1.5, marginBottom: 14 },
   pickerArea: { borderWidth: 2, borderStyle: 'dashed', borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#D5DCE6', borderRadius: 16, padding: 28, alignItems: 'center', marginBottom: 16 },
