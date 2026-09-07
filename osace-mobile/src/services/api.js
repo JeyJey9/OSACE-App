@@ -53,17 +53,15 @@ export const setupAxiosInterceptors = (logoutCallback) => {
     async (error) => {
       const { status } = error.response || {};
 
-      // ▼▼▼ FIX 2: Obținem URL-ul care a eșuat ▼▼▼
-      const failedUrl = error.config.url;
-      const ignoreUrls = ['/api/auth/login', '/api/auth/register'];
+      const failedUrl = error.config?.url || '';
+      const isAuthUrl = failedUrl.startsWith('/api/auth/') || failedUrl.includes('/auth/');
 
       // Verificăm dacă este o eroare 401/403
       if ((status === 401 || status === 403) && !isAlertShown) {
 
-        // ▼▼▼ FIX 2: Adăugăm condiția de ignorare ▼▼▼
-        if (ignoreUrls.includes(failedUrl)) {
-          // Dacă e login sau register, NU facem nimic global.
-          // Lăsăm eroarea să fie prinsă de LoginScreen.js
+        if (isAuthUrl) {
+          // Dacă e orice traseu de autentificare (login, register, verify, reset), NU facem nimic global.
+          // Lăsăm componenta apelantă să gestioneze răspunsul.
         } else {
           // Este o eroare pe un URL protejat, deci sesiunea CHIAR a expirat
           isAlertShown = true;

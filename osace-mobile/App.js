@@ -20,6 +20,7 @@ import NotificationHistoryScreen from './src/features/Notifications/screens/Noti
 import ScanScreen from './src/features/Event/screens/ScanScreen';
 import ForgotPasswordScreen from './src/features/Auth/screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/features/Auth/screens/ResetPasswordScreen';
+import ConfirmEmailScreen from './src/features/Auth/screens/ConfirmEmailScreen';
 import OnboardingScreen from './src/features/Auth/screens/OnboardingScreen';
 import { PermissionProvider } from './src/features/Auth/PermissionContext';
 import NetworkBanner from './src/components/NetworkBanner';
@@ -171,6 +172,11 @@ function AppNavigator() {
         <>
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="ConfirmEmail"
+            component={ConfirmEmailScreen}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen
             name="ForgotPassword"
             component={ForgotPasswordScreen}

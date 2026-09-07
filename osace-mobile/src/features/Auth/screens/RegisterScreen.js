@@ -69,28 +69,29 @@ export default function RegisterScreen({ navigation }) {
     if (lastName.trim().length < 2) { setError('Numele de familie trebuie să aibă cel puțin 2 caractere.'); return; }
     if (firstName.trim().length < 2) { setError('Prenumele trebuie să aibă cel puțin 2 caractere.'); return; }
     if (!validateEmail(email)) { setError('Te rog introdu o adresă de email validă.'); return; }
-    if (password.length < 6) { setError('Parola trebuie să aibă cel puțin 6 caractere.'); return; }
+    if (password.length < 8) { setError('Parola trebuie să aibă cel puțin 8 caractere.'); return; }
 
     setLoading(true);
     try {
-      const response = await api.post(`/api/auth/register`, {
+      await api.post(`/api/auth/register-request`, {
         display_name: displayName.trim(),
         last_name: lastName.trim(),
         first_name: firstName.trim(),
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         password,
       });
 
       Toast.show({
-        type: 'success',
-        text1: 'Cont Creat!',
-        text2: `Contul pentru ${response.data.user?.email || email} a fost creat.`,
+        type: 'info',
+        text1: 'Cod de verificare trimis! ✉️',
+        text2: `Verifică inbox-ul pentru ${email.trim().toLowerCase()}`,
+        visibilityTime: 4000,
       });
 
-      setTimeout(() => navigation.navigate('Login'), 2000);
+      navigation.navigate('ConfirmEmail', { email: email.trim().toLowerCase() });
     } catch (err) {
-      console.error('Eroare la înregistrare:', err.response?.data || err.message);
-      setError(err.response?.data?.error || 'A apărut o eroare la înregistrare.');
+      console.error('Eroare la inițierea înregistrării:', err.response?.data || err.message);
+      setError(err.response?.data?.error || 'A apărut o eroare la trimiterea cererii de înregistrare.');
     } finally {
       setLoading(false);
     }
