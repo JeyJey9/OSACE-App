@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 export default function ScanScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { eventId } = route.params; 
+  const initialEventId = route.params?.eventId || null; 
 
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
@@ -24,8 +24,43 @@ export default function ScanScreen() {
     setScanned(true); 
 
     try {
-      const response = await api.post(`/api/events/${eventId}/confirm-presence`, {
-        code: data,
+      let targetEventId = initialEventId;
+      let targetCode = data ? data.toString().trim() : '';
+
+      // Extragem eventId și code dacă codul QR este structurat (URL, OSACE prefix, sau JSON)
+      if (typeof targetCode === 'string') {
+        if (targetCode.includes('/scan?') || targetCode.includes('eventId=')) {
+          const queryPart = targetCode.split('?')[1] || targetCode;
+          const searchParams = new URLSearchParams(queryPart);
+          if (searchParams.get('eventId')) targetEventId = searchParams.get('eventId');
+          if (searchParams.get('code')) targetCode = searchParams.get('code');
+        } else if (targetCode.startsWith('OSACE:')) {
+          const parts = targetCode.split(':');
+          if (parts.length >= 3) {
+            targetEventId = parts[1];
+            targetCode = parts[2];
+          }
+        } else if (targetCode.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(targetCode);
+            if (parsed.eventId) targetEventId = parsed.eventId;
+            if (parsed.code) targetCode = parsed.code;
+          } catch (e) {}
+        }
+      }
+
+      if (!targetEventId) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert(
+          'Cod QR Neidentificat',
+          'Codul scanat nu conține un eveniment valid OSACE.',
+          [{ text: 'Încearcă din nou', onPress: () => setScanned(false) }]
+        );
+        return;
+      }
+
+      const response = await api.post(`/api/events/${targetEventId}/confirm-presence`, {
+        code: targetCode,
       });
 
       const serverMessage = response.data.message;
@@ -36,8 +71,8 @@ export default function ScanScreen() {
       let finalMessage = serverMessage;
 
       if (status === 'checked_in') {
-        title = 'Check-in Reușit! 📍';
-        finalMessage = 'Ești prezent! ⚠️ NU UITA să scanezi din nou când pleci!';
+        title = 'Prezență Înregistrată! 📍';
+        finalMessage = serverMessage || 'Ești prezent! Ora sosirii tale a fost salvată.';
       } else if (status === 'attended') {
         title = 'Check-out Reușit! 🏆';
       }

@@ -135,28 +135,15 @@ export default function MyEventsScreen() {
               <Text style={[styles.statusText, { color: '#27ae60' }]}>Prezență Confirmată</Text>
             </View>
           ) : isCheckedIn ? (
-            <View style={{ width: '100%' }}>
-              <View style={[styles.statusBadge, { backgroundColor: isDark ? 'rgba(52, 152, 219, 0.15)' : '#EBF5FB', borderColor: isDark ? 'rgba(52, 152, 219, 0.3)' : 'rgba(52, 152, 219, 0.2)', marginBottom: 12, alignSelf: 'flex-start' }]}>
-                <Ionicons name="time" size={16} color="#3498db" />
-                <Text style={[styles.statusText, { color: '#3498db' }]}>Check-in realizat</Text>
-              </View>
-
-              <TouchableOpacity
-                style={[styles.scanButton, { backgroundColor: STANDARD_BLUE + '15', borderColor: STANDARD_BLUE + '40', borderWidth: 1 }]}
-                onPress={() => navigation.navigate('ScanScreen', { eventId: item.id })}
-              >
-                <Ionicons name="walk-outline" size={18} color={STANDARD_BLUE} />
-                <Text style={[styles.scanButtonText, { color: STANDARD_BLUE }]}>Scanează la plecare</Text>
-              </TouchableOpacity>
+            <View style={[styles.statusBadge, { backgroundColor: isDark ? 'rgba(52, 152, 219, 0.15)' : '#EBF5FB', borderColor: isDark ? 'rgba(52, 152, 219, 0.3)' : 'rgba(52, 152, 219, 0.2)' }]}>
+              <Ionicons name="time" size={16} color="#3498db" />
+              <Text style={[styles.statusText, { color: '#3498db' }]}>În Sală (Check-in)</Text>
             </View>
           ) : (
-            <TouchableOpacity
-              style={[styles.scanButton, { backgroundColor: STANDARD_BLUE + '15', borderColor: STANDARD_BLUE + '40', borderWidth: 1 }]}
-              onPress={() => navigation.navigate('ScanScreen', { eventId: item.id })}
-            >
-              <Ionicons name="qr-code-outline" size={18} color={STANDARD_BLUE} />
-              <Text style={[styles.scanButtonText, { color: STANDARD_BLUE }]}>Scanează la sosire</Text>
-            </TouchableOpacity>
+            <View style={[styles.statusBadge, { backgroundColor: isDark ? 'rgba(243, 156, 18, 0.15)' : '#FEF9E7', borderColor: isDark ? 'rgba(243, 156, 18, 0.3)' : 'rgba(243, 156, 18, 0.2)' }]}>
+              <Ionicons name="calendar-outline" size={16} color="#f39c12" />
+              <Text style={[styles.statusText, { color: '#f39c12' }]}>Înscris la activitate</Text>
+            </View>
           )}
         </View>
       </TouchableOpacity>

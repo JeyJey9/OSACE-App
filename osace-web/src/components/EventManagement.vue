@@ -66,8 +66,10 @@
               <p class="ev-location">📍 {{ selectedEvent.location }}</p>
             </div>
             <div class="detail-actions">
-              <button class="btn-outline" @click="openEditMode">Editează</button>
-              <button class="btn-danger-outline" @click="deleteEvent(selectedEvent.id)">Șterge</button>
+              <button class="btn-primary btn-sm" @click="openProjectorMode">📽️ Proiecție Videoproiector</button>
+              <button class="btn-success btn-sm" @click="openBulkValidationModal">⚡ Validează Prezențe</button>
+              <button class="btn-outline btn-sm" @click="openEditMode">Editează</button>
+              <button class="btn-danger-outline btn-sm" @click="deleteEvent(selectedEvent.id)">Șterge</button>
             </div>
           </div>
 
@@ -99,23 +101,40 @@
                 <span>{{ countdown }}s</span>
               </div>
             </div>
-            <button class="btn-outline" @click="fetchAndShowQR">🔄 Regenerează manual</button>
+            <div style="display:flex;gap:0.75rem;margin-top:0.75rem;">
+              <button class="btn-outline btn-sm" @click="fetchAndShowQR">🔄 Regenerează manual</button>
+              <button class="btn-primary btn-sm" @click="openProjectorMode">↗ Deschide Ecran Complet</button>
+            </div>
           </div>
 
           <!-- Participants Section -->
           <div class="participants-section">
-            <h4>Participanți ({{ participants.length }})</h4>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+              <h4 style="margin:0;">Participanți ({{ participants.length }})</h4>
+              <button class="btn-secondary btn-sm" @click="openBulkValidationModal">⚡ Validare în Masă</button>
+            </div>
             <div v-if="loadingParticipants" class="loading-state">Se încarcă...</div>
             <div v-else-if="participants.length === 0" class="empty-state">
               Niciun participant confirmat.
             </div>
             <div v-else class="participants-grid">
-              <div v-for="p in participants" :key="p.user_id" class="participant-chip" :class="p.confirmation_status">
+              <div 
+                v-for="p in participants" 
+                :key="p.user_id" 
+                class="participant-chip clickable" 
+                :class="p.confirmation_status"
+                @click="openEditParticipantModal(p)"
+                title="Click pentru a edita orele și statusul acestui participant"
+              >
                 <span class="p-avatar">{{ p.display_name ? p.display_name.charAt(0) : '?' }}</span>
                 <div class="p-info">
                   <span class="p-name">{{ p.display_name }}</span>
-                  <span class="p-status">{{ formatStatus(p.confirmation_status) }} · {{ p.awarded_hours ? p.awarded_hours + 'h' : '–' }}</span>
+                  <span class="p-status">
+                    {{ formatStatus(p.confirmation_status) }} · {{ p.awarded_hours ? p.awarded_hours + 'h' : '–' }}
+                    <span v-if="p.check_in_time" class="p-time">({{ formatScanHour(p.check_in_time) }})</span>
+                  </span>
                 </div>
+                <span class="edit-badge">✏️</span>
               </div>
             </div>
           </div>
@@ -126,6 +145,146 @@
           <p>← Selectează un eveniment din listă sau creează unul nou.</p>
         </div>
 
+      </div>
+    </div>
+
+    <!-- Modal Editare Individuală Participant -->
+    <div v-if="editParticipantModal.visible" class="modal-overlay" @click.self="editParticipantModal.visible = false">
+      <div class="modal-card glass-panel-elevated">
+        <h3>Editare Participant</h3>
+        <p class="modal-sub">Participant: <strong>{{ editParticipantModal.target?.display_name }}</strong></p>
+
+        <form @submit.prevent="saveSingleParticipant" style="display:flex;flex-direction:column;gap:1rem;margin-top:1rem;">
+          <div class="form-group">
+            <label>Status Prezență</label>
+            <select v-model="editParticipantModal.status" class="input-field" required>
+              <option value="registered">Înscris</option>
+              <option value="checked_in">Check-in (În Sală)</option>
+              <option value="attended">Prezent (Ore Aprobate)</option>
+              <option value="absent">Absent</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Ore Acordate</label>
+            <input 
+              v-model.number="editParticipantModal.hours" 
+              type="number" 
+              step="0.25" 
+              min="0" 
+              max="24" 
+              class="input-field" 
+              required 
+            />
+          </div>
+
+          <div v-if="editParticipantModal.target?.check_in_time" class="form-group" style="font-size:0.85rem;color:var(--color-text-secondary);">
+            <span>Ora Check-in: <strong>{{ formatDateTime(editParticipantModal.target.check_in_time) }}</strong></span>
+          </div>
+
+          <div class="modal-actions" style="display:flex;gap:1rem;margin-top:0.5rem;">
+            <button type="button" @click="editParticipantModal.visible = false" class="btn-secondary" style="flex:1;">Anulează</button>
+            <button type="submit" class="btn-primary" :disabled="editParticipantModal.saving" style="flex:1;">
+              {{ editParticipantModal.saving ? 'Se salvează...' : 'Salvează Modificarea' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Validare În Masă (Ședință) -->
+    <div v-if="bulkValidationModal.visible" class="modal-overlay" @click.self="bulkValidationModal.visible = false">
+      <div class="modal-card modal-lg glass-panel-elevated" style="max-width:850px;width:95%;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <div>
+            <h3 style="margin:0;">Validare Prezențe în Masă</h3>
+            <p style="margin:0;font-size:0.9rem;color:var(--color-text-secondary);">
+              Eveniment: <strong>{{ selectedEvent?.title }}</strong> · Orele sunt calculate automat pe baza sosirii.
+            </p>
+          </div>
+          <button class="btn-close" @click="bulkValidationModal.visible = false">✕</button>
+        </div>
+
+        <div v-if="bulkValidationModal.loading" class="loading-state">Se încarcă lista sosirilor...</div>
+        <div v-else-if="bulkValidationModal.attendees.length === 0" class="empty-state">
+          Niciun voluntar nu a scanat codul pentru acest eveniment.
+        </div>
+        <div v-else>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;padding:0.5rem 0.75rem;background:rgba(255,255,255,0.03);border-radius:8px;">
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:600;font-size:0.9rem;">
+              <input 
+                type="checkbox" 
+                :checked="bulkValidationModal.selectedIds.length === bulkValidationModal.attendees.length"
+                @change="toggleBulkSelectAll"
+              />
+              <span>Selectează toți ({{ bulkValidationModal.selectedIds.length }}/{{ bulkValidationModal.attendees.length }})</span>
+            </label>
+            <span style="font-size:0.8rem;color:var(--color-text-muted);">Poți ajusta individual orele din căsuță înainte de validare.</span>
+          </div>
+
+          <div style="max-height:380px;overflow-y:auto;" class="custom-scrollbar">
+            <table class="table" style="width:100%;">
+              <thead>
+                <tr>
+                  <th width="40"></th>
+                  <th>Voluntar</th>
+                  <th>Ora Scanării</th>
+                  <th>Punctualitate</th>
+                  <th width="110">Ore Acordate</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="a in bulkValidationModal.attendees" :key="a.user_id">
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      :value="a.user_id" 
+                      v-model="bulkValidationModal.selectedIds" 
+                    />
+                  </td>
+                  <td>
+                    <strong>{{ a.first_name ? `${a.first_name} ${a.last_name}` : a.display_name }}</strong>
+                    <div style="font-size:0.75rem;color:var(--color-text-muted);">@{{ a.display_name }}</div>
+                  </td>
+                  <td>{{ formatScanHour(a.check_in_time) }}</td>
+                  <td>
+                    <span class="badge" :class="getPunctualBadgeClass(a.punctuality_status)">
+                      {{ formatPunctualityLabel(a.punctuality_status, a.minutes_late) }}
+                    </span>
+                  </td>
+                  <td>
+                    <input 
+                      type="number" 
+                      step="0.25" 
+                      min="0" 
+                      max="24"
+                      v-model.number="bulkValidationModal.hoursMap[a.user_id]" 
+                      class="input-field"
+                      style="width:75px;padding:0.3rem 0.5rem;text-align:center;font-weight:700;"
+                    />
+                  </td>
+                  <td>
+                    <span class="badge" :class="a.confirmation_status === 'attended' ? 'badge-green' : 'badge-yellow'">
+                      {{ a.confirmation_status === 'attended' ? 'Validat' : 'În Sală' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:1rem;margin-top:1.25rem;">
+            <button class="btn-secondary" @click="bulkValidationModal.visible = false">Închide</button>
+            <button 
+              class="btn-success" 
+              :disabled="bulkValidationModal.selectedIds.length === 0 || bulkValidationModal.submitting"
+              @click="submitBulkValidationFromAdmin"
+            >
+              {{ bulkValidationModal.submitting ? 'Se validează...' : `Validează ${bulkValidationModal.selectedIds.length} Prezențe & Trimite Notificări` }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -202,8 +361,9 @@ const fetchAndShowQR = async () => {
   try {
     const res = await api.get(`/events/${selectedEvent.value.id}/current-code`);
     const code = res.data.code;
-    if (qrCanvas.value) {
-      await QRCode.toCanvas(qrCanvas.value, code, { width: 220, margin: 2, color: { dark: '#0f172a', light: '#f8fafc' } });
+    if (qrCanvas.value && code) {
+      const universalPayload = `https://osace.ro/scan?eventId=${selectedEvent.value.id}&code=${code}`;
+      await QRCode.toCanvas(qrCanvas.value, universalPayload, { width: 220, margin: 2, color: { dark: '#0f172a', light: '#f8fafc' } });
     }
   } catch (e) {
     console.error('Eroare la generarea QR:', e);
@@ -307,6 +467,152 @@ const deleteEvent = async (id) => {
   } catch (e) {
     alert(e.response?.data?.error || 'Eroare la ștergere.');
   }
+};
+
+// ─── Projector & Modals State ─────────────────────────────────────────────
+const openProjectorMode = () => {
+  if (!selectedEvent.value) return;
+  window.open(`/projector/${selectedEvent.value.id}`, '_blank');
+};
+
+// ─── Single Participant Edit Modal State ────────────────────────────────────
+const editParticipantModal = ref({
+  visible: false,
+  target: null,
+  status: 'registered',
+  hours: 0,
+  saving: false,
+});
+
+const openEditParticipantModal = (participant) => {
+  editParticipantModal.value = {
+    visible: true,
+    target: participant,
+    status: participant.confirmation_status || 'registered',
+    hours: parseFloat(participant.awarded_hours) || 0,
+    saving: false,
+  };
+};
+
+const saveSingleParticipant = async () => {
+  if (!editParticipantModal.value.target || !selectedEvent.value) return;
+  editParticipantModal.value.saving = true;
+  try {
+    const payload = {
+      status: editParticipantModal.value.status,
+      awarded_hours: parseFloat(editParticipantModal.value.hours) || 0,
+    };
+    await api.put(`/events/${selectedEvent.value.id}/participants/${editParticipantModal.value.target.user_id}`, payload);
+    editParticipantModal.value.visible = false;
+    await fetchParticipants(selectedEvent.value.id);
+  } catch (err) {
+    console.error('Eroare la salvare participant:', err);
+    alert(err.response?.data?.error || 'Nu s-a putut salva modificarea participantului.');
+  } finally {
+    editParticipantModal.value.saving = false;
+  }
+};
+
+// ─── Bulk Meeting Attendance Validation Modal State ─────────────────────────
+const bulkValidationModal = ref({
+  visible: false,
+  loading: false,
+  attendees: [],
+  selectedIds: [],
+  hoursMap: {},
+  submitting: false,
+});
+
+const openBulkValidationModal = async () => {
+  if (!selectedEvent.value) return;
+  bulkValidationModal.value.visible = true;
+  bulkValidationModal.value.loading = true;
+  bulkValidationModal.value.attendees = [];
+  bulkValidationModal.value.selectedIds = [];
+  bulkValidationModal.value.hoursMap = {};
+
+  try {
+    const res = await api.get(`/events/${selectedEvent.value.id}/attendance-review`);
+    const atts = res.data.attendees || [];
+    bulkValidationModal.value.attendees = atts;
+
+    const initialHours = {};
+    const initialSelected = [];
+
+    atts.forEach(a => {
+      initialHours[a.user_id] = a.suggested_hours !== undefined 
+        ? a.suggested_hours 
+        : (parseFloat(selectedEvent.value.duration_hours) || 2.0);
+      initialSelected.push(a.user_id);
+    });
+
+    bulkValidationModal.value.hoursMap = initialHours;
+    bulkValidationModal.value.selectedIds = initialSelected;
+  } catch (err) {
+    console.error('Eroare la attendance review:', err);
+    alert('Nu s-au putut prelua datele de prezență.');
+  } finally {
+    bulkValidationModal.value.loading = false;
+  }
+};
+
+const toggleBulkSelectAll = (e) => {
+  if (e.target.checked) {
+    bulkValidationModal.value.selectedIds = bulkValidationModal.value.attendees.map(a => a.user_id);
+  } else {
+    bulkValidationModal.value.selectedIds = [];
+  }
+};
+
+const submitBulkValidationFromAdmin = async () => {
+  if (bulkValidationModal.value.selectedIds.length === 0 || !selectedEvent.value) return;
+  bulkValidationModal.value.submitting = true;
+
+  try {
+    const payload = {
+      attendees: bulkValidationModal.value.selectedIds.map(uid => ({
+        userId: uid,
+        hours: bulkValidationModal.value.hoursMap[uid] !== undefined 
+          ? bulkValidationModal.value.hoursMap[uid] 
+          : (parseFloat(selectedEvent.value.duration_hours) || 2.0)
+      }))
+    };
+
+    const res = await api.post(`/events/${selectedEvent.value.id}/bulk-validate`, payload);
+    alert(res.data.message || 'Prezențele au fost validate cu succes!');
+    bulkValidationModal.value.visible = false;
+    await fetchParticipants(selectedEvent.value.id);
+  } catch (err) {
+    console.error('Eroare validare bulk:', err);
+    alert(err.response?.data?.error || 'Eroare la validarea prezențelor.');
+  } finally {
+    bulkValidationModal.value.submitting = false;
+  }
+};
+
+// Additional Formatting Helpers
+const formatScanHour = (dt) => {
+  if (!dt) return '-';
+  return new Date(dt).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+};
+
+const formatDateTime = (dt) => {
+  if (!dt) return '-';
+  return new Date(dt).toLocaleString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+};
+
+const formatPunctualityLabel = (status, minutes) => {
+  if (status === 'on_time') return '🟢 La timp';
+  if (status === 'late') return `🟡 Întârziat ${minutes}m`;
+  if (status === 'late_critical') return `🔴 Venit la final (${minutes}m)`;
+  return 'Înregistrat';
+};
+
+const getPunctualBadgeClass = (status) => {
+  if (status === 'on_time') return 'badge-green';
+  if (status === 'late') return 'badge-yellow';
+  if (status === 'late_critical') return 'badge-red';
+  return 'badge-blue';
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

@@ -41,6 +41,12 @@ const router = createRouter({
           meta: { requiresAdmin: true }
         }
       ]
+    },
+    {
+      path: '/projector/:id',
+      name: 'projector',
+      component: () => import('../views/ProjectorView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
     }
   ]
 });

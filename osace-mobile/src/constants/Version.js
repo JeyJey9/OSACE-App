@@ -1,9 +1,17 @@
 // src/constants/Version.js
 // Centrul de stocare al versiunii aplicației mobile OSACE și istoricul de Patch Notes.
 
-export const APP_VERSION = '2.3.0';
+export const APP_VERSION = '2.4.0';
 
 export const PATCH_NOTES = [
+  {
+    version: '2.4.0',
+    items: [
+      'Scan QR Universal: Buton in antet pentru a scana prezenta oricand.',
+      'Confirmare cont prin cod pe email la inregistrare.',
+      'Interfata curatata si optimizari de performanta pe ecranele de evenimente.',
+    ],
+  },
   {
     version: '2.3.0',
     items: [

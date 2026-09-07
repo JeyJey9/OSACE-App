@@ -534,22 +534,38 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
     if (!code) return res.status(400).json({ error: 'Codul de confirmare lipsă.' });
 
     try {
-      // 1. Preluăm datele evenimentului și statusul actual al voluntarului
+      // 1. Preluăm datele evenimentului
       const eventResult = await pool.query('SELECT * FROM events WHERE id = $1', [eventId]);
+      if (eventResult.rows.length === 0) return res.status(404).json({ error: 'Eveniment negăsit.' });
+      const event = eventResult.rows[0];
+
+      // 2. Verificăm codul QR (TOTP)
+      const isValid = authenticator.check(code, event.totp_secret);
+      if (!isValid) return res.status(401).json({ error: 'Cod invalid sau expirat.' });
+
+      // 3. Preluăm statusul actual al voluntarului
       const attendanceResult = await pool.query(
         'SELECT confirmation_status, check_in_time FROM event_attendance WHERE user_id = $1 AND event_id = $2',
         [userId, eventId]
       );
 
-      if (eventResult.rows.length === 0) return res.status(404).json({ error: 'Eveniment negăsit.' });
-      if (attendanceResult.rows.length === 0) return res.status(404).json({ error: 'Nu ești înscris la acest eveniment.' });
+      // CAZ NOU: Walk-in / Auto-înregistrare la scanare (dacă nu era înscris la eveniment)
+      if (attendanceResult.rows.length === 0) {
+        await pool.query(
+          `INSERT INTO event_attendance (user_id, event_id, confirmation_status, check_in_time)
+           VALUES ($1, $2, 'checked_in', NOW())
+           ON CONFLICT (user_id, event_id) DO UPDATE SET
+             confirmation_status = 'checked_in',
+             check_in_time = COALESCE(event_attendance.check_in_time, NOW())`,
+          [userId, eventId]
+        );
+        return res.status(200).json({
+          message: 'Prezență înregistrată! 📍 Spor la treabă.',
+          status: 'checked_in'
+        });
+      }
 
-      const event = eventResult.rows[0];
       const attendance = attendanceResult.rows[0];
-
-      // 2. Verificăm codul QR (TOTP)
-      const isValid = authenticator.check(code, event.totp_secret);
-      if (!isValid) return res.status(401).json({ error: 'Cod invalid sau expirat.' });
 
       // --- LOGICA DE STATUS ---
 
@@ -775,6 +791,214 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       return res.status(200).json({ message: 'Eveniment șters cu succes.' });
     } catch (error) {
       res.status(500).json({ error: 'Eroare server la ștergere.' });
+    }
+  });
+
+  // GET /:id/attendance-review (Raport prezențe & punctualitate pentru validare rapidă)
+  router.get('/:id/attendance-review', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { userId, role } = req.user;
+
+    try {
+      const hasAccess = await checkEventAccess(id, userId, role, 'CAN_SCAN_QR_ANYWHERE');
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Nu ai permisiunea de a vizualiza prezențele acestui eveniment.' });
+      }
+
+      const eventResult = await pool.query('SELECT id, title, start_time, end_time, duration_hours, category, location FROM events WHERE id = $1', [id]);
+      if (eventResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Eveniment negăsit.' });
+      }
+      const event = eventResult.rows[0];
+
+      const attendeesResult = await pool.query(
+        `SELECT 
+           u.id as user_id,
+           u.display_name,
+           u.first_name,
+           u.last_name,
+           u.email,
+           u.avatar_url,
+           ea.confirmation_status,
+           ea.check_in_time,
+           ea.check_out_time,
+           ea.awarded_hours,
+           ea.confirmed_at
+         FROM event_attendance ea
+         JOIN users u ON ea.user_id = u.id
+         WHERE ea.event_id = $1
+         ORDER BY 
+           CASE WHEN ea.check_in_time IS NOT NULL THEN 0 ELSE 1 END,
+           ea.check_in_time ASC,
+           u.last_name ASC`,
+        [id]
+      );
+
+      const eventStart = new Date(event.start_time);
+      const eventEnd = new Date(event.end_time);
+      const fullDuration = parseFloat(event.duration_hours) || 2.0;
+
+      const attendees = attendeesResult.rows.map(row => {
+        let minutesLate = 0;
+        let punctualityStatus = 'unknown';
+        let suggestedHours = fullDuration;
+
+        if (row.check_in_time) {
+          const checkIn = new Date(row.check_in_time);
+          minutesLate = Math.round((checkIn.getTime() - eventStart.getTime()) / (1000 * 60));
+
+          if (minutesLate <= 15) {
+            punctualityStatus = 'on_time';
+            suggestedHours = fullDuration;
+          } else {
+            // Sosire după primele 15 minute
+            const remainingMs = Math.max(0, eventEnd.getTime() - checkIn.getTime());
+            const remainingHours = remainingMs / (1000 * 60 * 60);
+
+            if (remainingHours <= 0.5) {
+              punctualityStatus = 'late_critical';
+              suggestedHours = 0;
+            } else {
+              punctualityStatus = 'late';
+              suggestedHours = Math.min(fullDuration, Math.max(0.25, Math.round(remainingHours * 4) / 4));
+            }
+          }
+        }
+
+        if (row.confirmation_status === 'attended' && row.awarded_hours !== null) {
+          suggestedHours = parseFloat(row.awarded_hours);
+        }
+
+        return {
+          ...row,
+          minutes_late: minutesLate,
+          punctuality_status: punctualityStatus,
+          suggested_hours: suggestedHours
+        };
+      });
+
+      res.json({
+        event,
+        attendees
+      });
+    } catch (error) {
+      console.error('Eroare la attendance-review:', error);
+      res.status(500).json({ error: 'Eroare server la preluarea prezențelor.' });
+    }
+  });
+
+  // POST /:id/bulk-validate (Validare în masă a prezențelor cu ore ajustate)
+  router.post('/:id/bulk-validate', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { userId, role } = req.user;
+    const { attendees } = req.body; // Array de { userId, hours }
+
+    if (!attendees || !Array.isArray(attendees) || attendees.length === 0) {
+      return res.status(400).json({ error: 'Lista de participanți pentru validare este goală.' });
+    }
+
+    const client = await pool.connect();
+    try {
+      const hasAccess = await checkEventAccess(id, userId, role, 'CAN_SCAN_QR_ANYWHERE');
+      if (!hasAccess) {
+        client.release();
+        return res.status(403).json({ error: 'Nu ai permisiunea de a valida prezențele pentru acest eveniment.' });
+      }
+
+      const eventResult = await client.query('SELECT id, title, start_time, end_time, category FROM events WHERE id = $1', [id]);
+      if (eventResult.rows.length === 0) {
+        client.release();
+        return res.status(404).json({ error: 'Eveniment negăsit.' });
+      }
+      const event = eventResult.rows[0];
+
+      await client.query('BEGIN');
+
+      const validatedUserIds = [];
+
+      for (const item of attendees) {
+        const targetUserId = parseInt(item.userId, 10);
+        const hours = Math.max(0, parseFloat(item.hours) || 0);
+
+        if (isNaN(targetUserId)) continue;
+
+        await client.query(
+          `INSERT INTO event_attendance (user_id, event_id, confirmation_status, awarded_hours, confirmed_at, check_out_time)
+           VALUES ($1, $2, 'attended', $3, NOW(), NOW())
+           ON CONFLICT (user_id, event_id) DO UPDATE SET
+             confirmation_status = 'attended',
+             awarded_hours = $3,
+             confirmed_at = NOW(),
+             check_out_time = COALESCE(event_attendance.check_out_time, NOW())`,
+          [targetUserId, id, hours]
+        );
+
+        validatedUserIds.push(targetUserId);
+      }
+
+      await client.query('COMMIT');
+      client.release();
+
+      // Badge-uri & Audit Log
+      for (const uid of validatedUserIds) {
+        checkBadgesOnConfirmation(uid, id, pool);
+      }
+      await logAction(pool, userId, 'EVENT_BULK_ATTENDANCE_VALIDATE', 'event', parseInt(id), {
+        count: validatedUserIds.length,
+        eventTitle: event.title
+      });
+
+      // Trimitere Notificări către participanți
+      if (validatedUserIds.length > 0) {
+        try {
+          const notifTitle = 'Prezență Confirmată! 🏆';
+          const notifBody = `Prezența ta la "${event.title}" a fost validată și orele au fost adăugate în contul tău.`;
+
+          const notifRes = await pool.query(
+            'INSERT INTO notifications (title, body) VALUES ($1, $2) RETURNING id',
+            [notifTitle, notifBody]
+          );
+          const notifId = notifRes.rows[0].id;
+
+          const placeholders = validatedUserIds.map((_, idx) => `($${idx * 2 + 1}, $${idx * 2 + 2})`).join(', ');
+          const flatParams = validatedUserIds.flatMap(uid => [uid, notifId]);
+          await pool.query(
+            `INSERT INTO user_notifications (user_id, notification_id) VALUES ${placeholders} ON CONFLICT DO NOTHING`,
+            flatParams
+          );
+
+          // Push tokens dacă sunt disponibile
+          const tokensRes = await pool.query(
+            'SELECT token FROM push_tokens WHERE user_id = ANY($1::int[]) AND token IS NOT NULL',
+            [validatedUserIds]
+          );
+          const pushTokens = tokensRes.rows.map(r => r.token).filter(Boolean);
+          if (pushTokens.length > 0) {
+            axios.post('https://api.expo.dev/v2/push/send', {
+              to: pushTokens,
+              sound: 'default',
+              title: notifTitle,
+              body: notifBody,
+              data: { eventId: id, _displayInForeground: true }
+            }, {
+              headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+            }).catch(e => console.log('[Push Err in bulk-validate]:', e.message));
+          }
+        } catch (notifErr) {
+          console.error('Eroare notificare bulk attendance:', notifErr);
+        }
+      }
+
+      res.json({
+        success: true,
+        validatedCount: validatedUserIds.length,
+        message: `Au fost validate cu succes prezențele pentru ${validatedUserIds.length} voluntari.`
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      client.release();
+      console.error('Eroare la bulk-validate:', error);
+      res.status(500).json({ error: 'Eroare server la validarea prezențelor.' });
     }
   });
 

@@ -203,8 +203,20 @@ export default function CustomHeader({ title, showRole = true, isHidden = false 
               )}
             </View>
 
-            {/* Right: notifications + avatar */}
+            {/* Right: QR scan + notifications + avatar */}
             <View style={styles.headerRight}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ScanScreen', {})}
+                style={[styles.iconButton, {
+                  backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                  borderColor: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)',
+                  marginRight: 6,
+                }]}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="qr-code-outline" size={20} color={STANDARD_BLUE} />
+              </TouchableOpacity>
+
               <TouchableOpacity
                 onPress={() => navigation.navigate('NotificationHistory')}
                 style={[styles.iconButton, {

@@ -217,16 +217,6 @@ export default function HistoryScreen() {
             <Text style={[styles.statusText, { color: iconColor }]}>{statusText}</Text>
           </View>
         </View>
-
-        {canStillCheckout && (
-          <TouchableOpacity
-            style={[styles.checkoutButton, { backgroundColor: STANDARD_BLUE + '15', borderColor: STANDARD_BLUE + '40', borderWidth: 1 }]}
-            onPress={() => navigation.navigate('ScanScreen', { eventId: item.event_id || item.id })}
-          >
-            <Ionicons name="walk-outline" size={18} color={STANDARD_BLUE} />
-            <Text style={[styles.checkoutButtonText, { color: STANDARD_BLUE }]}>Scanează la plecare</Text>
-          </TouchableOpacity>
-        )}
       </TouchableOpacity>
     );
   };

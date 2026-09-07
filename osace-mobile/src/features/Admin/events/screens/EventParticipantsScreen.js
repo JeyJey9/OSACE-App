@@ -135,10 +135,17 @@ export default function EventParticipantsScreen() {
       if (customHours !== null && !isNaN(parseFloat(customHours))) {
         payload.awarded_hours = parseFloat(customHours);
       }
-      const promises = selectedIds.map(userId => 
-        api.put(`/api/events/${eventId}/participants/${userId}`, payload)
-      );
-      await Promise.all(promises);
+      if (targetStatus === 'attended') {
+        const hours = customHours !== null && !isNaN(parseFloat(customHours)) ? parseFloat(customHours) : 0;
+        await api.post(`/api/events/${eventId}/bulk-validate`, {
+          attendees: selectedIds.map(userId => ({ userId, hours }))
+        });
+      } else {
+        const promises = selectedIds.map(userId => 
+          api.put(`/api/events/${eventId}/participants/${userId}`, payload)
+        );
+        await Promise.all(promises);
+      }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Toast.show({
