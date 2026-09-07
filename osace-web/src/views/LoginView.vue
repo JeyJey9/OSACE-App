@@ -14,7 +14,7 @@
             id="email" 
             v-model="email" 
             class="input-field" 
-            placeholder="Numele tău de utilizator"
+            placeholder="exemplu@email.com"
             required 
           />
         </div>
