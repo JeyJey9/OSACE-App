@@ -539,7 +539,8 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       if (eventResult.rows.length === 0) return res.status(404).json({ error: 'Eveniment negăsit.' });
       const event = eventResult.rows[0];
 
-      // 2. Verificăm codul QR (TOTP)
+      // 2. Verificăm codul QR (TOTP) cu toleranță de fereastră (±30s)
+      authenticator.options = { window: 1 };
       const isValid = authenticator.check(code, event.totp_secret);
       if (!isValid) return res.status(401).json({ error: 'Cod invalid sau expirat.' });
 
@@ -559,6 +560,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
              check_in_time = COALESCE(event_attendance.check_in_time, NOW())`,
           [userId, eventId]
         );
+        checkQuickRegisterBadge(userId, eventId, pool);
         return res.status(200).json({
           message: 'Prezență înregistrată! 📍 Spor la treabă.',
           status: 'checked_in'
@@ -569,8 +571,12 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
 
       // --- LOGICA DE STATUS ---
 
-      // CAZ A: Voluntarul face CHECK-IN (este 'registered' sau 'pending')
-      if (attendance.confirmation_status === 'registered' || attendance.confirmation_status === 'pending') {
+      // CAZ A: Voluntarul face CHECK-IN (este 'registered', 'pending' sau 'absent')
+      if (
+        attendance.confirmation_status === 'registered' || 
+        attendance.confirmation_status === 'pending' ||
+        attendance.confirmation_status === 'absent'
+      ) {
         await pool.query(
           `UPDATE event_attendance 
            SET confirmation_status = 'checked_in', check_in_time = NOW() 
