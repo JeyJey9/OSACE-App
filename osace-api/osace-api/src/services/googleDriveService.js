@@ -1,6 +1,7 @@
 // src/services/googleDriveService.js
-const { getDriveClient, getDriveConfig } = require('../config/googleDrive');
+const { getDriveClient, getDriveConfig, getOAuth2Client } = require('../config/googleDrive');
 const stream = require('stream');
+const axios = require('axios');
 
 /**
  * Returneaza instanta Drive sau arunca eroare daca nu este initializat
@@ -11,6 +12,61 @@ function ensureDrive() {
     throw new Error('Google Drive API nu este configurat corespunzator sau lipsesc credidentialele.');
   }
   return drive;
+}
+
+/**
+ * Incarca un fisier mare in Google Drive folosind protocolul Resumable Upload
+ * Recomandat si necesar pentru fisiere > 5MB pentru a evita "socket hang up"
+ */
+async function uploadFileResumable({ name, mimeType, body, size, parentFolderId, description, properties }) {
+  const oauth2Client = getOAuth2Client();
+  if (!oauth2Client) {
+    throw new Error('Clientul OAuth2 nu este initializat.');
+  }
+
+  const tokenRes = await oauth2Client.getAccessToken();
+  const accessToken = (tokenRes && typeof tokenRes === 'object' && tokenRes.token) ? tokenRes.token : tokenRes;
+
+  const config = getDriveConfig();
+  const targetParent = parentFolderId || config.rootFolderId;
+
+  const fileMetadata = {
+    name,
+    parents: targetParent ? [targetParent] : undefined,
+    description: description || undefined,
+    properties: properties || undefined,
+  };
+
+  // 1. Initializare sesiune de upload resumable
+  const initUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,mimeType,size,md5Checksum,webViewLink,webContentLink,createdTime,modifiedTime,parents';
+  
+  const initRes = await axios.post(initUrl, fileMetadata, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json; charset=UTF-8',
+      'X-Upload-Content-Type': mimeType || 'application/octet-stream',
+      'X-Upload-Content-Length': String(size),
+    },
+    timeout: 60000,
+  });
+
+  const uploadUrl = initRes.headers.location;
+  if (!uploadUrl) {
+    throw new Error('Google Drive API nu a returnat URL-ul de sesiune resumable (Location header lipseste).');
+  }
+
+  // 2. Transmitere date (body Buffer sau Stream) catre URL-ul sesiunii Google
+  const uploadRes = await axios.put(uploadUrl, body, {
+    headers: {
+      'Content-Length': String(size),
+      'Content-Type': mimeType || 'application/octet-stream',
+    },
+    maxBodyLength: Infinity,
+    maxContentLength: Infinity,
+    timeout: 0, // Fara timeout la transferul fisierului mare
+  });
+
+  return uploadRes.data;
 }
 
 /**
@@ -100,20 +156,37 @@ async function ensureFolderPath(pathSegments, rootFolderId = null) {
 }
 
 /**
- * Incarca un fisier in Google Drive (stream-based)
+ * Incarca un fisier in Google Drive (stream-based cu suport Resumable pentru fisiere > 5MB)
  * @param {Object} params
  * @param {string} params.name - Numele fisierului
  * @param {string} params.mimeType - Tipul MIME
  * @param {ReadableStream|Buffer} params.body - Fluxul de date sau buffer
+ * @param {number} [params.size] - Dimensiunea fisierului in octeti
  * @param {string} params.parentFolderId - ID folder parinte
  * @param {string} [params.description] - Descriere optionala
  * @param {Object} [params.properties] - Metadata custom
  * @returns {Promise<Object>}
  */
-async function uploadFile({ name, mimeType, body, parentFolderId, description, properties }) {
-  const drive = ensureDrive();
+async function uploadFile({ name, mimeType, body, size, parentFolderId, description, properties }) {
   const config = getDriveConfig();
   const targetParent = parentFolderId || config.rootFolderId;
+  const fileSize = size || (Buffer.isBuffer(body) ? body.length : null);
+
+  // Pentru fisiere mai mari de 5MB, folosim protocolul oficial Google Resumable Upload
+  // pentru a preveni 'socket hang up' / ECONNRESET generat de limita multipart a Google.
+  if (fileSize && fileSize > 5 * 1024 * 1024) {
+    return uploadFileResumable({
+      name,
+      mimeType,
+      body,
+      size: fileSize,
+      parentFolderId: targetParent,
+      description,
+      properties,
+    });
+  }
+
+  const drive = ensureDrive();
 
   // Convertim Buffer in Readable Stream daca este necesar
   let mediaStream = body;

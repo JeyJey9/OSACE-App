@@ -30,8 +30,16 @@ function validateUploadFile(file) {
     throw new FileSizeExceededError(file.size, config.maxUploadMb);
   }
 
-  // Verificare lista alba de MIME types
-  if (!ALLOWED_ARCHIVE_MIMES.includes(mime) && !mime.startsWith('image/') && !mime.startsWith('text/')) {
+  // Verificare lista alba de MIME types sau extensie valida (fallback pentru browsere ce trimit application/octet-stream)
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  const allowedExtensions = [
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+    '.txt', '.csv', '.md',
+    '.zip', '.rar', '.7z', '.gz',
+    '.jpg', '.jpeg', '.png', '.webp', '.svg'
+  ];
+
+  if (!ALLOWED_ARCHIVE_MIMES.includes(mime) && !mime.startsWith('image/') && !mime.startsWith('text/') && !allowedExtensions.includes(ext)) {
     throw new InvalidFileTypeError(mime);
   }
 

@@ -410,6 +410,7 @@ async function uploadDocument(pool, userId, role, file, metadata = {}) {
     name: docName,
     mimeType: file.mimetype,
     body: file.buffer,
+    size: file.size,
     parentFolderId: targetDriveFolderId,
     description: description || undefined,
     properties: {

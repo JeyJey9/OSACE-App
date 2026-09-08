@@ -233,6 +233,16 @@ async function handleBatchUpload() {
 
       const res = await api.post('/archive/documents/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 0, // Eliminam limita de 60s pentru fisiere mari
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            item.progress = percent;
+            if (fileQueue.value.length === 1) {
+              overallProgress.value = percent;
+            }
+          }
+        },
       });
 
       item.status = 'done';
@@ -241,7 +251,11 @@ async function handleBatchUpload() {
     } catch (err) {
       console.error('Upload error for', item.file.name, err);
       item.status = 'error';
-      item.error = err.response?.data?.error || 'Eroare la upload';
+      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        item.error = 'Timpul de încărcare a expirat (timeout)';
+      } else {
+        item.error = err.response?.data?.error || err.message || 'Eroare la upload';
+      }
     }
 
     overallProgress.value = Math.round(((i + 1) / fileQueue.value.length) * 100);
