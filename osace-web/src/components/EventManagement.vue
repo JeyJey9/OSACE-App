@@ -7,12 +7,23 @@
       <div class="event-list-panel">
         <div class="panel-header">
           <h3>Evenimente</h3>
-          <button class="btn-primary btn-sm" @click="openCreateMode">+ Nou</button>
+          <div class="header-actions">
+            <button 
+              type="button"
+              class="btn-refresh" 
+              :disabled="loadingEvents" 
+              @click="fetchEvents" 
+              title="Reîmprospătează lista"
+            >
+              <RefreshCwIcon :size="15" :class="{ 'spin-icon': loadingEvents }" />
+            </button>
+            <button class="btn-primary btn-sm" @click="openCreateMode">+ Nou</button>
+          </div>
         </div>
 
         <div v-if="loadingEvents" class="loading-state">Se încarcă...</div>
         <div v-else-if="events.length === 0" class="empty-state">
-          Nu există evenimente create de tine.
+          Nu există evenimente înregistrate.
         </div>
         <div v-else class="event-items">
           <div
@@ -63,13 +74,28 @@
             <div>
               <span class="ev-category" :class="selectedEvent.category">{{ selectedEvent.category }}</span>
               <h2>{{ selectedEvent.title }}</h2>
-              <p class="ev-location">📍 {{ selectedEvent.location }}</p>
+              <p class="ev-location">
+                <MapPinIcon :size="14" class="text-primary" />
+                <span>{{ selectedEvent.location || 'Sediul OSACE' }}</span>
+              </p>
             </div>
             <div class="detail-actions">
-              <button class="btn-primary btn-sm" @click="openProjectorMode">📽️ Proiecție Videoproiector</button>
-              <button class="btn-success btn-sm" @click="openBulkValidationModal">⚡ Validează Prezențe</button>
-              <button class="btn-outline btn-sm" @click="openEditMode">Editează</button>
-              <button class="btn-danger-outline btn-sm" @click="deleteEvent(selectedEvent.id)">Șterge</button>
+              <button class="btn-primary btn-sm" @click="openProjectorMode">
+                <TvIcon :size="15" />
+                <span>Videoproiector</span>
+              </button>
+              <button class="btn-success btn-sm" @click="openBulkValidationModal">
+                <ZapIcon :size="15" />
+                <span>Validează Prezențe</span>
+              </button>
+              <button class="btn-secondary btn-sm" @click="openEditMode">
+                <Edit3Icon :size="15" />
+                <span>Editează</span>
+              </button>
+              <button class="btn-danger-sm" @click="deleteEvent(selectedEvent.id)">
+                <Trash2Icon :size="15" />
+                <span>Șterge</span>
+              </button>
             </div>
           </div>
 
@@ -102,8 +128,14 @@
               </div>
             </div>
             <div style="display:flex;gap:0.75rem;margin-top:0.75rem;">
-              <button class="btn-outline btn-sm" @click="fetchAndShowQR">🔄 Regenerează manual</button>
-              <button class="btn-primary btn-sm" @click="openProjectorMode">↗ Deschide Ecran Complet</button>
+              <button class="btn-secondary btn-sm" @click="fetchAndShowQR">
+                <RefreshCwIcon :size="14" />
+                <span>Regenerează</span>
+              </button>
+              <button class="btn-primary btn-sm" @click="openProjectorMode">
+                <ExternalLinkIcon :size="14" />
+                <span>Ecran Complet</span>
+              </button>
             </div>
           </div>
 
@@ -111,11 +143,14 @@
           <div class="participants-section">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
               <h4 style="margin:0;">Participanți ({{ participants.length }})</h4>
-              <button class="btn-secondary btn-sm" @click="openBulkValidationModal">⚡ Validare în Masă</button>
+              <button class="btn-secondary btn-sm" @click="openBulkValidationModal">
+                <ZapIcon :size="14" />
+                <span>Validare în Masă</span>
+              </button>
             </div>
             <div v-if="loadingParticipants" class="loading-state">Se încarcă...</div>
             <div v-else-if="participants.length === 0" class="empty-state">
-              Niciun participant confirmat.
+              Niciun participant confirmat momentan.
             </div>
             <div v-else class="participants-grid">
               <div 
@@ -134,7 +169,9 @@
                     <span v-if="p.check_in_time" class="p-time">({{ formatScanHour(p.check_in_time) }})</span>
                   </span>
                 </div>
-                <span class="edit-badge">✏️</span>
+                <span class="edit-badge">
+                  <Edit3Icon :size="12" />
+                </span>
               </div>
             </div>
           </div>
@@ -292,6 +329,15 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { 
+  RefreshCwIcon, 
+  MapPinIcon, 
+  TvIcon, 
+  ZapIcon, 
+  Edit3Icon, 
+  ExternalLinkIcon, 
+  Trash2Icon 
+} from 'lucide-vue-next';
 import QRCode from 'qrcode';
 import api from '../services/api';
 import EventForm from './EventForm.vue';
@@ -321,8 +367,14 @@ function emptyForm() {
 const fetchEvents = async () => {
   loadingEvents.value = true;
   try {
-    const res = await api.get('/events/my-created');
+    const res = await api.get('/admin/events/all');
     events.value = res.data;
+    if (selectedEvent.value) {
+      const current = events.value.find(e => e.id === selectedEvent.value.id);
+      if (current) {
+        selectedEvent.value = current;
+      }
+    }
   } catch (e) {
     console.error('Eroare la preluarea evenimentelor:', e);
   } finally {
@@ -661,6 +713,45 @@ onUnmounted(() => { clearQrTimers(); });
 
 .panel-header h3 {
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-bg);
+  border: 1px solid var(--border-color);
+  color: var(--color-text-secondary);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .btn-sm {

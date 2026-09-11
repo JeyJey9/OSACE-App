@@ -87,7 +87,9 @@
 
         <!-- 1st Place (Center - Elevated) -->
         <div v-if="top3[0]" class="podium-card gold glass-panel-elevated">
-          <div class="crown-icon">👑</div>
+          <div class="crown-icon">
+            <CrownIcon :size="18" />
+          </div>
           <div class="podium-rank-badge rank-1">1</div>
           <div class="podium-avatar-wrap gold-glow">
             <img 
@@ -171,7 +173,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { TrophyIcon } from 'lucide-vue-next';
+import { TrophyIcon, CrownIcon } from 'lucide-vue-next';
 import api from '../services/api';
 
 const loading = ref(true);
@@ -454,14 +456,17 @@ onMounted(async () => {
 
 .crown-icon {
   position: absolute;
-  top: -24px;
-  font-size: 2rem;
-  animation: float 2.5s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  top: -16px;
+  width: 34px;
+  height: 34px;
+  background: var(--color-bg-elevated);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fbbf24;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .podium-rank-badge {
@@ -492,7 +497,7 @@ onMounted(async () => {
   height: 64px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .gold .podium-avatar {
@@ -502,7 +507,7 @@ onMounted(async () => {
 }
 
 .gold-glow {
-  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.4));
+  /* Subtle border highlight instead of neon blur */
 }
 
 .podium-avatar.placeholder {

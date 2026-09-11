@@ -5,108 +5,142 @@
         <h1>Panou Administrare</h1>
         <p class="subtitle">Gestionează activitățile, orele, utilizatorii și comunitatea OSACE.</p>
       </div>
+      <div class="header-status-badge" v-if="totalPendingCount > 0">
+        <span class="status-pulse"></span>
+        <span>{{ totalPendingCount }} {{ totalPendingCount === 1 ? 'acțiune în așteptare' : 'acțiuni în așteptare' }}</span>
+      </div>
     </header>
 
-    <!-- Navigation Tabs with Pending Count Badges -->
-    <div class="tabs">
-      <!-- 1. Aprobări Ore -->
-      <button 
-        :class="['tab-btn', { active: activeTab === 'hour_requests' }]" 
-        @click="activeTab = 'hour_requests'; fetchHourRequests()"
-      >
-        <span>Aprobări Ore</span>
-        <span v-if="pendingCounts.hourRequests > 0" class="count-bubble tab-bubble">{{ pendingCounts.hourRequests }}</span>
-      </button>
+    <!-- Categorized Admin Navigation Ribbon (Zero Horizontal Scrolling) -->
+    <nav class="admin-nav-bar glass-panel" aria-label="Navigare Administrare">
+      <!-- 1. Evenimente & Ore -->
+      <div class="nav-cluster">
+        <span class="cluster-title">Evenimente & Ore</span>
+        <div class="cluster-buttons">
+          <button 
+            type="button"
+            :class="['nav-chip', { active: activeTab === 'events' }]" 
+            @click="selectTab('events')"
+          >
+            <Calendar :size="15" />
+            <span>Gestiune Evenimente</span>
+          </button>
 
-      <!-- 2. Verificări Legitimații (Admin) -->
-      <button 
-        v-if="isAdmin"
-        :class="['tab-btn', { active: activeTab === 'verifications' }]" 
-        @click="activeTab = 'verifications'; fetchVerifications()"
-      >
-        <span>Verificări Legitimație</span>
-        <span v-if="pendingCounts.studentVerifications > 0" class="count-bubble tab-bubble">{{ pendingCounts.studentVerifications }}</span>
-      </button>
+          <button 
+            type="button"
+            :class="['nav-chip', { active: activeTab === 'hour_requests' }]" 
+            @click="selectTab('hour_requests')"
+          >
+            <Clock :size="15" />
+            <span>Aprobări Ore</span>
+            <span v-if="pendingCounts.hourRequests > 0" class="count-bubble">{{ pendingCounts.hourRequests }}</span>
+          </button>
 
-      <!-- 3. Aprobări Contribuții (Admin) -->
-      <button 
-        v-if="isAdmin"
-        :class="['tab-btn', { active: activeTab === 'requests' }]" 
-        @click="activeTab = 'requests'; fetchRequests()"
-      >
-        <span>Aprobări Contribuții</span>
-        <span v-if="pendingCounts.contributionRequests > 0" class="count-bubble tab-bubble">{{ pendingCounts.contributionRequests }}</span>
-      </button>
+          <button 
+            type="button"
+            :class="['nav-chip', { active: activeTab === 'assign' }]" 
+            @click="selectTab('assign')"
+          >
+            <PlusCircle :size="15" />
+            <span>Acordare Ore</span>
+          </button>
 
-      <!-- 4. Gestionează Contribuții (Admin) -->
-      <button 
-        v-if="isAdmin"
-        :class="['tab-btn', { active: activeTab === 'manage_contributions' }]" 
-        @click="activeTab = 'manage_contributions'; fetchAllContributions()"
-      >
-        <span>Toate Contribuțiile</span>
-      </button>
+          <button 
+            v-if="isAdmin"
+            type="button"
+            :class="['nav-chip', { active: activeTab === 'requests' }]" 
+            @click="selectTab('requests')"
+          >
+            <FileText :size="15" />
+            <span>Aprobări Contribuții</span>
+            <span v-if="pendingCounts.contributionRequests > 0" class="count-bubble">{{ pendingCounts.contributionRequests }}</span>
+          </button>
 
-      <!-- 5. Acordare Ore / Cerere Contribuție -->
-      <button 
-        :class="['tab-btn', { active: activeTab === 'assign' }]" 
-        @click="activeTab = 'assign'"
-      >
-        <span>Acordare Ore</span>
-      </button>
+          <button 
+            v-if="isAdmin"
+            type="button"
+            :class="['nav-chip', { active: activeTab === 'manage_contributions' }]" 
+            @click="selectTab('manage_contributions')"
+          >
+            <Folder :size="15" />
+            <span>Toate Contribuțiile</span>
+          </button>
+        </div>
+      </div>
 
-      <!-- 6. Comentarii Raportate -->
-      <button 
-        :class="['tab-btn', { active: activeTab === 'reports' }]" 
-        @click="activeTab = 'reports'; fetchReports()"
-      >
-        <span>Comentarii Raportate</span>
-        <span v-if="pendingCounts.reportedComments > 0" class="count-bubble tab-bubble">{{ pendingCounts.reportedComments }}</span>
-      </button>
+      <div class="cluster-divider"></div>
 
-      <!-- 7. Gestiune Evenimente -->
-      <button 
-        :class="['tab-btn', { active: activeTab === 'events' }]" 
-        @click="activeTab = 'events'"
-      >
-        <span>Gestiune Evenimente</span>
-      </button>
+      <!-- 2. Membri & Comunitate -->
+      <div class="nav-cluster">
+        <span class="cluster-title">Membri & Moderare</span>
+        <div class="cluster-buttons">
+          <button 
+            type="button"
+            :class="['nav-chip', { active: activeTab === 'users' }]" 
+            @click="selectTab('users')"
+          >
+            <Users :size="15" />
+            <span>Utilizatori</span>
+          </button>
 
-      <!-- 8. Utilizatori -->
-      <button 
-        :class="['tab-btn', { active: activeTab === 'users' }]" 
-        @click="activeTab = 'users'"
-      >
-        <span>Utilizatori</span>
-      </button>
+          <button 
+            v-if="isAdmin"
+            type="button"
+            :class="['nav-chip', { active: activeTab === 'verifications' }]" 
+            @click="selectTab('verifications')"
+          >
+            <GraduationCap :size="15" />
+            <span>Verificări Legitimație</span>
+            <span v-if="pendingCounts.studentVerifications > 0" class="count-bubble">{{ pendingCounts.studentVerifications }}</span>
+          </button>
 
-      <!-- 9. Badge-uri (Admin) -->
-      <button 
-        v-if="isAdmin"
-        :class="['tab-btn', { active: activeTab === 'badges' }]" 
-        @click="activeTab = 'badges'; fetchBadges()"
-      >
-        <span>Badge-uri</span>
-      </button>
+          <button 
+            type="button"
+            :class="['nav-chip', { active: activeTab === 'reports' }]" 
+            @click="selectTab('reports')"
+          >
+            <Flag :size="15" />
+            <span>Comentarii Raportate</span>
+            <span v-if="pendingCounts.reportedComments > 0" class="count-bubble">{{ pendingCounts.reportedComments }}</span>
+          </button>
+        </div>
+      </div>
 
-      <!-- 10. Trimite Notificări (Admin) -->
-      <button 
-        v-if="isAdmin"
-        :class="['tab-btn', { active: activeTab === 'notifications' }]" 
-        @click="activeTab = 'notifications'"
-      >
-        <span>Notificări Push</span>
-      </button>
+      <div class="cluster-divider" v-if="isAdmin"></div>
 
-      <!-- 11. Jurnale Audit (Admin) -->
-      <button 
-        v-if="isAdmin"
-        :class="['tab-btn', { active: activeTab === 'logs' }]" 
-        @click="activeTab = 'logs'; fetchAuditLogs()"
-      >
-        <span>Jurnal Audit</span>
-      </button>
-    </div>
+      <!-- 3. Sistem & Instrumente -->
+      <div class="nav-cluster" v-if="isAdmin">
+        <span class="cluster-title">Sistem & Audit</span>
+        <div class="cluster-buttons">
+          <button 
+            type="button"
+            :class="['nav-chip', { active: activeTab === 'badges' }]" 
+            @click="selectTab('badges')"
+          >
+            <Award :size="15" />
+            <span>Badge-uri</span>
+          </button>
+
+          <button 
+            type="button"
+            :class="['nav-chip', { active: activeTab === 'notifications' }]" 
+            @click="selectTab('notifications')"
+          >
+            <Bell :size="15" />
+            <span>Notificări Push</span>
+          </button>
+
+          <button 
+            type="button"
+            :class="['nav-chip', { active: activeTab === 'logs' }]" 
+            @click="selectTab('logs')"
+          >
+            <Shield :size="15" />
+            <span>Jurnal Audit</span>
+          </button>
+        </div>
+      </div>
+    </nav>
 
     <!-- ========================================================= -->
     <!-- TAB 1: APROBĂRI ORE (HOUR REQUESTS)                      -->
@@ -122,7 +156,9 @@
 
       <div v-if="loadingHourReqs" class="loading-state">Se încarcă cererile de ore...</div>
       <div v-else-if="hourRequests.length === 0" class="empty-state glass-panel">
-        Nicio cerere de ore în așteptare! 🎉
+        <CheckCircle2 :size="32" class="text-success" style="margin-bottom: 0.5rem;" />
+        <h4>Toate cererile de ore au fost procesate</h4>
+        <p class="empty-sub">Nu există solicitări de ore în așteptare în acest moment.</p>
       </div>
       <div v-else class="requests-grid">
         <div v-for="req in hourRequests" :key="req.id" class="request-card glass-panel">
@@ -131,7 +167,10 @@
             <span class="badge-pill badge-blue">@{{ req.display_name }}</span>
           </div>
 
-          <p class="req-event-title">📍 {{ req.event_title }}</p>
+          <p class="req-event-title">
+            <MapPin :size="13" />
+            <span>{{ req.event_title }}</span>
+          </p>
 
           <div class="req-time-details">
             <div v-if="req.check_in_time" class="time-row">
@@ -185,7 +224,9 @@
 
       <div v-if="loadingVerif" class="loading-state">Se încarcă cererile de verificare...</div>
       <div v-else-if="verifications.length === 0" class="empty-state glass-panel">
-        Nicio legitimație în așteptare. Toate sunt analizate! 🎉
+        <ShieldCheck :size="32" class="text-success" style="margin-bottom: 0.5rem;" />
+        <h4>Toate legitimațiile au fost verificate</h4>
+        <p class="empty-sub">Nu există solicitări de validare a calității de student în așteptare.</p>
       </div>
       <div v-else class="requests-grid">
         <div v-for="v in verifications" :key="v.id" class="request-card glass-panel">
@@ -198,7 +239,10 @@
           <!-- Clickable Image Thumbnail for Lightbox -->
           <div class="id-image-wrapper" @click="lightboxImg = resolveUploadUrl(v.image_url)">
             <img :src="resolveUploadUrl(v.image_url)" alt="Student ID" class="id-thumbnail" />
-            <span class="zoom-hint">🔍 Click pentru mărire</span>
+            <span class="zoom-hint">
+              <ZoomIn :size="13" />
+              <span>Mărește</span>
+            </span>
           </div>
 
           <div class="action-buttons">
@@ -344,7 +388,9 @@
 
       <div v-if="loadingReports" class="loading-state">Se încarcă rapoartele...</div>
       <div v-else-if="reports.length === 0" class="empty-state glass-panel">
-        Niciun comentariu raportat! Comunitatea este pașnică. ✨
+        <CheckCircle2 :size="32" class="text-success" style="margin-bottom: 0.5rem;" />
+        <h4>Niciun comentariu raportat</h4>
+        <p class="empty-sub">Nu există rapoarte de moderare în așteptare.</p>
       </div>
       <div v-else class="requests-grid">
         <div v-for="r in reports" :key="r.report_id" class="request-card glass-panel">
@@ -606,12 +652,42 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { AwardIcon } from 'lucide-vue-next';
+import { useRoute } from 'vue-router';
+import { 
+  Calendar, 
+  Clock, 
+  PlusCircle, 
+  FileText, 
+  Folder, 
+  Users, 
+  GraduationCap, 
+  Flag, 
+  Award, 
+  Bell, 
+  Shield,
+  CheckCircle2,
+  MapPin,
+  ShieldCheck,
+  ZoomIn
+} from 'lucide-vue-next';
 import api from '../services/api';
 import EventManagement from '../components/EventManagement.vue';
 import UserManagement from '../components/UserManagement.vue';
 
-const activeTab = ref('hour_requests');
+const route = useRoute();
+const activeTab = ref(sessionStorage.getItem('adminActiveTab') || 'events');
+
+const selectTab = (tab) => {
+  activeTab.value = tab;
+  sessionStorage.setItem('adminActiveTab', tab);
+  if (tab === 'hour_requests') fetchHourRequests();
+  else if (tab === 'verifications') fetchVerifications();
+  else if (tab === 'requests') fetchRequests();
+  else if (tab === 'manage_contributions') fetchAllContributions();
+  else if (tab === 'reports') fetchReports();
+  else if (tab === 'badges') fetchBadges();
+  else if (tab === 'logs') fetchAuditLogs();
+};
 
 const currentUser = computed(() => {
   const str = localStorage.getItem('userData');
@@ -634,6 +710,13 @@ const fetchPendingCounts = async () => {
     if (res.data) pendingCounts.value = res.data;
   } catch (err) {}
 };
+
+const totalPendingCount = computed(() => {
+  return (pendingCounts.value.hourRequests || 0) + 
+         (pendingCounts.value.studentVerifications || 0) + 
+         (pendingCounts.value.contributionRequests || 0) + 
+         (pendingCounts.value.reportedComments || 0);
+});
 
 // ── 1. Hour Requests ─────────────────────────────────
 const hourRequests = ref([]);
@@ -1034,69 +1117,139 @@ const formatDetails = (details) => {
 
 onMounted(() => {
   fetchPendingCounts();
-  fetchHourRequests();
   fetchUsers();
+  const initialTab = route.query.tab || sessionStorage.getItem('adminActiveTab') || 'events';
+  selectTab(initialTab);
 });
 </script>
 
 <style scoped>
 .admin-view {
-  max-width: 1200px;
+  max-width: 1400px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .page-header h1 {
-  font-size: 2.2rem;
-  margin-bottom: 0.25rem;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+  color: var(--color-text-primary);
 }
 
 .subtitle {
   color: var(--color-text-secondary);
-}
-
-/* Tabs */
-.tabs {
-  display: flex;
-  gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.tab-btn {
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid transparent;
   font-size: 0.95rem;
-  font-weight: 600;
-  padding: 0.6rem 1rem;
-  border-radius: 10px;
+}
+
+.header-status-badge {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  white-space: nowrap;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.status-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+/* Categorized Admin Navigation Ribbon (Zero Horizontal Scroll) */
+.admin-nav-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: stretch;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 0.85rem 1.15rem;
+  backdrop-filter: blur(12px);
+}
+
+.nav-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1 1 auto;
+}
+
+.cluster-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-left: 0.2rem;
+}
+
+.cluster-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.nav-chip {
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
-.tab-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color-text-primary);
+.nav-chip:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
-.tab-btn.active {
-  background: rgba(59, 130, 246, 0.15);
-  color: var(--color-primary);
-  border-color: rgba(59, 130, 246, 0.3);
+.nav-chip.active {
+  background: rgba(59, 130, 246, 0.14);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.tab-bubble {
-  font-size: 0.65rem;
-  min-width: 16px;
-  height: 16px;
+.cluster-divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0 0.15rem;
+  align-self: stretch;
+}
+
+@media (max-width: 1100px) {
+  .cluster-divider {
+    display: none;
+  }
 }
 
 .content-header {
@@ -1144,15 +1297,19 @@ onMounted(() => {
 }
 
 .req-event-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-weight: 600;
-  color: var(--color-primary);
-  font-size: 0.95rem;
+  color: #60a5fa;
+  font-size: 0.9rem;
 }
 
 .req-time-details {
-  background: rgba(15, 23, 42, 0.5);
-  padding: 0.75rem 1rem;
-  border-radius: 10px;
+  background: var(--color-bg-base);
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
   font-size: 0.8rem;
   display: flex;
   flex-direction: column;
@@ -1198,27 +1355,28 @@ onMounted(() => {
 
 .btn-approve, .btn-reject {
   flex: 1;
-  padding: 0.6rem;
-  border-radius: 8px;
-  font-weight: 700;
+  padding: 0.55rem;
+  border-radius: 6px;
+  font-weight: 600;
   font-size: 0.85rem;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: opacity 0.15s;
 }
 
-.btn-approve { background: var(--color-success); color: white; }
-.btn-reject { background: var(--color-danger); color: white; }
+.btn-approve { background: #059669; color: white; }
+.btn-reject { background: #dc2626; color: white; }
 .btn-approve:hover, .btn-reject:hover { opacity: 0.9; }
 
 /* Verifications Tab */
 .id-image-wrapper {
   position: relative;
   cursor: pointer;
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
   background: #000;
   margin: 0.5rem 0;
+  border: 1px solid var(--border-color);
 }
 
 .id-thumbnail {
@@ -1232,11 +1390,15 @@ onMounted(() => {
   position: absolute;
   bottom: 8px;
   right: 8px;
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
+  padding: 0.2rem 0.55rem;
   border-radius: 6px;
-  color: white;
+  color: #f8fafc;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 /* Comments Tab */
@@ -1514,10 +1676,25 @@ onMounted(() => {
 }
 
 .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 3rem 1.5rem;
+  padding: 3.5rem 1.5rem;
   color: var(--color-text-secondary);
-  border-radius: 16px;
+  border-radius: 12px;
+}
+
+.empty-state h4 {
+  font-size: 1.05rem;
+  color: #f8fafc;
+  margin-bottom: 0.25rem;
+}
+
+.empty-sub {
+  font-size: 0.85rem;
+  color: #64748b;
 }
 
 .loading-state {

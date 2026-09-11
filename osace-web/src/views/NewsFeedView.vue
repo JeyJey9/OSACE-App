@@ -47,9 +47,9 @@
 
     <!-- Empty State -->
     <div v-else-if="posts.length === 0" class="empty-state glass-panel">
-      <SparklesIcon :size="40" class="text-primary" />
+      <NewspaperIcon :size="36" class="text-primary" />
       <h3>Nicio postare momentan</h3>
-      <p>Postările vor apărea aici automat din Instagram sau din comunicatele oficiale.</p>
+      <p>Postările vor apărea aici automat din comunicatele oficiale și activitățile OSACE.</p>
     </div>
 
     <!-- Posts Feed -->
@@ -294,7 +294,7 @@ import {
   ChevronRightIcon, 
   SendIcon, 
   FlagIcon, 
-  SparklesIcon 
+  NewspaperIcon 
 } from 'lucide-vue-next';
 import api from '../services/api';
 

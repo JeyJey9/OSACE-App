@@ -2,6 +2,9 @@
   <div class="login-container">
     <div class="login-box glass-panel">
       <div class="logo-container">
+        <div class="brand-logo-circle">
+          <img src="/favicon.ico" alt="OSACE Logo" class="login-logo-img" />
+        </div>
         <h2>O.S.A.C.E.</h2>
         <p class="subtitle">Portal Voluntari</p>
       </div>
@@ -87,32 +90,58 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Fundal gradient modern */
-  background: radial-gradient(circle at top right, #1e293b, #0f172a);
-  padding: 1rem;
+  background: #090d16;
+  padding: 1.5rem;
 }
 
 .login-box {
   width: 100%;
   max-width: 400px;
-  padding: 2.5rem;
+  padding: 2.25rem;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
 .logo-container {
   text-align: center;
   margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.brand-logo-circle {
+  width: 54px;
+  height: 54px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  padding: 6px;
+}
+
+.login-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .logo-container h2 {
-  font-size: 2.5rem;
-  color: var(--color-primary);
-  margin-bottom: 0.25rem;
-  letter-spacing: 2px;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #f8fafc;
+  margin-bottom: 0.15rem;
+  letter-spacing: 1.5px;
 }
 
 .subtitle {
   color: var(--color-text-secondary);
-  font-size: 1.1rem;
+  font-size: 0.95rem;
 }
 
 .form-group {

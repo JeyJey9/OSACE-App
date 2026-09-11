@@ -2,7 +2,9 @@
   <aside class="navbar glass-panel">
     <!-- Brand -->
     <div class="nav-brand">
-      <div class="logo">O</div>
+      <div class="logo-wrap">
+        <img src="/favicon.ico" alt="OSACE Logo" class="brand-logo-img" />
+      </div>
       <div class="brand-text">
         <span class="brand-name">OSACE</span>
         <span class="brand-tag">PORTAL</span>
@@ -463,19 +465,23 @@ onUnmounted(() => {
     padding: 0 0.5rem;
   }
 
-  .logo {
+  .logo-wrap {
     width: 42px;
     height: 42px;
-    background: linear-gradient(135deg, var(--color-primary), #1d4ed8);
-    color: white;
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem;
-    font-weight: 800;
-    font-family: var(--font-heading);
-    box-shadow: var(--shadow-glow);
+    padding: 6px;
+    flex-shrink: 0;
+  }
+
+  .brand-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   .brand-text {
@@ -484,11 +490,11 @@ onUnmounted(() => {
   }
 
   .brand-name {
-    font-size: 1.4rem;
+    font-size: 1.35rem;
     font-weight: 800;
     font-family: var(--font-heading);
     color: var(--color-text-primary);
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     line-height: 1.1;
   }
 
@@ -501,21 +507,28 @@ onUnmounted(() => {
 
   .nav-links {
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.4rem;
     width: 100%;
   }
 
   .nav-item {
     flex-direction: row;
-    padding: 0.85rem 1.1rem;
-    border-radius: 12px;
-    font-size: 0.95rem;
-    gap: 0.9rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    gap: 0.85rem;
+    border: 1px solid transparent;
+  }
+
+  .nav-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
   }
 
   .nav-item.active {
-    background: rgba(59, 130, 246, 0.12);
-    color: var(--color-primary);
+    background: var(--color-bg-subtle);
+    color: #f8fafc;
+    border-color: rgba(255, 255, 255, 0.1);
     font-weight: 600;
   }
 
