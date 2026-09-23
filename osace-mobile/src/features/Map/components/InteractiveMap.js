@@ -155,8 +155,14 @@ const InteractiveMap = forwardRef(({
     // 1. Verificare atingere pe scări (prioritate mare)
     if (stairs && stairs.length > 0) {
       let foundStair = null;
-      let minStairDist = 42; // toleranță generoasă în spațiul SVG
+      let minStairDist = 48; // toleranță generoasă în spațiul SVG
       for (const s of stairs) {
+        const dx = Math.abs(svgX - s.x);
+        const dy = Math.abs(svgY - s.y);
+        if (dx <= 42 && dy <= 30) {
+          foundStair = s;
+          break;
+        }
         const dist = Math.hypot(svgX - s.x, svgY - s.y);
         if (dist <= minStairDist) {
           foundStair = s;
@@ -173,14 +179,14 @@ const InteractiveMap = forwardRef(({
     // 2. Verificare atingere pe săli normale
     for (const r of roomsWithVertices) {
       if (
-        svgX >= r.bounds.minX - 8 &&
-        svgX <= r.bounds.maxX + 8 &&
-        svgY >= r.bounds.minY - 8 &&
-        svgY <= r.bounds.maxY + 8
+        svgX >= r.bounds.minX - 10 &&
+        svgX <= r.bounds.maxX + 10 &&
+        svgY >= r.bounds.minY - 10 &&
+        svgY <= r.bounds.maxY + 10
       ) {
         if (
           isPointInPolygon(svgX, svgY, r.vertices) ||
-          Math.hypot(svgX - r.center.x, svgY - r.center.y) <= 24
+          (r.center && Math.hypot(svgX - r.center.x, svgY - r.center.y) <= 32)
         ) {
           lastSelectTime.current = now;
           onRoomSelect && onRoomSelect(r);
@@ -328,7 +334,7 @@ const InteractiveMap = forwardRef(({
         contentWidth={MAP_DIMENSIONS.width}
         contentHeight={MAP_DIMENSIONS.height}
         onSingleTap={handleSingleTap}
-        doubleTapDelay={200}
+        doubleTapDelay={150}
         onMoveShouldSetPanResponderCapture={(evt, gestureState) =>
           Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4
         }
@@ -337,6 +343,7 @@ const InteractiveMap = forwardRef(({
           width={MAP_DIMENSIONS.width}
           height={MAP_DIMENSIONS.height}
           viewBox={MAP_DIMENSIONS.viewBox}
+          pointerEvents="none"
         >
           {/* 1. Strat Outline Clădire */}
           <G id="Building_Outline">
@@ -355,7 +362,7 @@ const InteractiveMap = forwardRef(({
 
           {/* 1.1 Strat Demisol Foundation Slab (corpuri G, K și canal tehnic) */}
           {floorId === 'B' && demisolUnfinishedAreas && (
-            <G id="Demisol_Base" pointerEvents="none">
+            <G id="Demisol_Base">
               {demisolUnfinishedAreas.map((d, index) => (
                 <Path
                   key={`demisol-unfinished-${index}`}
@@ -395,7 +402,6 @@ const InteractiveMap = forwardRef(({
                     stroke={roomStyle.stroke}
                     strokeWidth={roomStyle.strokeWidth}
                     opacity={roomStyle.opacity}
-                    onPress={() => onRoomSelect && onRoomSelect(room)}
                   />
 
                   {/* Etichetă Cod Sală */}
@@ -414,7 +420,6 @@ const InteractiveMap = forwardRef(({
                       fontWeight={isSelected ? '800' : '700'}
                       textAnchor="middle"
                       alignmentBaseline="middle"
-                      onPress={() => onRoomSelect && onRoomSelect(room)}
                     >
                       {room.code}
                     </SvgText>
@@ -426,7 +431,7 @@ const InteractiveMap = forwardRef(({
 
           {/* 4. Strat Pereți Interiori (Walls Layer) */}
           {showWalls && wallsPathData && (
-            <G id="Walls" pointerEvents="none">
+            <G id="Walls">
               <Path
                 d={wallsPathData}
                 fill="none"
@@ -453,10 +458,7 @@ const InteractiveMap = forwardRef(({
                 const badgeY = stair.y - badgeHeight / 2;
 
                 return (
-                  <G
-                    key={stair.id}
-                    onPress={() => onStairSelect && onStairSelect(stair)}
-                  >
+                  <G key={stair.id}>
                     {/* Halo / Glow circular de fundal */}
                     <Circle
                       cx={stair.x}
