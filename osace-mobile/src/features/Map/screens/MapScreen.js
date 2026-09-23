@@ -30,6 +30,9 @@ const MapScreen = ({ navigation }) => {
   const [startPoint, setStartPoint] = useState(null);
   const [showWalls, setShowWalls] = useState(true);
   const [showUnderlay, setShowUnderlay] = useState(true);
+  const [showDebugGraph, setShowDebugGraph] = useState(false);
+  const [debugTapCoords, setDebugTapCoords] = useState(null);
+  const [selectedDebugNode, setSelectedDebugNode] = useState(null);
   const mapRef = useRef(null);
 
   // Configurare Header și dezactivare swipe drawer pentru pan fără interferențe
@@ -76,6 +79,22 @@ const MapScreen = ({ navigation }) => {
               />
             </TouchableOpacity>
             <TouchableOpacity
+              onPress={() => {
+                setShowDebugGraph((prev) => !prev);
+                setSelectedDebugNode(null);
+                setDebugTapCoords(null);
+              }}
+              style={{ marginRight: 12, padding: 4 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel={showDebugGraph ? 'Ascunde debug graf' : 'Afișează debug graf'}
+            >
+              <Ionicons
+                name={showDebugGraph ? 'git-network' : 'git-network-outline'}
+                size={20}
+                color={showDebugGraph ? '#06b6d4' : isDark ? '#94a3b8' : '#64748b'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={() => mapRef.current?.resetView()}
               style={styles.headerResetButton}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -87,7 +106,7 @@ const MapScreen = ({ navigation }) => {
         ),
       });
     }
-  }, [navigation, colors, showWalls, showUnderlay, isDark]);
+  }, [navigation, colors, showWalls, showUnderlay, showDebugGraph, isDark]);
 
   // Selectare sală din hartă
   const handleRoomSelect = useCallback((room) => {
@@ -325,6 +344,15 @@ const MapScreen = ({ navigation }) => {
             targetRoom={activeRoute?.targetRoom || null}
             showWalls={showWalls}
             showUnderlay={showUnderlay}
+            showDebugGraph={showDebugGraph}
+            onDebugTap={(coords) => {
+              setDebugTapCoords(coords);
+              setSelectedDebugNode(null);
+            }}
+            onDebugNodeSelect={(node) => {
+              setSelectedDebugNode(node);
+              setDebugTapCoords(null);
+            }}
           />
 
           {/* 2. Top Header Overlay: Căutare sau Banner Navigație Activă */}
@@ -389,6 +417,55 @@ const MapScreen = ({ navigation }) => {
               onOpenRoom={handleOpenRoomFromStair}
             />
           )}
+
+          {/* 6. Banner Coordonate & Noduri Mod Debug */}
+          {showDebugGraph && (
+            <View style={styles.debugCoordsBanner}>
+              <View style={styles.debugHeaderRow}>
+                <View style={styles.debugBadge}>
+                  <Ionicons name="bug" size={12} color="#ffffff" style={{ marginRight: 4 }} />
+                  <Text style={styles.debugBadgeText}>DEBUG GRAF NAVIGAȚIE</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowDebugGraph(false);
+                    setSelectedDebugNode(null);
+                    setDebugTapCoords(null);
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close-circle" size={20} color={isDark ? '#94a3b8' : '#64748b'} />
+                </TouchableOpacity>
+              </View>
+
+              {selectedDebugNode ? (
+                <View style={styles.debugContent}>
+                  <Text style={styles.debugNodeTitle}>
+                    Nod: <Text style={{ color: '#06b6d4', fontWeight: '800' }}>{selectedDebugNode.id}</Text>
+                  </Text>
+                  <Text style={styles.debugNodeCoords}>
+                    Coordonate: <Text style={{ fontWeight: '800', color: colors.textPrimary }}>X: {Math.round(selectedDebugNode.x)}, Y: {Math.round(selectedDebugNode.y)}</Text> • Tip: {selectedDebugNode.type}
+                  </Text>
+                  {selectedDebugNode.roomCode && (
+                    <Text style={styles.debugNodeSub}>Sală asociată: {selectedDebugNode.roomCode}</Text>
+                  )}
+                </View>
+              ) : debugTapCoords ? (
+                <View style={styles.debugContent}>
+                  <Text style={styles.debugNodeTitle}>
+                    Punct Atins pe Hartă:
+                  </Text>
+                  <Text style={styles.debugNodeCoords}>
+                    Coordonate SVG: <Text style={{ fontWeight: '800', color: '#10b981' }}>X: {debugTapCoords.x}, Y: {debugTapCoords.y}</Text>
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.debugHint}>
+                  Atinge un nod sau orice punct de pe hartă pentru a afla coordonatele X, Y exacte.
+                </Text>
+              )}
+            </View>
+          )}
         </View>
       </SafeAreaView>
     </GestureHandlerRootView>
@@ -450,6 +527,65 @@ const createStyles = (colors, isDark) =>
       right: 16,
       top: 86,
       zIndex: 15,
+    },
+    debugCoordsBanner: {
+      position: 'absolute',
+      bottom: 24,
+      left: 16,
+      right: 16,
+      backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+      borderRadius: 14,
+      padding: 12,
+      borderWidth: 1.5,
+      borderColor: '#06b6d4',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 8,
+      zIndex: 40,
+    },
+    debugHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 6,
+    },
+    debugBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#0891b2',
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    debugBadgeText: {
+      color: '#ffffff',
+      fontSize: 10,
+      fontWeight: '800',
+    },
+    debugContent: {
+      marginTop: 2,
+    },
+    debugNodeTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    debugNodeCoords: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    debugNodeSub: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 1,
+    },
+    debugHint: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      fontStyle: 'italic',
     },
   });
 
