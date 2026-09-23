@@ -1334,29 +1334,29 @@ export const buildingFloors = {
         "floor": "P",
         "level": "±0.00",
         "area_plan_m2": 28.64,
-        "area_calc_m2": 11.2,
+        "area_calc_m2": 27.8,
         "confidence": "medium",
         "labelPos": {
-          "x": 991.1,
-          "y": 711.3
+            "x": 1038,
+            "y": 726.9
         },
         "center": {
-          "x": 991.1,
-          "y": 711.3
+            "x": 1038,
+            "y": 726.9
         },
         "bounds": {
-          "minX": 963.9,
-          "minY": 684.1,
-          "maxX": 1025.7,
-          "maxY": 769.6,
-          "width": 61.8,
-          "height": 85.5
+            "minX": 963.9,
+            "minY": 684.1,
+            "maxX": 1112,
+            "maxY": 769.6,
+            "width": 148.1,
+            "height": 85.5
         },
-        "pathData": "M 971 684.1 L 971 690.5 L 963.9 691.2 L 963.9 769.6 L 1002.4 769.6 L 1002.4 736.7 L 1025.3 736 L 1025.7 684.1 Z",
+        "pathData": "M 963.9 684.1 L 1112 684.1 L 1112 769.6 L 963.9 769.6 Z",
         "wing": "Corp K",
         "isCorridor": false,
         "isTechnical": false
-      },
+    },
       {
         "id": "room-K011",
         "code": "K011",
@@ -1365,29 +1365,29 @@ export const buildingFloors = {
         "floor": "P",
         "level": "±0.00",
         "area_plan_m2": 28.28,
-        "area_calc_m2": 13.5,
+        "area_calc_m2": 17,
         "confidence": "medium",
         "labelPos": {
-          "x": 990,
-          "y": 181.2
+            "x": 1038,
+            "y": 181.2
         },
         "center": {
-          "x": 990,
-          "y": 181.2
+            "x": 1038,
+            "y": 181.2
         },
         "bounds": {
-          "minX": 963.9,
-          "minY": 155.1,
-          "maxX": 1067.3,
-          "maxY": 207.3,
-          "width": 103.4,
-          "height": 52.2
+            "minX": 963.9,
+            "minY": 155.1,
+            "maxX": 1112,
+            "maxY": 207.3,
+            "width": 148.1,
+            "height": 52.2
         },
-        "pathData": "M 963.9 155.1 L 963.9 200.2 L 970.2 200.2 L 971 207.3 L 1067.3 207.3 L 1067.3 155.1 Z",
+        "pathData": "M 963.9 155.1 L 1112 155.1 L 1112 207.3 L 963.9 207.3 Z",
         "wing": "Corp K",
         "isCorridor": false,
         "isTechnical": false
-      },
+    },
       {
         "id": "room-K008",
         "code": "K008",

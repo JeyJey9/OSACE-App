@@ -1414,15 +1414,15 @@ export const NAV_NODES = {
   },
   "P-R-K010": {
     "id": "P-R-K010",
-    "x": 991.1,
-    "y": 711.3,
+    "x": 1038,
+    "y": 726.9,
     "floor": "P",
     "type": "room",
     "roomCode": "K010"
   },
   "P-R-K011": {
     "id": "P-R-K011",
-    "x": 990,
+    "x": 1038,
     "y": 181.2,
     "floor": "P",
     "type": "room",
@@ -2715,6 +2715,38 @@ export const NAV_NODES = {
     "floor": "P",
     "type": "corridor",
     "roomCode": null
+  },
+  "P-C085": {
+    "id": "P-C085",
+    "x": 1094,
+    "y": 870,
+    "floor": "P",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "P-C086": {
+    "id": "P-C086",
+    "x": 1160,
+    "y": 878,
+    "floor": "P",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "P-C087": {
+    "id": "P-C087",
+    "x": 1094,
+    "y": 96,
+    "floor": "P",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "P-C088": {
+    "id": "P-C088",
+    "x": 1116,
+    "y": 798,
+    "floor": "P",
+    "type": "corridor",
+    "roomCode": null
   }
 };
 
@@ -3908,12 +3940,6 @@ export const NAV_EDGES = [
     "weight": 84.1
   },
   {
-    "from": "P-R-K001",
-    "to": "P-C060",
-    "kind": "door",
-    "weight": 129.5
-  },
-  {
     "from": "P-R-K002",
     "to": "P-C059",
     "kind": "door",
@@ -3948,18 +3974,6 @@ export const NAV_EDGES = [
     "to": "P-C051",
     "kind": "door",
     "weight": 137.9
-  },
-  {
-    "from": "P-R-K010",
-    "to": "P-C045",
-    "kind": "door",
-    "weight": 102.8
-  },
-  {
-    "from": "P-R-K011",
-    "to": "P-C040",
-    "kind": "door",
-    "weight": 101.7
   },
   {
     "from": "P-R-K008",
@@ -4038,18 +4052,6 @@ export const NAV_EDGES = [
     "to": "P-C046",
     "kind": "corridor-stair",
     "weight": 46.3
-  },
-  {
-    "from": "P-S10",
-    "to": "P-C047",
-    "kind": "corridor-stair",
-    "weight": 90.4
-  },
-  {
-    "from": "P-S11",
-    "to": "P-C060",
-    "kind": "corridor-stair",
-    "weight": 95.5
   },
   {
     "from": "P-S12",
@@ -4934,12 +4936,6 @@ export const NAV_EDGES = [
     "weight": 46.2
   },
   {
-    "from": "P-C060",
-    "to": "P-C078",
-    "kind": "corridor-bridge",
-    "weight": 176.2
-  },
-  {
     "from": "B-C036",
     "to": "B-C038",
     "kind": "corridor-bridge",
@@ -5052,6 +5048,78 @@ export const NAV_EDGES = [
     "to": "P-S07",
     "kind": "corridor-stair",
     "weight": 48.8
+  },
+  {
+    "from": "P-C060",
+    "to": "P-C088",
+    "kind": "corridor",
+    "weight": 43.1
+  },
+  {
+    "from": "P-C088",
+    "to": "P-C085",
+    "kind": "corridor",
+    "weight": 75.3
+  },
+  {
+    "from": "P-C088",
+    "to": "P-C086",
+    "kind": "corridor",
+    "weight": 91.3
+  },
+  {
+    "from": "P-C085",
+    "to": "P-C086",
+    "kind": "corridor",
+    "weight": 66.5
+  },
+  {
+    "from": "P-C085",
+    "to": "P-C078",
+    "kind": "corridor",
+    "weight": 67.6
+  },
+  {
+    "from": "P-C086",
+    "to": "P-C078",
+    "kind": "corridor",
+    "weight": 67.5
+  },
+  {
+    "from": "P-C085",
+    "to": "P-S11",
+    "kind": "corridor-stair",
+    "weight": 94.6
+  },
+  {
+    "from": "P-C085",
+    "to": "P-R-K010",
+    "kind": "door",
+    "weight": 153.7
+  },
+  {
+    "from": "P-C086",
+    "to": "P-R-K001",
+    "kind": "door",
+    "weight": 112.7
+  },
+  {
+    "from": "P-C087",
+    "to": "P-C047",
+    "kind": "corridor",
+    "weight": 36.9
+  },
+  {
+    "from": "P-C087",
+    "to": "P-S10",
+    "kind": "corridor-stair",
+    "weight": 56.5
+  },
+  {
+    "from": "P-C087",
+    "to": "P-R-K011",
+    "kind": "door",
+    "weight": 102
   }
 ];
 
@@ -5212,3 +5280,5 @@ export default {
   resolveToNodeId,
   findPath,
 };
+
+
