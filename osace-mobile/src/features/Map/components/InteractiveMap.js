@@ -12,6 +12,9 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const AnimatedPolyline = Animated.createAnimatedComponent(Polyline);
 
+// Ordinea nivelurilor de jos în sus pentru stratificarea arhitecturală (underlay)
+const FLOOR_ORDER = ['B', 'P', 'E1', 'E2', 'E3'];
+
 // Funcție ray-casting pentru verificare dacă un punct (px, py) este în interiorul unui poligon
 function isPointInPolygon(px, py, vertices) {
   if (!vertices || vertices.length < 3) return false;
@@ -38,6 +41,7 @@ const InteractiveMap = forwardRef(({
   isNavigating = false,
   targetRoom = null,
   showWalls = true,
+  showUnderlay = true,
   style,
 }, ref) => {
   const zoomableViewRef = useRef(null);
@@ -68,6 +72,16 @@ const InteractiveMap = forwardRef(({
 
   // Obținem contururile etajului curent
   const outlines = useMemo(() => floorOutlines[floorId] || [], [floorId]);
+
+  // Calculăm etajele inferioare vizibile în fundal ca sub-strat fantomă (ghost underlay)
+  const currentFloorIndex = useMemo(() => {
+    return FLOOR_ORDER.indexOf(floorId);
+  }, [floorId]);
+
+  const underlyingFloors = useMemo(() => {
+    if (currentFloorIndex <= 0) return [];
+    return FLOOR_ORDER.slice(0, currentFloorIndex);
+  }, [currentFloorIndex]);
 
   // Obținem pereții interiori ai etajului curent
   const wallsPathData = useMemo(() => floorWalls[floorId] || null, [floorId]);
@@ -346,6 +360,35 @@ const InteractiveMap = forwardRef(({
           viewBox={MAP_DIMENSIONS.viewBox}
           pointerEvents="none"
         >
+          {/* 0. Strat Ghost Underlays (contururi și pereți exteriori etaje inferioare) */}
+          {showUnderlay && underlyingFloors.length > 0 && (
+            <G id="Ghost_Underlays" pointerEvents="none">
+              {underlyingFloors.map((underFloorId) => {
+                const underFloorIndex = FLOOR_ORDER.indexOf(underFloorId);
+                const distanceBelow = currentFloorIndex - underFloorIndex;
+                const baseOpacity =
+                  distanceBelow === 1 ? 0.6 :
+                  distanceBelow === 2 ? 0.45 :
+                  distanceBelow === 3 ? 0.35 : 0.25;
+
+                const underPaths = floorOutlines[underFloorId] || [];
+                return underPaths.map((d, i) => (
+                  <Path
+                    key={`ghost-${underFloorId}-${i}`}
+                    d={d}
+                    fill={isDark ? 'rgba(30, 41, 59, 0.22)' : 'rgba(226, 232, 240, 0.4)'}
+                    stroke={isDark ? '#64748b' : '#94a3b8'}
+                    strokeWidth={1.8}
+                    strokeDasharray="6 4"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    opacity={baseOpacity}
+                  />
+                ));
+              })}
+            </G>
+          )}
+
           {/* 1. Strat Outline Clădire */}
           <G id="Building_Outline">
             {outlines.map((d, index) => (

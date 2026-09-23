@@ -27,6 +27,7 @@ const MapScreen = ({ navigation }) => {
   const [activeRoute, setActiveRoute] = useState(null);
   const [isNavigating, setIsNavigating] = useState(false);
   const [showWalls, setShowWalls] = useState(true);
+  const [showUnderlay, setShowUnderlay] = useState(true);
   const mapRef = useRef(null);
 
   // Configurare Header și dezactivare swipe drawer pentru pan fără interferențe
@@ -61,6 +62,18 @@ const MapScreen = ({ navigation }) => {
               />
             </TouchableOpacity>
             <TouchableOpacity
+              onPress={() => setShowUnderlay((prev) => !prev)}
+              style={{ marginRight: 12, padding: 4 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel={showUnderlay ? 'Ascunde etaje inferioare' : 'Afișează etaje inferioare'}
+            >
+              <Ionicons
+                name={showUnderlay ? 'layers' : 'layers-outline'}
+                size={20}
+                color={showUnderlay ? colors.primary : isDark ? '#94a3b8' : '#64748b'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={() => mapRef.current?.resetView()}
               style={styles.headerResetButton}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -72,7 +85,7 @@ const MapScreen = ({ navigation }) => {
         ),
       });
     }
-  }, [navigation, colors, showWalls, isDark]);
+  }, [navigation, colors, showWalls, showUnderlay, isDark]);
 
   // Selectare sală din hartă
   const handleRoomSelect = useCallback((room) => {
@@ -228,6 +241,7 @@ const MapScreen = ({ navigation }) => {
             isNavigating={isNavigating}
             targetRoom={activeRoute?.targetRoom || null}
             showWalls={showWalls}
+            showUnderlay={showUnderlay}
           />
 
           {/* 2. Top Header Overlay: Căutare sau Banner Navigație Activă */}
