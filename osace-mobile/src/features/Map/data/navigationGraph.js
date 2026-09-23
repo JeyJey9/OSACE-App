@@ -1332,6 +1332,30 @@ export const NAV_NODES = {
     "type": "room",
     "roomCode": "G011"
   },
+  "P-R-G-san-sud": {
+    "id": "P-R-G-san-sud",
+    "x": 309.1,
+    "y": 657.5,
+    "floor": "P",
+    "type": "room",
+    "roomCode": "GR. SAN."
+  },
+  "P-R-G-san-nord-1": {
+    "id": "P-R-G-san-nord-1",
+    "x": 309.1,
+    "y": 241.0,
+    "floor": "P",
+    "type": "room",
+    "roomCode": "GR. SAN."
+  },
+  "P-R-G-san-nord-2": {
+    "id": "P-R-G-san-nord-2",
+    "x": 309.1,
+    "y": 301.0,
+    "floor": "P",
+    "type": "room",
+    "roomCode": "GR. SAN."
+  },
   "P-R-G012": {
     "id": "P-R-G012",
     "x": 490.2,
@@ -1999,16 +2023,16 @@ export const NAV_NODES = {
   },
   "E1-R-G114": {
     "id": "E1-R-G114",
-    "x": 285.5,
-    "y": 237.5,
+    "x": 309.1,
+    "y": 241.0,
     "floor": "E1",
     "type": "room",
     "roomCode": "G114"
   },
   "E1-R-G115": {
     "id": "E1-R-G115",
-    "x": 306,
-    "y": 276.7,
+    "x": 309.1,
+    "y": 301.0,
     "floor": "E1",
     "type": "room",
     "roomCode": "G115"
@@ -2111,16 +2135,16 @@ export const NAV_NODES = {
   },
   "E1-R-K107": {
     "id": "E1-R-K107",
-    "x": 994.6,
-    "y": 714.6,
+    "x": 1019.2,
+    "y": 727.9,
     "floor": "E1",
     "type": "room",
     "roomCode": "K107"
   },
   "E1-R-K108": {
     "id": "E1-R-K108",
-    "x": 989.7,
-    "y": 181,
+    "x": 1019.2,
+    "y": 163.0,
     "floor": "E1",
     "type": "room",
     "roomCode": "K108"
@@ -2415,16 +2439,16 @@ export const NAV_NODES = {
   },
   "E2-R-K207": {
     "id": "E2-R-K207",
-    "x": 994.6,
-    "y": 714.9,
+    "x": 1019.2,
+    "y": 727.9,
     "floor": "E2",
     "type": "room",
     "roomCode": "K207"
   },
   "E2-R-K208": {
     "id": "E2-R-K208",
-    "x": 989.7,
-    "y": 180.8,
+    "x": 1019.2,
+    "y": 163.0,
     "floor": "E2",
     "type": "room",
     "roomCode": "K208"
@@ -3904,6 +3928,24 @@ export const NAV_EDGES = [
     "weight": 60.6
   },
   {
+    "from": "P-R-G-san-sud",
+    "to": "P-C012",
+    "kind": "door",
+    "weight": 48
+  },
+  {
+    "from": "P-R-G-san-nord-1",
+    "to": "P-C004",
+    "kind": "door",
+    "weight": 48
+  },
+  {
+    "from": "P-R-G-san-nord-2",
+    "to": "P-C005",
+    "kind": "door",
+    "weight": 48
+  },
+  {
     "from": "P-R-G012",
     "to": "P-C030",
     "kind": "door",
@@ -5092,8 +5134,13 @@ initGraph();
 export function resolveToNodeId(roomOrCode) {
   if (!roomOrCode) return 'P-C026'; // Default: Intrare Principală Parter
   if (typeof roomOrCode === 'object') {
+    if (roomOrCode.id) {
+      const candidateId = `${roomOrCode.floor}-R-${roomOrCode.id.replace('room-', '')}`;
+      if (NAV_NODES[candidateId]) return candidateId;
+      const res = resolveToNodeId(roomOrCode.id);
+      if (res && res !== 'P-C026') return res;
+    }
     if (roomOrCode.code) return resolveToNodeId(roomOrCode.code);
-    if (roomOrCode.id) return resolveToNodeId(roomOrCode.id);
   }
 
   const str = String(roomOrCode).trim();
@@ -5117,9 +5164,10 @@ export function resolveToNodeId(roomOrCode) {
     }
   }
 
-  // Fallback: search node ID ending with the code
+  // Fallback: search node ID ending with the code (case-insensitive)
   for (const id of Object.keys(NAV_NODES)) {
-    if (id.endsWith('-' + upper) || id.endsWith(upper)) {
+    const idUpper = id.toUpperCase();
+    if (idUpper.endsWith('-' + upper) || idUpper.endsWith(upper)) {
       return id;
     }
   }
