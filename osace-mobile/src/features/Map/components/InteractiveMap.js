@@ -1,236 +1,452 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
-import Svg, { G, Rect, Line, Text as SvgText, Path, Polyline, Circle } from 'react-native-svg';
+import React, { useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
+import { View, StyleSheet, Dimensions, Animated, Easing } from 'react-native';
+import Svg, { G, Path, Text as SvgText, Circle, Polyline, Rect } from 'react-native-svg';
 import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
-import { mapData } from '../data/MapData'; 
+import { MAP_DIMENSIONS, ROOM_TYPE_COLORS, getRoomsByFloor } from '../data/buildingData';
+import { floorOutlines, demisolUnfinishedAreas } from '../data/floorOutlines';
+import { floorWalls } from '../data/floorWalls';
+import { getStairsByFloor } from '../data/buildingStairs';
+import { useThemeColor } from '../../../constants/useThemeColor';
 
-// Componenta animată pentru linia de navigație
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 const AnimatedPolyline = Animated.createAnimatedComponent(Polyline);
 
-const InteractiveMap = ({ onRoomSelect, selectedRoomId, isNavigating }) => {
-  
+const InteractiveMap = forwardRef(({
+  floorId = 'P',
+  selectedRoomId = null,
+  onRoomSelect,
+  onStairSelect,
+  routePoints = null,
+  isNavigating = false,
+  targetRoom = null,
+  showWalls = true,
+  style,
+}, ref) => {
   const zoomableViewRef = useRef(null);
   const dashOffset = useRef(new Animated.Value(0)).current;
+  const { colors, isDark } = useThemeColor();
 
-  // --- 1. ALEGEM DATELE PENTRU NOUL LAYOUT ---
-  // Folosim 'ghijk_parter' dacă există, altfel fallback pe 'parter'
-  const currentFloorData = mapData?.ghijk_parter || mapData?.parter || {};
+  const themeColors = isDark ? ROOM_TYPE_COLORS.dark : ROOM_TYPE_COLORS.light;
 
-  const activeRoomPath = selectedRoomId ? currentFloorData[selectedRoomId]?.pathFromEntrance : null;
-  const pointsString = activeRoomPath ? activeRoomPath.map(p => `${p.x},${p.y}`).join(' ') : "";
-
-  // --- 2. ANIMAȚIE NAVIGAȚIE ---
+  // Animație linie navigație când navigarea este activă
   useEffect(() => {
-    if (isNavigating && activeRoomPath) {
+    if (isNavigating && routePoints && routePoints.length > 0) {
       dashOffset.setValue(0);
-      Animated.loop(
+      const animation = Animated.loop(
         Animated.timing(dashOffset, {
-          toValue: -25, 
-          duration: 1000, 
+          toValue: -24,
+          duration: 900,
           easing: Easing.linear,
-          useNativeDriver: false 
+          useNativeDriver: false,
         })
-      ).start();
+      );
+      animation.start();
+      return () => animation.stop();
     } else {
       dashOffset.stopAnimation();
     }
-  }, [isNavigating, activeRoomPath]);
+  }, [isNavigating, routePoints]);
 
-  // --- 3. CENTRARE AUTOMATĂ (LOGICĂ NOUĂ) ---
-  useEffect(() => {
-    if (selectedRoomId && zoomableViewRef.current) {
-      const room = currentFloorData[selectedRoomId];
-      if (room && room.center) {
-        
-        // Ajustăm zoom-ul pentru harta nouă (e mai detaliată, deci zoom mai mic)
-        const ZOOM = 1.2; 
-        
-        // Dimensiunile noii hărți
-        const MAP_WIDTH = 466;
-        const MAP_HEIGHT = 478;
+  // Obținem contururile etajului curent
+  const outlines = useMemo(() => floorOutlines[floorId] || [], [floorId]);
 
-        // Calculăm centrul ecranului (aproximativ)
-        const SCREEN_CENTER_X = 200; // Jumătate din ecran mobil standard
-        const SCREEN_CENTER_Y = 300; 
+  // Obținem pereții interiori ai etajului curent
+  const wallsPathData = useMemo(() => floorWalls[floorId] || null, [floorId]);
 
-        // Calculăm deplasarea necesară pentru a aduce sala în centru
-        // Formula: (CentrulEcranului - (CoordSala * Zoom))
-        const targetX = (SCREEN_CENTER_X - (room.center.x * ZOOM));
-        const targetY = (SCREEN_CENTER_Y - (room.center.y * ZOOM));
+  // Obținem scările și conectorii verticali ai etajului curent
+  const stairs = useMemo(() => getStairsByFloor(floorId), [floorId]);
 
-        zoomableViewRef.current.zoomTo(ZOOM);
-        setTimeout(() => {
-           zoomableViewRef.current.moveTo(targetX, targetY);
-        }, 150);
+  // Obținem toate încăperile pentru etajul curent
+  const rooms = useMemo(() => getRoomsByFloor(floorId), [floorId]);
+
+  // Separăm coridoarele de săli
+  const { corridors, regularRooms } = useMemo(() => {
+    const corr = [];
+    const reg = [];
+    for (const r of rooms) {
+      if (r.isCorridor) {
+        corr.push(r);
+      } else {
+        reg.push(r);
       }
     }
-  }, [selectedRoomId]); 
+    return { corridors: corr, regularRooms: reg };
+  }, [rooms]);
 
-  // --- 4. STILIZARE SĂLI ---
-  const ROOM_SELECTED = "#1C748C"; 
-  const ROOM_DEFAULT = "#3953a4"; // Albastrul din planul tău
-  
-  const getRoomStyle = (roomId) => {
-    const isSelected = selectedRoomId === roomId;
+  // Centrare precisă pe sală sau punct
+  const focusOnPoint = (point, zoomLevel = 1.35) => {
+    if (!point || !zoomableViewRef.current) return;
+    const zoomable = zoomableViewRef.current;
+
+    // Centrul SVG-ului în coordonate interne
+    const contentCenterX = MAP_DIMENSIONS.width / 2; // 673.4
+    const contentCenterY = MAP_DIMENSIONS.height / 2; // 696.0
+
+    // Deplasare necesară pentru a aduce punctul în centrul viewport-ului
+    // Dacă point.x < contentCenterX (stânga), targetOffsetX > 0 (deplasare spre dreapta)
+    // Dacă point.x > contentCenterX (dreapta), targetOffsetX < 0 (deplasare spre stânga)
+    const targetOffsetX = contentCenterX - point.x;
+    // Decalăm ușor în sus (-60px) pentru ca sala să fie perfect vizibilă deasupra cardului de detalii
+    const targetOffsetY = contentCenterY - point.y - 60;
+
+    zoomable.zoomTo(zoomLevel);
+
+    if (zoomable.panAnim) {
+      Animated.timing(zoomable.panAnim, {
+        toValue: { x: targetOffsetX, y: targetOffsetY },
+        duration: 350,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start(() => {
+        zoomable.offsetX = targetOffsetX;
+        zoomable.offsetY = targetOffsetY;
+      });
+    } else if (typeof zoomable._setNewOffsetPosition === 'function') {
+      zoomable._setNewOffsetPosition(targetOffsetX, targetOffsetY);
+    }
+  };
+
+  const focusOnRoom = (room, zoomLevel = 1.35) => {
+    if (room?.center) {
+      focusOnPoint(room.center, zoomLevel);
+    }
+  };
+
+  const resetView = () => {
+    if (!zoomableViewRef.current) return;
+    const zoomable = zoomableViewRef.current;
+    zoomable.zoomTo(0.65);
+    if (zoomable.panAnim) {
+      Animated.timing(zoomable.panAnim, {
+        toValue: { x: 0, y: 0 },
+        duration: 350,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start(() => {
+        zoomable.offsetX = 0;
+        zoomable.offsetY = 0;
+      });
+    } else if (typeof zoomable._setNewOffsetPosition === 'function') {
+      zoomable._setNewOffsetPosition(0, 0);
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    focusOnRoom,
+    focusOnPoint,
+    resetView,
+    zoomableViewRef,
+  }));
+
+  // Când se selectează o sală din exterior (ex: căutare), centrăm automat camera
+  useEffect(() => {
+    if (selectedRoomId) {
+      const found = rooms.find((r) => r.id === selectedRoomId);
+      if (found) {
+        const timer = setTimeout(() => {
+          focusOnRoom(found, 1.35);
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [selectedRoomId, floorId]);
+
+  // Puncte navigație pentru etajul curent
+  const currentFloorRoute = useMemo(() => {
+    if (!routePoints || !Array.isArray(routePoints)) return null;
+    return routePoints.filter((pt) => !pt.floor || pt.floor === floorId);
+  }, [routePoints, floorId]);
+
+  const routePolylineString = useMemo(() => {
+    if (!currentFloorRoute || currentFloorRoute.length < 2) return '';
+    return currentFloorRoute.map((p) => `${p.x},${p.y}`).join(' ');
+  }, [currentFloorRoute]);
+
+  // Verificăm dacă începutul sau sfârșitul întregului traseu este pe acest etaj
+  const isStartOfTotalRoute = useMemo(() => {
+    if (!routePoints || routePoints.length === 0) return false;
+    return routePoints[0].floor === floorId;
+  }, [routePoints, floorId]);
+
+  const isEndOfTotalRoute = useMemo(() => {
+    if (!routePoints || routePoints.length === 0) return false;
+    return routePoints[routePoints.length - 1].floor === floorId;
+  }, [routePoints, floorId]);
+
+  // Calculăm stilul pentru fiecare încăpere
+  const getRoomStyle = (room) => {
+    const isSelected = selectedRoomId === room.id;
+    const isTarget = targetRoom?.id === room.id;
+
+    if (isSelected || isTarget) {
+      return {
+        fill: themeColors.selectedFill,
+        stroke: themeColors.selectedStroke,
+        strokeWidth: 3,
+        opacity: 0.95,
+      };
+    }
+
+    const typeColor = themeColors[room.type] || themeColors.default;
     return {
-        fill: isSelected ? ROOM_SELECTED : ROOM_DEFAULT,
-        opacity: isSelected ? 0.8 : 0.5, // Facem sălile invizibile când nu sunt selectate (doar conturul din spate rămâne, sau le lăsăm puțin vizibile pt debug)
-        // Sfat: Pune opacity 0.3 ca să vezi unde sunt zonele de click, sau 0 dacă vrei să fie complet ascunse
-        stroke: isSelected ? "#fff" : "none",
-        strokeWidth: isSelected ? 2 : 0
+      fill: typeColor,
+      stroke: themeColors.stroke,
+      strokeWidth: room.isTechnical ? 1.5 : 1.2,
+      opacity: isDark ? 0.85 : 0.9,
     };
   };
 
+  const mapBgColor = isDark ? '#0b0f19' : '#f1f5f9';
+  const outlineFill = isDark ? '#161f30' : '#ffffff';
+  const outlineStroke = isDark ? '#334155' : '#1e293b';
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: mapBgColor }, style]}>
       <ReactNativeZoomableView
         ref={zoomableViewRef}
-        maxZoom={3}
-        minZoom={0.4}
-        initialZoom={0.8}
+        maxZoom={3.5}
+        minZoom={0.35}
+        initialZoom={0.65}
         bindToBorders={false}
-        contentWidth={466}  // Lățimea SVG-ului nou
-        contentHeight={478} // Înălțimea SVG-ului nou
+        contentWidth={MAP_DIMENSIONS.width}
+        contentHeight={MAP_DIMENSIONS.height}
       >
-        <Svg width={466} height={478} viewBox="0 0 466 478">
-          
-          {/* --- GRUP: PEREȚI (STRUCTURA FIXĂ) --- */}
-          <G id="Pereti">
-            <Polyline points="113.43 370.75 2 370.75 2 326.4 35.96 326.4" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="57.19 326.57 89.73 326.57 89.73 371.32" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="46.89" y1="370.75" x2="46.89" y2="327.1" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="2.35 284.65 89.34 284.65 89.34 23.93 191.22 23.93 191.22 282.32 160.25 282.32" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Path d="M201.6,380.15v58H208" transform="translate(-61.32 -132.24)" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="140.28" y1="236.33" x2="140.28" y2="161.35" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="140.32 75.74 140.32 151.28 89.34 151.28" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="150.45" y1="152.07" x2="191.22" y2="152.07" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="191.17" y1="88.37" x2="149.95" y2="88.37" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="139.35" y1="23.93" x2="139.35" y2="66.38" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="119.09" y1="66.38" x2="90.08" y2="66.38" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="118.56" y1="24.61" x2="118.56" y2="56.81" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="89.34" y1="236.73" x2="118.69" y2="236.73" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="89.34 284.65 118.03 284.65 118.03 246.4" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="160.13 305.88 191.97 305.88 191.97 282.32" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="192.22 283.93 267.63 283.93 267.63 305.88 394.99 305.88 394.99 299.3 334.89 299.3 334.89 235.48 373.09 235.48 373.09 255.41 373.09 189.92" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="373.76" y1="213.69" x2="400.57" y2="213.69" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="411.96 214.4 463.65 214.4 463.65 299.16 411.3 299.16 411.3 225.89" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="378.75" y1="401.39" x2="378.75" y2="453.4" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="378.75" y1="465.07" x2="295.97" y2="465.07" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="286.99 471.75 283.45 475.29 260.36 452.19 263.28 449.27" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="271.35 442.09 271.35 371.4 271.35 360.14" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="271.35 369.9 191.22 369.9 191.22 327.6 208.24 327.6" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="268.38 369.55 268.38 326.2 221.68 326.2" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="191.22" y1="215.89" x2="150.7" y2="215.89" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="120.82" y1="370.44" x2="126.06" y2="370.44" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="137.1" y1="370.26" x2="143.46" y2="370.26" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="154.5" y1="370.83" x2="158.71" y2="370.83" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="166.1" y1="370.44" x2="191.22" y2="370.44" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Path d="M234.7,508.7" transform="translate(-61.32 -132.24)" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Polyline points="173.09 370.44 173.09 325.33 166.1 325.33" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="159.31" y1="325.48" x2="154.08" y2="325.48" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="143.46" y1="325.87" x2="137.1" y2="325.87" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="126.48" y1="325.51" x2="121.25" y2="325.51" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="114.03" y1="325.48" x2="89.73" y2="325.48" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="177.78" y1="347.45" x2="173.53" y2="347.45" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Path d="M252.54,480.21" transform="translate(-61.32 -132.24)" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="184.15" y1="347.44" x2="190.73" y2="347.44" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="247.86" y1="369.55" x2="247.86" y2="336.08" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="281.82" y1="358.94" x2="335.59" y2="358.94" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="349.53" y1="359.26" x2="358.82" y2="359.26" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="366.33" y1="358.96" x2="374.51" y2="358.96" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Polyline points="352.53 348.82 352.57 358.94 352.57 363.68 374.35 385.46 378 385.62 378 359.47 374.51 359.47 374.51 348.33 416.96 348.33 416.96 305.88 408.47 305.88 408.47 299.93" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Path d="M425.17,477.89" transform="translate(-61.32 -132.24)" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Polyline points="373.76 349.53 364.53 340.3 364.53 317.97 385.76 317.97" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="385.96" y1="348.33" x2="385.96" y2="335.06" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Polyline points="404.22 348.33 404.22 327.1 385.83 327.1" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="416.96" y1="317.34" x2="394.63" y2="317.34" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-            <Line x1="334.67" y1="266.05" x2="373.76" y2="266.05" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="372.58 192.12 283.2 192.12 283.2 108.32 372.26 108.32 372.26 66.64 335.55 66.64 335.55 2 463.65 2 463.65 214.4" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="463.79" y1="150.44" x2="411.96" y2="150.44" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="411.96" y1="171.95" x2="411.96" y2="193.17" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Polyline points="372.8 178.4 372.8 122.42 297.29 122.42 297.29 178.51 373.76 178.51" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="373.09" y1="150.58" x2="401.39" y2="150.58" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="411.96" y1="129.49" x2="411.96" y2="108.27" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="372.47" y1="87.17" x2="401.26" y2="87.17" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="411.96" y1="87.04" x2="463.7" y2="87.04" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="410.81" y1="2.31" x2="410.81" y2="75.72" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="372.26" y1="66.64" x2="372.26" y2="44.79" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="373.76" y1="33.98" x2="335.76" y2="33.98" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4"/>
-            <Line x1="365.76" y1="23.7" x2="342.27" y2="23.7" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="8"/>
-            <Path d="M203.05,480.57" transform="translate(-61.32 -132.24)" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="8"/>
-            <Polyline points="310.08 358.73 310.08 348.82 331.35 348.82 331.35 358.94" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="8"/>
-            <Path d="M150.66,438.62" transform="translate(-61.32 -132.24)" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="8"/>
+        <Svg
+          width={MAP_DIMENSIONS.width}
+          height={MAP_DIMENSIONS.height}
+          viewBox={MAP_DIMENSIONS.viewBox}
+        >
+          {/* 1. Strat Outline Clădire */}
+          <G id="Building_Outline">
+            {outlines.map((d, index) => (
+              <Path
+                key={`outline-${index}`}
+                d={d}
+                fill={outlineFill}
+                stroke={outlineStroke}
+                strokeWidth={4.5}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            ))}
           </G>
 
-          {/* --- GRUP: NAVIGAȚIE (STRAT DEASUPRA) --- */}
-          {activeRoomPath && isNavigating && (
-            <G id="Navigation_Layer">
-              <AnimatedPolyline
-                points={pointsString}
-                fill="none"
-                stroke="#1C748C" 
-                strokeWidth="5"
-                strokeDasharray="15, 10" 
-                strokeDashoffset={dashOffset} 
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <Circle cx={activeRoomPath[0].x} cy={activeRoomPath[0].y} r="8" fill="#22c55e" stroke="white" strokeWidth="2" />
-              <Circle cx={activeRoomPath[activeRoomPath.length - 1].x} cy={activeRoomPath[activeRoomPath.length - 1].y} r="8" fill="#1C748C" stroke="white" strokeWidth="2" />
+          {/* 1.1 Strat Demisol Foundation Slab (corpuri G, K și canal tehnic) */}
+          {floorId === 'B' && demisolUnfinishedAreas && (
+            <G id="Demisol_Base" pointerEvents="none">
+              {demisolUnfinishedAreas.map((d, index) => (
+                <Path
+                  key={`demisol-unfinished-${index}`}
+                  d={d}
+                  fill={themeColors.corridor}
+                  stroke={isDark ? '#334155' : '#94a3b8'}
+                  strokeWidth={1.2}
+                />
+              ))}
             </G>
           )}
 
-          {/* --- GRUP: SĂLI (INTERACTIVE) --- */}
-          <G id="Sali">
-                        {/* GD 02 */}
-            <G onPress={() => onRoomSelect('room_gd02')}>
-                {/* Dreptunghiul (Sala) */}
-                <Rect 
-                    x="4.48" y="327.1" width="41.74" height="42.24" 
-                    {...getRoomStyle('room_gd02')} 
-                />
-                
-                {/* Textul (Eticheta) */}
-                <SvgText
-                    fill="#334155"        // Culoare gri închis (profesional)
-                    fontSize="10"         // Mărime text (ajustează după nevoie)
-                    fontWeight="bold"
-                    x="25"                // Aprox. centrul dreptunghiului pe X (4.48 + 41.74/2)
-                    y="352"               // Aprox. centrul dreptunghiului pe Y
-                    textAnchor="middle"   // Centrează textul pe coordonata X
-                    alignmentBaseline="middle" // Centrează textul pe coordonata Y
-                    opacity={1}           // Textul trebuie să fie mereu vizibil
-                >
-                    GD 02
-                </SvgText>
-            </G>
-
-            {/* GD 03 */}
-            <G onPress={() => onRoomSelect('room_gd03')}>
-                <Rect x="47.9" y="326.93" width="41.47" height="42.62" {...getRoomStyle('room_gd03')} />
-            </G>
-
-            {/* ID 03 */}
-            <G onPress={() => onRoomSelect('room_id03')}>
-                 <Rect x="192.31" y="328.87" width="53.6" height="40.03" {...getRoomStyle('room_id03')} />
-            </G>
-
-            {/* AULA */}
-            <G onPress={() => onRoomSelect('room_aula_belea')}>
-                <Polyline points="275.02 364.48 275.63 434.79 303.69 462.85 373.76 462.85 373.76 389.37 346.54 362.15" {...getRoomStyle('room_aula_belea')} />
-            </G>
+          {/* 2. Strat Coridoare */}
+          <G id="Corridors">
+            {corridors.map((corridor) => (
+              <Path
+                key={corridor.id}
+                d={corridor.pathData}
+                fill={themeColors.corridor}
+                stroke={isDark ? '#334155' : '#94a3b8'}
+                strokeWidth={1.2}
+              />
+            ))}
           </G>
 
+          {/* 3. Strat Săli Interactive */}
+          <G id="Rooms">
+            {regularRooms.map((room) => {
+              const roomStyle = getRoomStyle(room);
+              const isSelected = selectedRoomId === room.id || targetRoom?.id === room.id;
+
+              return (
+                <G key={room.id}>
+                  <Path
+                    d={room.pathData}
+                    fill={roomStyle.fill}
+                    stroke={roomStyle.stroke}
+                    strokeWidth={roomStyle.strokeWidth}
+                    opacity={roomStyle.opacity}
+                    onPress={() => onRoomSelect && onRoomSelect(room)}
+                  />
+
+                  {/* Etichetă Cod Sală */}
+                  {room.labelPos && (
+                    <SvgText
+                      x={room.labelPos.x}
+                      y={room.labelPos.y}
+                      fill={
+                        isSelected
+                          ? '#ffffff'
+                          : isDark
+                          ? '#e2e8f0'
+                          : '#1e293b'
+                      }
+                      fontSize={isSelected ? '14' : '11'}
+                      fontWeight={isSelected ? '800' : '700'}
+                      textAnchor="middle"
+                      alignmentBaseline="middle"
+                      onPress={() => onRoomSelect && onRoomSelect(room)}
+                    >
+                      {room.code}
+                    </SvgText>
+                  )}
+                </G>
+              );
+            })}
+          </G>
+
+          {/* 4. Strat Pereți Interiori (Walls Layer) */}
+          {showWalls && wallsPathData && (
+            <G id="Walls" pointerEvents="none">
+              <Path
+                d={wallsPathData}
+                fill="none"
+                stroke={isDark ? '#64748b' : '#3f4652'}
+                strokeWidth={2.2}
+                strokeLinecap="square"
+              />
+            </G>
+          )}
+
+          {/* 4.1 Strat Scări / Conectori Verticali */}
+          {stairs && stairs.length > 0 && (
+            <G id="Stairs">
+              {stairs.map((stair) => {
+                const isUp = stair.direction === 'up';
+                const isDown = stair.direction === 'down';
+                const dirSymbol = isUp ? '▲' : isDown ? '▼' : '⇅';
+                const dirColor = isUp ? '#10b981' : isDown ? '#f59e0b' : '#3b82f6';
+
+                // Dimensiuni badge
+                const badgeWidth = Math.max(46, stair.label.length * 8 + 26);
+                const badgeHeight = 22;
+                const badgeX = stair.x - badgeWidth / 2;
+                const badgeY = stair.y - badgeHeight / 2;
+
+                return (
+                  <G
+                    key={stair.id}
+                    onPress={() => onStairSelect && onStairSelect(stair)}
+                  >
+                    {/* Halo / Glow circular de fundal */}
+                    <Circle
+                      cx={stair.x}
+                      cy={stair.y}
+                      r={16}
+                      fill={dirColor}
+                      opacity={isDark ? 0.25 : 0.18}
+                    />
+
+                    {/* Pill Badge Container */}
+                    <Rect
+                      x={badgeX}
+                      y={badgeY}
+                      width={badgeWidth}
+                      height={badgeHeight}
+                      rx={11}
+                      ry={11}
+                      fill={isDark ? '#1e293b' : '#ffffff'}
+                      stroke={dirColor}
+                      strokeWidth={2}
+                    />
+
+                    {/* Indicator Cerc Direcție */}
+                    <Circle
+                      cx={badgeX + 11}
+                      cy={stair.y}
+                      r={7}
+                      fill={dirColor}
+                    />
+
+                    {/* Simbol Direcție (▲ / ▼ / ⇅) */}
+                    <SvgText
+                      x={badgeX + 11}
+                      y={stair.y + 1}
+                      fill="#ffffff"
+                      fontSize="8"
+                      fontWeight="900"
+                      textAnchor="middle"
+                      alignmentBaseline="middle"
+                    >
+                      {dirSymbol}
+                    </SvgText>
+
+                    {/* Etichetă Etaj Destinație (P, B, E1, E1–E3, etc.) */}
+                    <SvgText
+                      x={badgeX + 11 + (badgeWidth - 11) / 2}
+                      y={stair.y + 1}
+                      fill={isDark ? '#f8fafc' : '#0f172a'}
+                      fontSize="10"
+                      fontWeight="800"
+                      textAnchor="middle"
+                      alignmentBaseline="middle"
+                    >
+                      {stair.label}
+                    </SvgText>
+                  </G>
+                );
+              })}
+            </G>
+          )}
+
+          {/* 5. Strat Navigație (Rutare activă) */}
+          {routePolylineString !== '' && (
+            <G id="Navigation_Route">
+              {/* Linia de traseu cu animație dash */}
+              <AnimatedPolyline
+                points={routePolylineString}
+                fill="none"
+                stroke="#0284c7"
+                strokeWidth={5}
+                strokeDasharray="14, 8"
+                strokeDashoffset={dashOffset}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {currentFloorRoute && currentFloorRoute.length > 0 && (
+                <>
+                  {/* Nod de Start pe acest etaj */}
+                  <Circle
+                    cx={currentFloorRoute[0].x}
+                    cy={currentFloorRoute[0].y}
+                    r={8}
+                    fill={isStartOfTotalRoute ? '#10b981' : '#0284c7'}
+                    stroke="#ffffff"
+                    strokeWidth={2.5}
+                  />
+
+                  {/* Nod de Sosire / Ieșire pe acest etaj */}
+                  <Circle
+                    cx={currentFloorRoute[currentFloorRoute.length - 1].x}
+                    cy={currentFloorRoute[currentFloorRoute.length - 1].y}
+                    r={8}
+                    fill={isEndOfTotalRoute ? '#ef4444' : '#f59e0b'}
+                    stroke="#ffffff"
+                    strokeWidth={2.5}
+                  />
+                </>
+              )}
+            </G>
+          )}
         </Svg>
       </ReactNativeZoomableView>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    overflow: 'hidden',
   },
 });
 

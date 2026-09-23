@@ -1,0 +1,231 @@
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useThemeColor } from '../../../constants/useThemeColor';
+
+const FLOOR_LABELS = {
+  B: 'Demisol',
+  P: 'Parter',
+  E1: 'Etaj 1',
+  E2: 'Etaj 2',
+  E3: 'Etaj 3',
+};
+
+const NavigationBanner = ({
+  route,
+  currentFloor,
+  onSwitchFloor,
+  onStopNavigation,
+  style,
+}) => {
+  const { colors, isDark } = useThemeColor();
+
+  const navState = useMemo(() => {
+    if (!route || !route.nodes || route.nodes.length === 0) return null;
+
+    const allNodes = route.nodes;
+    const targetRoom = route.targetRoom;
+    const floors = route.floors || [];
+
+    const nodesOnCurrentFloor = allNodes.filter((n) => n.floor === currentFloor);
+    const isDestinationFloor = targetRoom && targetRoom.floor === currentFloor;
+
+    // Determinăm următoarea acțiune dacă nu suntem la destinație
+    let nextFloor = null;
+    let isClimbing = false;
+
+    if (!isDestinationFloor) {
+      const currentFloorIdx = floors.indexOf(currentFloor);
+      if (currentFloorIdx !== -1 && currentFloorIdx < floors.length - 1) {
+        nextFloor = floors[currentFloorIdx + 1];
+        // Comparație ordinea etajelor (B < P < E1 < E2 < E3)
+        const floorOrder = ['B', 'P', 'E1', 'E2', 'E3'];
+        isClimbing = floorOrder.indexOf(nextFloor) > floorOrder.indexOf(currentFloor);
+      } else if (currentFloorIdx === -1) {
+        // Dacă utilizatorul se uită la un etaj care nu este pe traseu, îl ghidăm spre primul etaj
+        nextFloor = floors[0];
+      }
+    }
+
+    return {
+      hasNodesOnFloor: nodesOnCurrentFloor.length > 0,
+      isDestinationFloor,
+      nextFloor,
+      isClimbing,
+      targetRoom,
+      totalDistanceMeters: route.totalDistanceMeters || 0,
+    };
+  }, [route, currentFloor]);
+
+  if (!navState) return null;
+
+  const styles = createStyles(colors, isDark);
+
+  return (
+    <View style={[styles.container, style]}>
+      {/* Rând superior: Destinație & Buton Închidere */}
+      <View style={styles.topRow}>
+        <View style={styles.badge}>
+          <Ionicons name="navigate" size={14} color="#ffffff" style={{ marginRight: 4 }} />
+          <Text style={styles.badgeText}>Navigație</Text>
+        </View>
+
+        <View style={styles.targetInfo}>
+          <Text style={styles.targetTitle} numberOfLines={1}>
+            Către {navState.targetRoom?.code || 'Destinație'}
+          </Text>
+          <Text style={styles.targetSub}>
+            {navState.totalDistanceMeters}m distanță totală
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          onPress={onStopNavigation}
+          style={styles.stopButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="close-circle" size={24} color={isDark ? '#ef4444' : '#dc2626'} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Rând instrucțiuni etaj */}
+      <View style={styles.instructionBox}>
+        {navState.isDestinationFloor ? (
+          <View style={styles.instructionContent}>
+            <Ionicons name="checkmark-circle" size={18} color="#10b981" style={styles.instructionIcon} />
+            <Text style={styles.instructionText}>
+              Ești la etajul destinației ({FLOOR_LABELS[currentFloor]}). Urmează linia albastră până la sală.
+            </Text>
+          </View>
+        ) : navState.nextFloor ? (
+          <View style={styles.instructionWithAction}>
+            <View style={styles.instructionContent}>
+              <Ionicons
+                name={navState.isClimbing ? 'arrow-up-circle' : 'arrow-down-circle'}
+                size={18}
+                color="#0284c7"
+                style={styles.instructionIcon}
+              />
+              <Text style={styles.instructionText}>
+                Mergi la scări și {navState.isClimbing ? 'urcă' : 'coboară'} la{' '}
+                <Text style={{ fontWeight: '800' }}>{FLOOR_LABELS[navState.nextFloor]}</Text>.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.switchFloorBtn}
+              activeOpacity={0.7}
+              onPress={() => onSwitchFloor && onSwitchFloor(navState.nextFloor)}
+            >
+              <Text style={styles.switchFloorBtnText}>
+                Comută la {navState.nextFloor}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.instructionContent}>
+            <Ionicons name="information-circle" size={18} color="#f59e0b" style={styles.instructionIcon} />
+            <Text style={styles.instructionText}>
+              Traseul trece prin alte etaje. Comută la {FLOOR_LABELS[route.floors[0]]} pentru plecare.
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
+
+const createStyles = (colors, isDark) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: isDark ? 'rgba(30, 41, 59, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+      borderRadius: 16,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.16,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primary,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      marginRight: 10,
+    },
+    badgeText: {
+      color: '#ffffff',
+      fontSize: 11,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+    },
+    targetInfo: {
+      flex: 1,
+    },
+    targetTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    targetSub: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    stopButton: {
+      padding: 2,
+    },
+    instructionBox: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#f8fafc',
+      borderRadius: 10,
+      padding: 8,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0',
+    },
+    instructionContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    instructionIcon: {
+      marginRight: 8,
+    },
+    instructionText: {
+      fontSize: 12,
+      color: colors.textPrimary,
+      flex: 1,
+      lineHeight: 16,
+    },
+    instructionWithAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    switchFloorBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primary,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    switchFloorBtnText: {
+      color: '#ffffff',
+      fontSize: 11,
+      fontWeight: '700',
+      marginRight: 4,
+    },
+  });
+
+export default NavigationBanner;

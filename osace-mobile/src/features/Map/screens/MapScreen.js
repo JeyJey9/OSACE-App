@@ -1,191 +1,298 @@
-import React, { useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert, Linking, Image
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  Alert,
 } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useThemeColor } from '../../../constants/useThemeColor';
-import ScreenContainer from '../../../components/layout/ScreenContainer';
+import InteractiveMap from '../components/InteractiveMap';
+import FloorSelector from '../components/FloorSelector';
+import RoomSearchBar from '../components/RoomSearchBar';
+import RoomDetailsSheet from '../components/RoomDetailsSheet';
+import StairDetailsSheet from '../components/StairDetailsSheet';
+import NavigationBanner from '../components/NavigationBanner';
+import { findPath } from '../data/navigationGraph';
 
 const MapScreen = ({ navigation }) => {
   const { colors, isDark } = useThemeColor();
+  const [activeFloor, setActiveFloor] = useState('P');
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [selectedStair, setSelectedStair] = useState(null);
+  const [activeRoute, setActiveRoute] = useState(null);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [showWalls, setShowWalls] = useState(true);
+  const mapRef = useRef(null);
 
+  // Configurare Header și dezactivare swipe drawer pentru pan fără interferențe
   useLayoutEffect(() => {
     if (navigation) {
       navigation.setOptions({
         headerShown: true,
-        title: 'Harta Facultății'
+        title: 'Harta Facultății',
+        headerTitleStyle: {
+          fontWeight: '700',
+          fontSize: 18,
+          color: colors.textPrimary,
+        },
+        headerStyle: {
+          backgroundColor: colors.background,
+        },
+        headerTintColor: colors.textPrimary,
+        headerShadowVisible: false,
+        swipeEnabled: false,
+        headerRight: () => (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={() => setShowWalls((prev) => !prev)}
+              style={{ marginRight: 12, padding: 4 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel={showWalls ? 'Ascunde pereți' : 'Afișează pereți'}
+            >
+              <Ionicons
+                name={showWalls ? 'grid' : 'grid-outline'}
+                size={20}
+                color={showWalls ? colors.primary : isDark ? '#94a3b8' : '#64748b'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => mapRef.current?.resetView()}
+              style={styles.headerResetButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel="Recentrare hartă"
+            >
+              <Ionicons name="scan-outline" size={22} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+        ),
       });
     }
-  }, [navigation]);
+  }, [navigation, colors, showWalls, isDark]);
 
-  const handleStressBerbece = () => {
-    Alert.alert(
-      "✉️ Misiune: Stresează-l pe Berbece",
-      "Ești pe cale să ceri stadiul hărții. Vrei să-i trimiți un feedback direct designerului nostru pentru a grăbi procesul?",
-      [
-        { text: "Anulează", style: "cancel" },
-        {
-          text: "Stresează",
-          onPress: () => {
-            Alert.alert("Succes!", "Mâna lui Berbece a fost ghidată misterios către pictograma Adobe Illustrator. Harta se desenează deja cu 5 minute mai repede.");
-          }
-        }
-      ]
-    );
-  };
+  // Selectare sală din hartă
+  const handleRoomSelect = useCallback((room) => {
+    setSelectedStair(null);
+    if (selectedRoom?.id === room?.id) {
+      setSelectedRoom(null);
+    } else {
+      setSelectedRoom(room);
+    }
+  }, [selectedRoom]);
+
+  // Selectare scară din hartă
+  const handleStairSelect = useCallback((stair) => {
+    if (selectedStair?.id === stair?.id) {
+      setSelectedStair(null);
+    } else {
+      setSelectedRoom(null);
+      setSelectedStair(stair);
+    }
+  }, [selectedStair]);
+
+  // Schimbare etaj din fișa detaliilor scării
+  const handleStairSwitchFloor = useCallback((stair, targetFloor) => {
+    setSelectedStair(null);
+    setActiveFloor(targetFloor);
+    // Recentrare cameră pe scara respectivă de pe noul etaj
+    setTimeout(() => {
+      mapRef.current?.focusOnPoint({ x: stair.x, y: stair.y }, 1.35);
+    }, 200);
+  }, []);
+
+  // Selectare sală din bara de căutare
+  const handleSearchSelect = useCallback((room) => {
+    if (!room) return;
+    setSelectedStair(null);
+    if (room.floor && room.floor !== activeFloor) {
+      setActiveFloor(room.floor);
+    }
+    setSelectedRoom(room);
+  }, [activeFloor]);
+
+  // Comutare etaj manuală din selector
+  const handleFloorChange = useCallback((floorId) => {
+    setActiveFloor(floorId);
+    setSelectedStair(null);
+    if (selectedRoom && selectedRoom.floor !== floorId && !isNavigating) {
+      setSelectedRoom(null);
+    }
+  }, [selectedRoom, isNavigating]);
+
+  // Închidere Bottom Sheet detalii
+  const handleCloseDetails = useCallback(() => {
+    setSelectedRoom(null);
+  }, []);
+
+  // Pornire/oprire navigație către sală
+  const handleToggleNavigation = useCallback((room) => {
+    if (isNavigating) {
+      setIsNavigating(false);
+      setActiveRoute(null);
+      return;
+    }
+
+    if (!room) return;
+
+    // Calculăm traseul de la Intrarea Principală (sau poziția curentă) la sala selectată
+    const result = findPath(null, room.code || room.id);
+
+    if (result && result.nodes && result.nodes.length > 0) {
+      const fullRoute = {
+        nodes: result.nodes,
+        floors: result.floors,
+        totalDistanceMeters: result.totalDistanceMeters,
+        targetRoom: room,
+      };
+
+      setActiveRoute(fullRoute);
+      setIsNavigating(true);
+      // Închidem fișa de detalii pentru a oferi vizibilitate maximă hărții
+      setSelectedRoom(null);
+
+      // Dacă traseul începe pe alt etaj decât cel curent, comutăm pe etajul de start
+      const startFloor = result.floors[0] || 'P';
+      if (startFloor !== activeFloor) {
+        setActiveFloor(startFloor);
+      }
+
+      // Focalizăm pe primul punct al traseului
+      setTimeout(() => {
+        mapRef.current?.focusOnPoint(result.nodes[0], 1.3);
+      }, 200);
+    } else {
+      Alert.alert(
+        'Rută Indisponibilă',
+        `Nu s-a putut calcula un traseu până la sala ${room.code}.`
+      );
+    }
+  }, [isNavigating, activeFloor]);
+
+  // Oprire navigație din banner
+  const handleStopNavigation = useCallback(() => {
+    setIsNavigating(false);
+    setActiveRoute(null);
+  }, []);
+
+  // Comutare etaj din banner-ul de navigație (la scări)
+  const handleNavSwitchFloor = useCallback((nextFloor) => {
+    setActiveFloor(nextFloor);
+    // Găsim primul nod de pe noul etaj pentru recentrare cameră
+    if (activeRoute && activeRoute.nodes) {
+      const firstNodeOnNextFloor = activeRoute.nodes.find((n) => n.floor === nextFloor);
+      if (firstNodeOnNextFloor) {
+        setTimeout(() => {
+          mapRef.current?.focusOnPoint(firstNodeOnNextFloor, 1.4);
+        }, 150);
+      }
+    }
+  }, [activeRoute]);
 
   const styles = createStyles(colors, isDark);
 
   return (
-    <ScreenContainer style={styles.mainContainer}>
-      <View style={styles.contentContainer}>
-        {/* Animated-like construct icon container */}
-        <View style={styles.iconContainer}>
-          <Ionicons name="construct" size={50} color={colors.primary} />
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>Work In Progress</Text>
-          </View>
+    <GestureHandlerRootView style={styles.rootGesture}>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          barStyle={isDark ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+        />
+        <View style={styles.container}>
+          {/* 1. Harta Interactivă */}
+          <InteractiveMap
+            ref={mapRef}
+            floorId={activeFloor}
+            selectedRoomId={selectedRoom?.id || null}
+            onRoomSelect={handleRoomSelect}
+            onStairSelect={handleStairSelect}
+            routePoints={activeRoute?.nodes || null}
+            isNavigating={isNavigating}
+            targetRoom={activeRoute?.targetRoom || null}
+            showWalls={showWalls}
+          />
+
+          {/* 2. Top Header Overlay: Căutare sau Banner Navigație Activă */}
+          {isNavigating && activeRoute ? (
+            <NavigationBanner
+              route={activeRoute}
+              currentFloor={activeFloor}
+              onSwitchFloor={handleNavSwitchFloor}
+              onStopNavigation={handleStopNavigation}
+              style={styles.topOverlayPosition}
+            />
+          ) : (
+            <RoomSearchBar
+              currentFloor={activeFloor}
+              onSelectRoom={handleSearchSelect}
+              style={styles.topOverlayPosition}
+            />
+          )}
+
+          {/* 3. Selector Flotant de Etaje (dreapta ecranului) */}
+          <FloorSelector
+            activeFloor={activeFloor}
+            onFloorChange={handleFloorChange}
+            style={styles.floorSelectorPosition}
+          />
+
+          {/* 4. Bottom Sheet Detalii Sală (când o sală este selectată) */}
+          {selectedRoom && !isNavigating && (
+            <RoomDetailsSheet
+              room={selectedRoom}
+              onClose={handleCloseDetails}
+              onNavigateHere={handleToggleNavigation}
+              isNavigating={isNavigating}
+            />
+          )}
+
+          {/* 5. Bottom Sheet Detalii Scară (când o scară este selectată) */}
+          {selectedStair && !isNavigating && (
+            <StairDetailsSheet
+              stair={selectedStair}
+              currentFloor={activeFloor}
+              onClose={() => setSelectedStair(null)}
+              onSwitchFloor={handleStairSwitchFloor}
+            />
+          )}
         </View>
-
-        <Text style={styles.title}>Șantierele OSACE 🏗️</Text>
-
-        <Text style={styles.subtitle}>
-          Harta interactivă a facultății este în plină fază de proiectare și construcție digitală.
-        </Text>
-
-        {/* Playful alert box */}
-        <View style={styles.jokeCard}>
-          <Ionicons name="alert-circle-outline" size={24} color="#f39c12" style={styles.jokeIcon} />
-          <View style={styles.jokeTextContainer}>
-            <Text style={styles.jokeTitle}>Vrei harta mai repede? ⏰</Text>
-            <Text style={styles.jokeText}>
-              Mergi și stresează-l pe Berbece să termine designul! Fiecare mesaj îl aduce cu 5 minute mai aproape de finalizare.
-            </Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          activeOpacity={0.8}
-          onPress={handleStressBerbece}
-        >
-          <Ionicons name="notifications-outline" size={20} color="#fff" style={styles.btnIcon} />
-          <Text style={styles.actionButtonText}>Stresează-l pe Berbece</Text>
-        </TouchableOpacity>
-      </View>
-    </ScreenContainer>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 };
 
-const createStyles = (colors, isDark) => StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  contentContainer: {
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    paddingTop: 120,
-    width: '100%',
-  },
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#f8f9fa',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  badge: {
-    position: 'absolute',
-    bottom: -8,
-    alignSelf: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    textAlign: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 28,
-    paddingHorizontal: 16,
-  },
-  jokeCard: {
-    flexDirection: 'row',
-    backgroundColor: isDark ? 'rgba(243, 156, 18, 0.08)' : '#fef9eb',
-    borderWidth: 1,
-    borderColor: isDark ? 'rgba(243, 156, 18, 0.2)' : '#fbeec7',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 32,
-    alignItems: 'flex-start',
-    width: '100%',
-  },
-  jokeIcon: {
-    marginRight: 12,
-    marginTop: 2,
-  },
-  jokeTextContainer: {
-    flex: 1,
-  },
-  jokeTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: isDark ? '#f5b041' : '#b7791f',
-    marginBottom: 4,
-  },
-  jokeText: {
-    fontSize: 13,
-    color: colors.textPrimary,
-    lineHeight: 18,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 3,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-  },
-  btnIcon: {
-    marginRight: 8,
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-});
+const createStyles = (colors, isDark) =>
+  StyleSheet.create({
+    rootGesture: {
+      flex: 1,
+    },
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    container: {
+      flex: 1,
+      position: 'relative',
+    },
+    headerResetButton: {
+      marginRight: 16,
+      padding: 4,
+    },
+    topOverlayPosition: {
+      position: 'absolute',
+      top: 12,
+      left: 16,
+      right: 16,
+      zIndex: 25,
+    },
+    floorSelectorPosition: {
+      position: 'absolute',
+      right: 16,
+      top: 86,
+      zIndex: 15,
+    },
+  });
 
 export default MapScreen;
