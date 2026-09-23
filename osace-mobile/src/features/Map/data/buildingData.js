@@ -430,12 +430,12 @@ export const buildingFloors = {
       },
       {
         "id": "stair-B-08",
-        "annotation": "4 Tr.",
-        "steps": 4,
-        "connector_id": "vc-03",
-        "x": 911.7,
-        "y": 961.4,
-        "type": "vertical-connector"
+        "annotation": "Intrare Aula",
+        "steps": null,
+        "connector_id": null,
+        "x": 802.0,
+        "y": 990.0,
+        "type": "poi"
       },
       {
         "id": "stair-B-09",
@@ -1616,15 +1616,7 @@ export const buildingFloors = {
         "y": 493.6,
         "type": "level-change"
       },
-      {
-        "id": "stair-P-15",
-        "annotation": "6 Tr.",
-        "steps": 6,
-        "connector_id": "vc-03",
-        "x": 917.4,
-        "y": 962,
-        "type": "vertical-connector"
-      },
+
       {
         "id": "stair-P-16",
         "annotation": "15 Tr.",

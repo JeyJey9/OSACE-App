@@ -152,14 +152,15 @@ const InteractiveMap = forwardRef(({
     const now = Date.now();
     if (now - lastSelectTime.current < 250) return;
 
-    // 1. Verificare atingere pe scări (prioritate mare)
+    // 1. Verificare atingere pe scări și puncte de interes (prioritate mare)
     if (stairs && stairs.length > 0) {
       let foundStair = null;
       let minStairDist = 48; // toleranță generoasă în spațiul SVG
       for (const s of stairs) {
         const dx = Math.abs(svgX - s.x);
         const dy = Math.abs(svgY - s.y);
-        if (dx <= 42 && dy <= 30) {
+        const halfWidth = s.label && s.label.length > 5 ? s.label.length * 4.5 + 16 : 42;
+        if (dx <= halfWidth && dy <= 30) {
           foundStair = s;
           break;
         }
@@ -446,13 +447,16 @@ const InteractiveMap = forwardRef(({
           {stairs && stairs.length > 0 && (
             <G id="Stairs">
               {stairs.map((stair) => {
+                const isPOI = stair.type === 'poi' || stair.direction === 'none';
                 const isUp = stair.direction === 'up';
                 const isDown = stair.direction === 'down';
-                const dirSymbol = isUp ? '▲' : isDown ? '▼' : '⇅';
-                const dirColor = isUp ? '#10b981' : isDown ? '#f59e0b' : '#3b82f6';
+                const dirSymbol = isPOI ? '➜' : isUp ? '▲' : isDown ? '▼' : '⇅';
+                const dirColor = isPOI ? '#8b5cf6' : isUp ? '#10b981' : isDown ? '#f59e0b' : '#3b82f6';
 
                 // Dimensiuni badge
-                const badgeWidth = Math.max(46, stair.label.length * 8 + 26);
+                const badgeWidth = isPOI
+                  ? Math.max(92, stair.label.length * 6.5 + 26)
+                  : Math.max(46, stair.label.length * 8 + 26);
                 const badgeHeight = 22;
                 const badgeX = stair.x - badgeWidth / 2;
                 const badgeY = stair.y - badgeHeight / 2;

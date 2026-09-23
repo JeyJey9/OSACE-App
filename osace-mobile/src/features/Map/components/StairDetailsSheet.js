@@ -9,6 +9,7 @@ const StairDetailsSheet = ({
   currentFloor,
   onClose,
   onSwitchFloor,
+  onOpenRoom,
 }) => {
   const { colors, isDark } = useThemeColor();
   const bottomSheetRef = useRef(null);
@@ -32,17 +33,20 @@ const StairDetailsSheet = ({
       ? 'Parter'
       : `Etaj ${currentFloor.replace('E', '')}`;
 
+  const isPOI = stair.type === 'poi' || stair.direction === 'none';
   const isUp = stair.direction === 'up';
   const isDown = stair.direction === 'down';
   const isBoth = stair.direction === 'both';
 
-  const badgeIconName = isUp
+  const badgeIconName = isPOI
+    ? 'log-in'
+    : isUp
     ? 'arrow-up-circle'
     : isDown
     ? 'arrow-down-circle'
     : 'swap-vertical-circle';
 
-  const badgeColor = isUp ? '#10b981' : isDown ? '#f59e0b' : '#3b82f6';
+  const badgeColor = isPOI ? '#8b5cf6' : isUp ? '#10b981' : isDown ? '#f59e0b' : '#3b82f6';
 
   const styles = createStyles(colors, isDark, badgeColor);
 
@@ -66,7 +70,7 @@ const StairDetailsSheet = ({
       }}
     >
       <BottomSheetView style={styles.contentContainer}>
-        {/* Antet Scară */}
+        {/* Antet Scară / POI */}
         <View style={styles.header}>
           <View style={styles.badgeContainer}>
             <Ionicons name={badgeIconName} size={28} color={badgeColor} />
@@ -78,7 +82,9 @@ const StairDetailsSheet = ({
                 </View>
               </View>
               <Text style={styles.subtitle}>
-                Aflat la {currentFloorLabel} • {stair.direction === 'up' ? 'Urcare' : stair.direction === 'down' ? 'Coborâre' : 'Legătură etaje'}
+                {isPOI
+                  ? `Aflat la ${currentFloorLabel} • Punct de Acces Principal`
+                  : `Aflat la ${currentFloorLabel} • ${isUp ? 'Urcare' : isDown ? 'Coborâre' : 'Legătură etaje'}`}
               </Text>
             </View>
           </View>
@@ -103,46 +109,69 @@ const StairDetailsSheet = ({
           </View>
         ) : null}
 
-        {/* Secțiune Etaje Destinație */}
-        <Text style={styles.sectionTitle}>SCHIMBĂ ETAJUL (VEZI DESTINAȚIA)</Text>
+        {/* Secțiune Etaje Destinație sau Acces Sală */}
+        {isPOI ? (
+          <>
+            <Text style={styles.sectionTitle}>ACCES SALĂ ASOCIATĂ</Text>
+            <TouchableOpacity
+              style={styles.destinationButton}
+              onPress={() => onOpenRoom && onOpenRoom('room-B-amfiteatru')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.destLeft}>
+                <View style={[styles.destFloorBadge, { backgroundColor: '#8b5cf6' }]}>
+                  <Ionicons name="school" size={18} color="#ffffff" />
+                </View>
+                <View>
+                  <Text style={styles.destFloorName}>Aula Constantin Belea</Text>
+                  <Text style={styles.destFloorSub}>Apasă pentru a deschide detaliile aulei</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>SCHIMBĂ ETAJUL (VEZI DESTINAȚIA)</Text>
+            <ScrollView
+              style={styles.destinationsScroll}
+              contentContainerStyle={styles.destinationsContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              {stair.targetFloors &&
+                stair.targetFloors.map((targetFloor, index) => {
+                  const targetName =
+                    stair.targetFloorNames && stair.targetFloorNames[index]
+                      ? stair.targetFloorNames[index]
+                      : targetFloor === 'B'
+                      ? 'Demisol'
+                      : targetFloor === 'P'
+                      ? 'Parter'
+                      : `Etaj ${targetFloor.replace('E', '')}`;
 
-        <ScrollView
-          style={styles.destinationsScroll}
-          contentContainerStyle={styles.destinationsContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {stair.targetFloors &&
-            stair.targetFloors.map((targetFloor, index) => {
-              const targetName =
-                stair.targetFloorNames && stair.targetFloorNames[index]
-                  ? stair.targetFloorNames[index]
-                  : targetFloor === 'B'
-                  ? 'Demisol'
-                  : targetFloor === 'P'
-                  ? 'Parter'
-                  : `Etaj ${targetFloor.replace('E', '')}`;
-
-              return (
-                <TouchableOpacity
-                  key={`target-${targetFloor}-${index}`}
-                  style={styles.destinationButton}
-                  onPress={() => onSwitchFloor && onSwitchFloor(stair, targetFloor)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.destLeft}>
-                    <View style={styles.destFloorBadge}>
-                      <Text style={styles.destFloorBadgeText}>{targetFloor}</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.destFloorName}>{targetName}</Text>
-                      <Text style={styles.destFloorSub}>Apasă pentru a merge la acest etaj</Text>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.primary} />
-                </TouchableOpacity>
-              );
-            })}
-        </ScrollView>
+                  return (
+                    <TouchableOpacity
+                      key={`target-${targetFloor}-${index}`}
+                      style={styles.destinationButton}
+                      onPress={() => onSwitchFloor && onSwitchFloor(stair, targetFloor)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.destLeft}>
+                        <View style={styles.destFloorBadge}>
+                          <Text style={styles.destFloorBadgeText}>{targetFloor}</Text>
+                        </View>
+                        <View>
+                          <Text style={styles.destFloorName}>{targetName}</Text>
+                          <Text style={styles.destFloorSub}>Apasă pentru a merge la acest etaj</Text>
+                        </View>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+                    </TouchableOpacity>
+                  );
+                })}
+            </ScrollView>
+          </>
+        )}
       </BottomSheetView>
     </BottomSheet>
   );

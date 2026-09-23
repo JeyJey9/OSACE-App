@@ -17,6 +17,7 @@ import RoomDetailsSheet from '../components/RoomDetailsSheet';
 import StairDetailsSheet from '../components/StairDetailsSheet';
 import NavigationBanner from '../components/NavigationBanner';
 import { findPath } from '../data/navigationGraph';
+import { getRoomById, getRoomByCode } from '../data/buildingData';
 
 const MapScreen = ({ navigation }) => {
   const { colors, isDark } = useThemeColor();
@@ -102,6 +103,21 @@ const MapScreen = ({ navigation }) => {
       mapRef.current?.focusOnPoint({ x: stair.x, y: stair.y }, 1.35);
     }, 200);
   }, []);
+
+  // Deschidere fișă de sală din fișa detaliilor scării / POI-ului (ex: Aula Constantin Belea)
+  const handleOpenRoomFromStair = useCallback((roomId) => {
+    setSelectedStair(null);
+    const room = getRoomById(roomId) || getRoomByCode(roomId);
+    if (room) {
+      if (room.floor && room.floor !== activeFloor) {
+        setActiveFloor(room.floor);
+      }
+      setTimeout(() => {
+        setSelectedRoom(room);
+        mapRef.current?.focusOnRoom(room);
+      }, 150);
+    }
+  }, [activeFloor]);
 
   // Selectare sală din bara de căutare
   const handleSearchSelect = useCallback((room) => {
@@ -255,6 +271,7 @@ const MapScreen = ({ navigation }) => {
               currentFloor={activeFloor}
               onClose={() => setSelectedStair(null)}
               onSwitchFloor={handleStairSwitchFloor}
+              onOpenRoom={handleOpenRoomFromStair}
             />
           )}
         </View>

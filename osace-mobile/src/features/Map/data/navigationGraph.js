@@ -590,11 +590,11 @@ export const NAV_NODES = {
   },
   "B-S08": {
     "id": "B-S08",
-    "x": 911.7,
-    "y": 961.4,
+    "x": 802,
+    "y": 990,
     "floor": "B",
-    "type": "stair",
-    "roomCode": null
+    "type": "poi",
+    "roomCode": "Aula Constantin Belea"
   },
   "B-S09": {
     "id": "B-S09",
@@ -1604,14 +1604,7 @@ export const NAV_NODES = {
     "type": "stair",
     "roomCode": null
   },
-  "P-S15": {
-    "id": "P-S15",
-    "x": 917.4,
-    "y": 962,
-    "floor": "P",
-    "type": "stair",
-    "roomCode": null
-  },
+
   "P-S16": {
     "id": "P-S16",
     "x": 960.6,
@@ -3257,9 +3250,15 @@ export const NAV_EDGES = [
   },
   {
     "from": "B-S08",
-    "to": "B-C053",
+    "to": "B-C046",
     "kind": "corridor-stair",
-    "weight": 19
+    "weight": 18
+  },
+  {
+    "from": "B-S08",
+    "to": "B-R-B-amfiteatru",
+    "kind": "door",
+    "weight": 35
   },
   {
     "from": "B-S09",
@@ -3849,12 +3848,7 @@ export const NAV_EDGES = [
     "kind": "corridor",
     "weight": 52
   },
-  {
-    "from": "P-S15",
-    "to": "P-C071",
-    "kind": "stair-access",
-    "weight": 23
-  },
+
   {
     "from": "P-S16",
     "to": "P-C072",
@@ -4113,12 +4107,7 @@ export const NAV_EDGES = [
     "kind": "corridor-stair",
     "weight": 281.7
   },
-  {
-    "from": "P-S15",
-    "to": "P-C071",
-    "kind": "corridor-stair",
-    "weight": 23
-  },
+
   {
     "from": "P-S16",
     "to": "P-C072",
@@ -5073,12 +5062,7 @@ export const NAV_EDGES = [
     "kind": "vertical-stair",
     "weight": 50
   },
-  {
-    "from": "B-S08",
-    "to": "P-S15",
-    "kind": "vertical-stair",
-    "weight": 50
-  },
+
   {
     "from": "B-S10",
     "to": "P-S16",
@@ -5113,13 +5097,20 @@ export function resolveToNodeId(roomOrCode) {
   }
 
   const str = String(roomOrCode).trim();
-  if (NAV_NODES[str]) return str;
-
-  // Search by room code (case-insensitive)
   const upper = str.toUpperCase().replace('ROOM-', '');
-  if (upper.includes('BELEA') || upper.includes('AULA') || upper.includes('B-AMFITEATRU')) {
-    return 'B-R-B-amfiteatru';
+
+  // Aula Constantin Belea -> rutează direct la Punctul Informativ (Intrare Aula B-S08)
+  if (
+    upper.includes('BELEA') ||
+    upper.includes('AULA') ||
+    upper.includes('B-AMFITEATRU') ||
+    upper === 'STAIR-B-08' ||
+    upper === 'B-S08'
+  ) {
+    return 'B-S08';
   }
+
+  if (NAV_NODES[str]) return str;
   for (const [id, node] of Object.entries(NAV_NODES)) {
     if (node.roomCode && node.roomCode.toUpperCase() === upper) {
       return id;
