@@ -17,6 +17,7 @@ export const ROOM_TYPE_COLORS = {
     cabinet: '#e3f3e6',
     amphitheatre: '#ece4fb',
     'student-space': '#fdf3cd',
+    entrance: '#dcfce7',
     service: '#f0f2f5',
     'other-public-space': '#f0f2f5',
     technical: '#f4f5f7',
@@ -33,6 +34,7 @@ export const ROOM_TYPE_COLORS = {
     cabinet: '#1a3d2e',
     amphitheatre: '#362359',
     'student-space': '#4d3d14',
+    entrance: '#064e3b',
     service: '#2a2f3a',
     'other-public-space': '#2a2f3a',
     technical: '#252932',
@@ -56,32 +58,63 @@ export const buildingFloors = {
       {
         "id": "corridor-GD01",
         "code": "GD01",
-        "name": "GD01 + GD04",
+        "name": "GD01 (Hol Demisol)",
         "type": "corridor",
         "floor": "B",
         "level": "-2.63",
-        "area_plan_m2": 207.43,
-        "area_calc_m2": 209.2,
+        "area_plan_m2": 136.05,
+        "area_calc_m2": 137.8,
         "confidence": "high",
         "labelPos": {
-          "x": 339.9,
-          "y": 1003.8
+          "x": 340.0,
+          "y": 880.0
         },
         "center": {
-          "x": 339.9,
-          "y": 1003.8
+          "x": 340.0,
+          "y": 880.0
         },
         "bounds": {
           "minX": 14.5,
           "minY": 822.7,
           "maxX": 567.2,
-          "maxY": 1079.7,
+          "maxY": 942.4,
           "width": 552.7,
-          "height": 257
+          "height": 119.7
         },
-        "pathData": "M 14.5 822.7 L 14.5 1079.7 L 260.5 1079.7 L 260.5 1075.8 L 18.4 1075.8 L 17.6 1010.8 L 24.7 1010.1 L 24.7 939.2 L 29.6 938.5 L 30.4 919.4 L 32.1 920.1 L 32.1 938.5 L 327.2 938.5 L 327.2 942.4 L 275.6 942.4 L 275.6 1058.1 L 279.9 1058.8 L 279.9 1071.2 L 305.3 1071.2 L 306 1065.2 L 327.9 1065.9 L 327.2 1075.8 L 279.9 1075.8 L 279.9 1079.7 L 404.1 1079.7 L 404.1 934.9 L 422.8 934.3 L 423.5 1079.7 L 548.1 1079.7 L 548.1 1075.8 L 500.1 1075.1 L 500.1 1065.9 L 504.7 1065.2 L 504.7 942.4 L 500.8 942.4 L 500.1 939.2 L 567.2 938.5 L 567.2 889.8 L 552.7 889.8 L 552 887.3 L 434.8 887.3 L 434.1 879.9 L 419.6 879.9 L 419 889.8 L 409.1 889.8 L 408 876.7 L 408.3 822.7 L 355.8 822.7 L 355.8 829 L 350.1 830.1 L 265.1 829.8 L 264.3 824.8 L 156 824.8 L 155.3 829.8 L 145.4 829.8 L 144.7 824.8 L 36 824.8 L 36 829 L 32.1 829.8 L 31.4 848.8 L 29.6 848.1 L 29.6 829.8 L 24.7 829 L 24.7 822.7 Z",
+        "pathData": "M 14.5 822.7 L 14.5 942.4 L 567.2 942.4 L 567.2 889.8 L 552.7 889.8 L 552 887.3 L 434.8 887.3 L 434.1 879.9 L 419.6 879.9 L 419 889.8 L 409.1 889.8 L 408 876.7 L 408.3 822.7 L 355.8 822.7 L 355.8 829 L 350.1 830.1 L 265.1 829.8 L 264.3 824.8 L 156 824.8 L 155.3 829.8 L 145.4 829.8 L 144.7 824.8 L 36 824.8 L 36 829 L 32.1 829.8 L 31.4 848.8 L 29.6 848.1 L 29.6 829.8 L 24.7 829 L 24.7 822.7 Z",
         "wing": "Corp G",
         "isCorridor": true,
+        "isTechnical": false
+      },
+      {
+        "id": "room-GD04",
+        "code": "GD04",
+        "name": "Intrarea Principală",
+        "type": "entrance",
+        "floor": "B",
+        "level": "-2.63",
+        "area_plan_m2": 71.38,
+        "area_calc_m2": 71.4,
+        "confidence": "high",
+        "labelPos": {
+          "x": 389.0,
+          "y": 990.0
+        },
+        "center": {
+          "x": 389.0,
+          "y": 1011.0
+        },
+        "bounds": {
+          "minX": 269.3,
+          "minY": 942.4,
+          "maxX": 508.6,
+          "maxY": 1079.7,
+          "width": 239.3,
+          "height": 137.3
+        },
+        "pathData": "M 269.3 942.4 L 508.6 942.4 L 508.6 1079.7 L 269.3 1079.7 Z",
+        "wing": "Corp G",
+        "isCorridor": false,
         "isTechnical": false
       },
       {

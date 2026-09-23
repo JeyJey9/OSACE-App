@@ -580,6 +580,14 @@ export const NAV_NODES = {
     "type": "stair",
     "roomCode": null
   },
+  "B-entrance-main": {
+    "id": "B-entrance-main",
+    "x": 389.0,
+    "y": 1065.0,
+    "floor": "B",
+    "type": "entrance",
+    "roomCode": "GD04"
+  },
   "B-S08": {
     "id": "B-S08",
     "x": 802,
@@ -3253,6 +3261,18 @@ export const NAV_EDGES = [
     "weight": 707
   },
   {
+    "from": "B-entrance-main",
+    "to": "B-C029",
+    "kind": "corridor",
+    "weight": 31
+  },
+  {
+    "from": "B-entrance-main",
+    "to": "B-C032",
+    "kind": "corridor",
+    "weight": 54
+  },
+  {
     "from": "B-S06",
     "to": "B-C057",
     "kind": "corridor-stair",
@@ -5112,19 +5132,31 @@ initGraph();
 
 // Resolve a room identifier (id, code, or node id) to a nav node id
 export function resolveToNodeId(roomOrCode) {
-  if (!roomOrCode) return 'P-C026'; // Default: Intrare Principală Parter
+  if (!roomOrCode) return 'B-entrance-main'; // Default: Intrarea Principală (Demisol GD04)
   if (typeof roomOrCode === 'object') {
     if (roomOrCode.id) {
       const candidateId = `${roomOrCode.floor}-R-${roomOrCode.id.replace('room-', '')}`;
       if (NAV_NODES[candidateId]) return candidateId;
       const res = resolveToNodeId(roomOrCode.id);
-      if (res && res !== 'P-C026') return res;
+      if (res && res !== 'B-entrance-main') return res;
     }
     if (roomOrCode.code) return resolveToNodeId(roomOrCode.code);
   }
 
   const str = String(roomOrCode).trim();
   const upper = str.toUpperCase().replace('ROOM-', '');
+
+  // Intrarea Principală Facultate (Demisol GD04)
+  if (
+    upper.includes('INTRARE') ||
+    upper.includes('FACULTATE') ||
+    upper === 'GD04' ||
+    upper === 'ROOM-GD04' ||
+    upper === 'B-ENTRANCE-MAIN' ||
+    upper.includes('ENTRANCE')
+  ) {
+    return 'B-entrance-main';
+  }
 
   // Aula Constantin Belea -> rutează direct la Punctul Informativ (Intrare Aula B-S08)
   if (

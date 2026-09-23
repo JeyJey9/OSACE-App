@@ -486,6 +486,103 @@ const InteractiveMap = forwardRef(({
             </G>
           )}
 
+          {/* 4.0 Strat Uși și Badge Intrare Principală Demisol */}
+          {floorId === 'B' && (
+            <G id="Main_Entrance">
+              {/* Trepte exterioare de acces */}
+              <Path
+                d="M 285 1083.5 L 495 1083.5 M 288 1087.5 L 492 1087.5 M 291 1091.5 L 489 1091.5"
+                stroke={isDark ? '#64748b' : '#94a3b8'}
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                pointerEvents="none"
+              />
+              {/* 4 Uși Duble de Intrare cu deschidere arc */}
+              {[310, 365, 415, 470].map((doorX, dIdx) => (
+                <G key={`main-door-${dIdx}`} pointerEvents="none">
+                  <Path
+                    d={`M ${doorX - 14} 1079.7 L ${doorX - 14} 1069 A 14 14 0 0 1 ${doorX} 1079.7`}
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth={1.4}
+                    strokeDasharray="2 2"
+                  />
+                  <Path
+                    d={`M ${doorX + 14} 1079.7 L ${doorX + 14} 1069 A 14 14 0 0 0 ${doorX} 1079.7`}
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth={1.4}
+                    strokeDasharray="2 2"
+                  />
+                  <Path
+                    d={`M ${doorX - 14} 1079.7 L ${doorX - 14} 1069 M ${doorX + 14} 1079.7 L ${doorX + 14} 1069`}
+                    stroke={isDark ? '#34d399' : '#059669'}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                  />
+                </G>
+              ))}
+
+              {/* Badge Interactiv Intrare Principală Facultate */}
+              <G
+                onPress={() => {
+                  const gd04 = rooms.find((r) => r.code === 'GD04' || r.id === 'room-GD04');
+                  if (gd04 && onRoomSelect) {
+                    onRoomSelect(gd04);
+                  }
+                }}
+              >
+                {/* Glow verde smarald */}
+                <Circle
+                  cx={389.0}
+                  cy={1050.0}
+                  r={22}
+                  fill="#10b981"
+                  opacity={isDark ? 0.3 : 0.2}
+                />
+                {/* Container Badge Pill */}
+                <Rect
+                  x={389.0 - 95}
+                  y={1050.0 - 13}
+                  width={190}
+                  height={26}
+                  rx={13}
+                  ry={13}
+                  fill={isDark ? '#064e3b' : '#ecfdf5'}
+                  stroke="#10b981"
+                  strokeWidth={2}
+                />
+                {/* Icon cerc ușă */}
+                <Circle
+                  cx={389.0 - 78}
+                  cy={1050.0}
+                  r={8}
+                  fill="#10b981"
+                />
+                <SvgText
+                  x={389.0 - 78}
+                  y={1050.0 + 3.5}
+                  fill="#ffffff"
+                  fontSize="10"
+                  textAnchor="middle"
+                >
+                  🚪
+                </SvgText>
+                {/* Text Badge */}
+                <SvgText
+                  x={389.0 + 10}
+                  y={1050.0 + 4}
+                  fill={isDark ? '#6ee7b7' : '#047857'}
+                  fontSize="10.5"
+                  fontWeight="800"
+                  textAnchor="middle"
+                >
+                  INTRAREA PRINCIPALĂ
+                </SvgText>
+              </G>
+            </G>
+          )}
+
           {/* 4.1 Strat Scări / Conectori Verticali */}
           {stairs && stairs.length > 0 && (
             <G id="Stairs">
@@ -498,7 +595,7 @@ const InteractiveMap = forwardRef(({
 
                 // Dimensiuni badge
                 const badgeWidth = isPOI
-                  ? Math.max(92, stair.label.length * 6.5 + 26)
+                  ? Math.max(80, stair.label.length * 8 + 28)
                   : Math.max(46, stair.label.length * 8 + 26);
                 const badgeHeight = 22;
                 const badgeX = stair.x - badgeWidth / 2;

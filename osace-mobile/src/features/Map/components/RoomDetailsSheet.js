@@ -8,6 +8,7 @@ const RoomDetailsSheet = ({
   room,
   onClose,
   onNavigateHere,
+  onSetStartPoint,
   isNavigating = false,
 }) => {
   const { colors, isDark } = useThemeColor();
@@ -34,6 +35,15 @@ const RoomDetailsSheet = ({
 
   const styles = createStyles(colors, isDark);
 
+  const isEntrance = room.type === 'entrance' || room.code === 'GD04';
+  const isAula =
+    room.code?.toLowerCase().includes('aula') ||
+    room.code?.toLowerCase().includes('belea') ||
+    room.id?.includes('amfiteatru');
+
+  const badgeBg = isEntrance ? '#10b981' : isAula ? '#8b5cf6' : colors.primary;
+  const badgeLabel = isEntrance ? 'INTRARE' : isAula ? 'AULA' : room.code;
+
   return (
     <BottomSheet
       ref={bottomSheetRef}
@@ -56,19 +66,17 @@ const RoomDetailsSheet = ({
       <BottomSheetView style={styles.contentContainer}>
         {/* Antet Sală */}
         <View style={styles.header}>
-          <View style={styles.codeBadge}>
-            <Text style={styles.codeBadgeText}>
-              {room.code?.toLowerCase().includes('aula') || room.code?.toLowerCase().includes('belea')
-                ? 'AULA'
-                : room.code}
-            </Text>
+          <View style={[styles.codeBadge, { backgroundColor: badgeBg }]}>
+            <Text style={styles.codeBadgeText}>{badgeLabel}</Text>
           </View>
           <View style={styles.titleContainer}>
             <Text style={styles.roomName} numberOfLines={1}>
               {room.name || 'Sală'}
             </Text>
             <Text style={styles.roomSub}>
-              {room.wing} • {floorLabel}
+              {isEntrance
+                ? 'Corp Central • Demisol (4 uși acces exterior)'
+                : `${room.wing} • ${floorLabel}`}
             </Text>
           </View>
           <TouchableOpacity
@@ -87,13 +95,13 @@ const RoomDetailsSheet = ({
         {/* Metadate Sală */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
-            <Ionicons name="layers-outline" size={16} color={colors.primary} />
+            <Ionicons name="layers-outline" size={16} color={badgeBg} />
             <Text style={styles.statLabel}>Nivel</Text>
             <Text style={styles.statValue}>{room.level || floorLabel}</Text>
           </View>
 
           <View style={styles.statBox}>
-            <Ionicons name="expand-outline" size={16} color={colors.primary} />
+            <Ionicons name="expand-outline" size={16} color={badgeBg} />
             <Text style={styles.statLabel}>Suprafață</Text>
             <Text style={styles.statValue}>
               {room.area_plan_m2 > 0 ? `${room.area_plan_m2} mp` : 'N/A'}
@@ -101,33 +109,52 @@ const RoomDetailsSheet = ({
           </View>
 
           <View style={styles.statBox}>
-            <Ionicons name="pricetag-outline" size={16} color={colors.primary} />
+            <Ionicons name="pricetag-outline" size={16} color={badgeBg} />
             <Text style={styles.statLabel}>Destinație</Text>
             <Text style={styles.statValue} numberOfLines={1}>
-              {room.type}
+              {isEntrance ? 'Intrare Facultate' : room.type}
             </Text>
           </View>
         </View>
 
-        {/* Buton de Navigare */}
-        <TouchableOpacity
-          style={[
-            styles.navButton,
-            isNavigating && { backgroundColor: '#ef4444' },
-          ]}
-          activeOpacity={0.8}
-          onPress={() => onNavigateHere && onNavigateHere(room)}
-        >
-          <Ionicons
-            name={isNavigating ? 'stop-circle-outline' : 'navigate-outline'}
-            size={20}
-            color="#ffffff"
-            style={{ marginRight: 8 }}
-          />
-          <Text style={styles.navButtonText}>
-            {isNavigating ? 'Oprește Navigația' : 'Navighează Aici'}
-          </Text>
-        </TouchableOpacity>
+        {/* Butoane de Navigare: Punct de Plecare + Destinație */}
+        <View style={styles.actionButtonsRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.startBtn]}
+            activeOpacity={0.8}
+            onPress={() => onSetStartPoint && onSetStartPoint(room)}
+          >
+            <Ionicons
+              name="flag-outline"
+              size={18}
+              color={colors.primary}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[styles.actionBtnText, { color: colors.primary }]}>
+              Plecare
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.actionBtn,
+              styles.destBtn,
+              isNavigating && { backgroundColor: '#ef4444' },
+            ]}
+            activeOpacity={0.8}
+            onPress={() => onNavigateHere && onNavigateHere(room)}
+          >
+            <Ionicons
+              name={isNavigating ? 'stop-circle-outline' : 'navigate-outline'}
+              size={18}
+              color="#ffffff"
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[styles.actionBtnText, { color: '#ffffff' }]}>
+              {isNavigating ? 'Oprește' : 'Navighează Aici'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </BottomSheetView>
     </BottomSheet>
   );
@@ -200,22 +227,35 @@ const createStyles = (colors, isDark) =>
       color: colors.textPrimary,
       textTransform: 'capitalize',
     },
-    navButton: {
+    actionButtonsRow: {
       flexDirection: 'row',
-      backgroundColor: colors.primary,
+      gap: 12,
+      alignItems: 'center',
+    },
+    actionBtn: {
+      flexDirection: 'row',
       borderRadius: 14,
-      paddingVertical: 14,
+      paddingVertical: 13,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    startBtn: {
+      flex: 1,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9',
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+    },
+    destBtn: {
+      flex: 1.4,
+      backgroundColor: colors.primary,
       shadowColor: colors.primary,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.3,
       shadowRadius: 6,
       elevation: 4,
     },
-    navButtonText: {
-      color: '#ffffff',
-      fontSize: 15,
+    actionBtnText: {
+      fontSize: 14,
       fontWeight: '700',
     },
   });

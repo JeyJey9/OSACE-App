@@ -27,7 +27,7 @@ export const buildingStairs = {
       direction: 'none',
       targetFloors: [],
       targetFloorNames: [],
-      label: 'Intrare Aula',
+      label: 'Aulă',
       fullDescription: 'Accesul principal în Aula Constantin Belea (Demisol)',
     },
     {

@@ -16,6 +16,7 @@ const NavigationBanner = ({
   currentFloor,
   onSwitchFloor,
   onStopNavigation,
+  onSwapEndpoints,
   style,
 }) => {
   const { colors, isDark } = useThemeColor();
@@ -25,6 +26,11 @@ const NavigationBanner = ({
 
     const allNodes = route.nodes;
     const targetRoom = route.targetRoom;
+    const startPoint = route.startPoint || {
+      code: 'GD04',
+      name: 'Intrarea Principală',
+      floor: 'B',
+    };
     const floors = route.floors || [];
 
     const nodesOnCurrentFloor = allNodes.filter((n) => n.floor === currentFloor);
@@ -53,6 +59,7 @@ const NavigationBanner = ({
       nextFloor,
       isClimbing,
       targetRoom,
+      startPoint,
       totalDistanceMeters: route.totalDistanceMeters || 0,
     };
   }, [route, currentFloor]);
@@ -63,21 +70,38 @@ const NavigationBanner = ({
 
   return (
     <View style={[styles.container, style]}>
-      {/* Rând superior: Destinație & Buton Închidere */}
+      {/* Rând superior: Traseu (Plecare ➔ Destinație) & Buton Închidere */}
       <View style={styles.topRow}>
         <View style={styles.badge}>
-          <Ionicons name="navigate" size={14} color="#ffffff" style={{ marginRight: 4 }} />
+          <Ionicons name="navigate" size={13} color="#ffffff" style={{ marginRight: 4 }} />
           <Text style={styles.badgeText}>Navigație</Text>
         </View>
 
         <View style={styles.targetInfo}>
-          <Text style={styles.targetTitle} numberOfLines={1}>
-            Către {navState.targetRoom?.code || 'Destinație'}
-          </Text>
-          <Text style={styles.targetSub}>
-            {navState.totalDistanceMeters}m distanță totală
+          <View style={styles.routePointsRow}>
+            <Text style={styles.routeStartPoint} numberOfLines={1}>
+              {navState.startPoint?.code || 'Intrare'}
+            </Text>
+            <Ionicons name="arrow-forward" size={12} color={colors.primary} style={{ marginHorizontal: 4 }} />
+            <Text style={styles.targetTitle} numberOfLines={1}>
+              {navState.targetRoom?.code || 'Destinație'}
+            </Text>
+          </View>
+          <Text style={styles.targetSub} numberOfLines={1}>
+            {navState.startPoint?.name ? `De la: ${navState.startPoint.name} • ` : ''}{navState.totalDistanceMeters}m distanță
           </Text>
         </View>
+
+        {onSwapEndpoints && (
+          <TouchableOpacity
+            onPress={onSwapEndpoints}
+            style={styles.swapButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel="Inversează sensul de mers"
+          >
+            <Ionicons name="swap-horizontal" size={20} color={colors.primary} />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           onPress={onStopNavigation}
@@ -173,6 +197,15 @@ const createStyles = (colors, isDark) =>
     targetInfo: {
       flex: 1,
     },
+    routePointsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    routeStartPoint: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.primary,
+    },
     targetTitle: {
       fontSize: 15,
       fontWeight: '700',
@@ -181,6 +214,12 @@ const createStyles = (colors, isDark) =>
     targetSub: {
       fontSize: 12,
       color: colors.textSecondary,
+    },
+    swapButton: {
+      padding: 6,
+      marginRight: 4,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+      borderRadius: 8,
     },
     stopButton: {
       padding: 2,
