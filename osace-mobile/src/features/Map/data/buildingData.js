@@ -420,15 +420,6 @@ export const buildingFloors = {
         "type": "level-change"
       },
       {
-        "id": "stair-B-07",
-        "annotation": "13 Tr.",
-        "steps": 13,
-        "connector_id": "vc-02",
-        "x": 1031.4,
-        "y": 98.3,
-        "type": "vertical-connector"
-      },
-      {
         "id": "stair-B-08",
         "annotation": "Intrare Aula",
         "steps": null,

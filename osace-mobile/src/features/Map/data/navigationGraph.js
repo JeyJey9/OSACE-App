@@ -580,14 +580,6 @@ export const NAV_NODES = {
     "type": "stair",
     "roomCode": null
   },
-  "B-S07": {
-    "id": "B-S07",
-    "x": 1031.4,
-    "y": 98.3,
-    "floor": "B",
-    "type": "stair",
-    "roomCode": null
-  },
   "B-S08": {
     "id": "B-S08",
     "x": 802,
@@ -3267,12 +3259,6 @@ export const NAV_EDGES = [
     "weight": 139.5
   },
   {
-    "from": "B-S07",
-    "to": "B-C057",
-    "kind": "corridor-stair",
-    "weight": 825
-  },
-  {
     "from": "B-S08",
     "to": "B-C046",
     "kind": "corridor-stair",
@@ -5037,12 +5023,6 @@ export const NAV_EDGES = [
     "to": "B-C052",
     "kind": "corridor-bridge",
     "weight": 31.4
-  },
-  {
-    "from": "B-S07",
-    "to": "P-S10",
-    "kind": "vertical-stair",
-    "weight": 50
   },
   {
     "from": "P-S10",
