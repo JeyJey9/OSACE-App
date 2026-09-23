@@ -12,6 +12,23 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const AnimatedPolyline = Animated.createAnimatedComponent(Polyline);
 
+// Funcție ray-casting pentru verificare dacă un punct (px, py) este în interiorul unui poligon
+function isPointInPolygon(px, py, vertices) {
+  if (!vertices || vertices.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+    const xi = vertices[i].x;
+    const yi = vertices[i].y;
+    const xj = vertices[j].x;
+    const yj = vertices[j].y;
+    const intersect =
+      yi > py !== yj > py &&
+      px < ((xj - xi) * (py - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
 const InteractiveMap = forwardRef(({
   floorId = 'P',
   selectedRoomId = null,
@@ -25,6 +42,7 @@ const InteractiveMap = forwardRef(({
 }, ref) => {
   const zoomableViewRef = useRef(null);
   const dashOffset = useRef(new Animated.Value(0)).current;
+  const lastSelectTime = useRef(0);
   const { colors, isDark } = useThemeColor();
 
   const themeColors = isDark ? ROOM_TYPE_COLORS.dark : ROOM_TYPE_COLORS.light;
@@ -73,6 +91,104 @@ const InteractiveMap = forwardRef(({
     }
     return { corridors: corr, regularRooms: reg };
   }, [rooms]);
+
+  // Parsăm vârfurile poligoanelor o singură dată per etaj
+  const roomsWithVertices = useMemo(() => {
+    return regularRooms.map((r) => {
+      const vertices = [];
+      const regex = /([0-9.]+)\s+([0-9.]+)/g;
+      let match;
+      while ((match = regex.exec(r.pathData)) !== null) {
+        vertices.push({ x: parseFloat(match[1]), y: parseFloat(match[2]) });
+      }
+      return { ...r, vertices };
+    });
+  }, [regularRooms]);
+
+  // Handler tactil pentru tap direct pe suprafața hărții
+  const handleSingleTap = (event, zoomObj) => {
+    if (!zoomObj) return;
+
+    const {
+      zoomLevel = 1,
+      offsetX = 0,
+      offsetY = 0,
+      originalWidth,
+      originalHeight,
+      originalPageX = 0,
+      originalPageY = 0,
+    } = zoomObj;
+
+    const containerWidth = originalWidth || SCREEN_WIDTH;
+    const containerHeight = originalHeight || SCREEN_HEIGHT;
+    const containerCenterX = containerWidth / 2;
+    const containerCenterY = containerHeight / 2;
+
+    const svgCenterX = MAP_DIMENSIONS.width / 2;
+    const svgCenterY = MAP_DIMENSIONS.height / 2;
+
+    let screenX = 0;
+    let screenY = 0;
+
+    if (
+      event?.nativeEvent?.pageX !== undefined &&
+      event?.nativeEvent?.pageY !== undefined &&
+      originalPageX !== undefined
+    ) {
+      screenX = event.nativeEvent.pageX - originalPageX;
+      screenY = event.nativeEvent.pageY - originalPageY;
+    } else if (
+      event?.nativeEvent?.locationX !== undefined &&
+      event?.nativeEvent?.locationY !== undefined
+    ) {
+      screenX = event.nativeEvent.locationX;
+      screenY = event.nativeEvent.locationY;
+    }
+
+    // Conversie inversă precisă: din coordonate ecran -> coordonate interne SVG
+    const svgX = (screenX - containerCenterX) / zoomLevel + svgCenterX - offsetX;
+    const svgY = (screenY - containerCenterY) / zoomLevel + svgCenterY - offsetY;
+
+    const now = Date.now();
+    if (now - lastSelectTime.current < 250) return;
+
+    // 1. Verificare atingere pe scări (prioritate mare)
+    if (stairs && stairs.length > 0) {
+      let foundStair = null;
+      let minStairDist = 42; // toleranță generoasă în spațiul SVG
+      for (const s of stairs) {
+        const dist = Math.hypot(svgX - s.x, svgY - s.y);
+        if (dist <= minStairDist) {
+          foundStair = s;
+          minStairDist = dist;
+        }
+      }
+      if (foundStair) {
+        lastSelectTime.current = now;
+        onStairSelect && onStairSelect(foundStair);
+        return;
+      }
+    }
+
+    // 2. Verificare atingere pe săli normale
+    for (const r of roomsWithVertices) {
+      if (
+        svgX >= r.bounds.minX - 8 &&
+        svgX <= r.bounds.maxX + 8 &&
+        svgY >= r.bounds.minY - 8 &&
+        svgY <= r.bounds.maxY + 8
+      ) {
+        if (
+          isPointInPolygon(svgX, svgY, r.vertices) ||
+          Math.hypot(svgX - r.center.x, svgY - r.center.y) <= 24
+        ) {
+          lastSelectTime.current = now;
+          onRoomSelect && onRoomSelect(r);
+          return;
+        }
+      }
+    }
+  };
 
   // Centrare precisă pe sală sau punct
   const focusOnPoint = (point, zoomLevel = 1.35) => {
@@ -211,6 +327,11 @@ const InteractiveMap = forwardRef(({
         bindToBorders={false}
         contentWidth={MAP_DIMENSIONS.width}
         contentHeight={MAP_DIMENSIONS.height}
+        onSingleTap={handleSingleTap}
+        doubleTapDelay={200}
+        onMoveShouldSetPanResponderCapture={(evt, gestureState) =>
+          Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4
+        }
       >
         <Svg
           width={MAP_DIMENSIONS.width}

@@ -49,6 +49,7 @@ const StairDetailsSheet = ({
   return (
     <BottomSheet
       ref={bottomSheetRef}
+      index={0}
       snapPoints={snapPoints}
       enablePanDownToClose={true}
       onClose={onClose}
@@ -70,7 +71,12 @@ const StairDetailsSheet = ({
           <View style={styles.badgeContainer}>
             <Ionicons name={badgeIconName} size={28} color={badgeColor} />
             <View style={styles.badgeTextWrapper}>
-              <Text style={styles.title}>{stair.name}</Text>
+              <View style={styles.titleRow}>
+                <Text style={styles.title}>{stair.name}</Text>
+                <View style={styles.idBadge}>
+                  <Text style={styles.idBadgeText}>{stair.id}</Text>
+                </View>
+              </View>
               <Text style={styles.subtitle}>
                 Aflat la {currentFloorLabel} • {stair.direction === 'up' ? 'Urcare' : stair.direction === 'down' ? 'Coborâre' : 'Legătură etaje'}
               </Text>
@@ -165,10 +171,30 @@ const createStyles = (colors, isDark, badgeColor) =>
       marginLeft: 12,
       flex: 1,
     },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
     title: {
-      fontSize: 18,
+      fontSize: 17,
       fontWeight: '800',
       color: colors.textPrimary,
+    },
+    idBadge: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+    },
+    idBadgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+      fontFamily: 'monospace',
+      color: colors.primary,
     },
     subtitle: {
       fontSize: 13,
