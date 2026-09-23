@@ -1,6 +1,7 @@
 import React, { useState, useRef, useLayoutEffect, useCallback } from 'react';
 import {
   View,
+  Text,
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
@@ -160,10 +161,7 @@ const MapScreen = ({ navigation }) => {
   // Setare punct de plecare (ales de utilizator sau Intrarea Principală)
   const handleSetStartPoint = useCallback((room) => {
     setStartPoint(room);
-    Alert.alert(
-      'Punct de plecare setat',
-      `Traseele vor porni de la ${room.name || room.code} (${room.floor === 'B' ? 'Demisol' : room.floor === 'P' ? 'Parter' : 'Etaj ' + room.floor.replace('E', '')}).`
-    );
+    setSelectedRoom(null);
     // Dacă utilizatorul navighează deja, recalculăm traseul de la noul punct de plecare la destinația actuală
     if (isNavigating && activeRoute?.targetRoom) {
       const result = findPath(room.code || room.id, activeRoute.targetRoom.code || activeRoute.targetRoom.id);
