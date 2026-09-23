@@ -39,74 +39,10 @@ const MapScreen = ({ navigation }) => {
   useLayoutEffect(() => {
     if (navigation) {
       navigation.setOptions({
-        headerShown: true,
-        title: 'Harta Facultății',
-        headerTitleStyle: {
-          fontWeight: '700',
-          fontSize: 18,
-          color: colors.textPrimary,
-        },
-        headerStyle: {
-          backgroundColor: colors.background,
-        },
-        headerTintColor: colors.textPrimary,
-        headerShadowVisible: false,
         swipeEnabled: false,
-        headerRight: () => (
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity
-              onPress={() => setShowWalls((prev) => !prev)}
-              style={{ marginRight: 12, padding: 4 }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel={showWalls ? 'Ascunde pereți' : 'Afișează pereți'}
-            >
-              <Ionicons
-                name={showWalls ? 'grid' : 'grid-outline'}
-                size={20}
-                color={showWalls ? colors.primary : isDark ? '#94a3b8' : '#64748b'}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowUnderlay((prev) => !prev)}
-              style={{ marginRight: 12, padding: 4 }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel={showUnderlay ? 'Ascunde etaje inferioare' : 'Afișează etaje inferioare'}
-            >
-              <Ionicons
-                name={showUnderlay ? 'layers' : 'layers-outline'}
-                size={20}
-                color={showUnderlay ? colors.primary : isDark ? '#94a3b8' : '#64748b'}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                setShowDebugGraph((prev) => !prev);
-                setSelectedDebugNode(null);
-                setDebugTapCoords(null);
-              }}
-              style={{ marginRight: 12, padding: 4 }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel={showDebugGraph ? 'Ascunde debug graf' : 'Afișează debug graf'}
-            >
-              <Ionicons
-                name={showDebugGraph ? 'git-network' : 'git-network-outline'}
-                size={20}
-                color={showDebugGraph ? '#06b6d4' : isDark ? '#94a3b8' : '#64748b'}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => mapRef.current?.resetView()}
-              style={styles.headerResetButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel="Recentrare hartă"
-            >
-              <Ionicons name="scan-outline" size={22} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-        ),
       });
     }
-  }, [navigation, colors, showWalls, showUnderlay, showDebugGraph, isDark]);
+  }, [navigation]);
 
   // Selectare sală din hartă
   const handleRoomSelect = useCallback((room) => {
@@ -389,7 +325,69 @@ const MapScreen = ({ navigation }) => {
             </View>
           )}
 
-          {/* 3. Selector Flotant de Etaje (dreapta ecranului) */}
+          {/* 3. Controale Flotante Hartă (Stânga ecranului) */}
+          <View style={styles.floatingControls}>
+            {/* Buton Toggle Debug Graf */}
+            <TouchableOpacity
+              style={[
+                styles.floatingControlBtn,
+                showDebugGraph && styles.floatingControlBtnActive,
+              ]}
+              onPress={() => {
+                setShowDebugGraph((prev) => !prev);
+                setSelectedDebugNode(null);
+                setDebugTapCoords(null);
+              }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityLabel={showDebugGraph ? 'Ascunde debug graf' : 'Afișează debug graf'}
+            >
+              <Ionicons
+                name={showDebugGraph ? 'git-network' : 'git-network-outline'}
+                size={20}
+                color={showDebugGraph ? '#ffffff' : isDark ? '#94a3b8' : '#64748b'}
+              />
+            </TouchableOpacity>
+
+            {/* Buton Pereți */}
+            <TouchableOpacity
+              style={styles.floatingControlBtn}
+              onPress={() => setShowWalls((prev) => !prev)}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityLabel={showWalls ? 'Ascunde pereți' : 'Afișează pereți'}
+            >
+              <Ionicons
+                name={showWalls ? 'grid' : 'grid-outline'}
+                size={20}
+                color={showWalls ? colors.primary : isDark ? '#94a3b8' : '#64748b'}
+              />
+            </TouchableOpacity>
+
+            {/* Buton Etaje Inferioare (Underlay) */}
+            <TouchableOpacity
+              style={styles.floatingControlBtn}
+              onPress={() => setShowUnderlay((prev) => !prev)}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityLabel={showUnderlay ? 'Ascunde etaje inferioare' : 'Afișează etaje inferioare'}
+            >
+              <Ionicons
+                name={showUnderlay ? 'layers' : 'layers-outline'}
+                size={20}
+                color={showUnderlay ? colors.primary : isDark ? '#94a3b8' : '#64748b'}
+              />
+            </TouchableOpacity>
+
+            {/* Buton Recentrare */}
+            <TouchableOpacity
+              style={styles.floatingControlBtn}
+              onPress={() => mapRef.current?.resetView()}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityLabel="Recentrare hartă"
+            >
+              <Ionicons name="scan-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* 4. Selector Flotant de Etaje (dreapta ecranului) */}
           <FloorSelector
             activeFloor={activeFloor}
             onFloorChange={handleFloorChange}
@@ -527,6 +525,38 @@ const createStyles = (colors, isDark) =>
       right: 16,
       top: 86,
       zIndex: 15,
+    },
+    floatingControls: {
+      position: 'absolute',
+      left: 16,
+      top: 86,
+      zIndex: 15,
+      backgroundColor: isDark ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+      borderRadius: 16,
+      padding: 4,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 5,
+    },
+    floatingControlBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginVertical: 2,
+    },
+    floatingControlBtnActive: {
+      backgroundColor: '#0891b2',
+      shadowColor: '#0891b2',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.35,
+      shadowRadius: 4,
+      elevation: 3,
     },
     debugCoordsBanner: {
       position: 'absolute',
