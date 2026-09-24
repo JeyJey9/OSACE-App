@@ -11,6 +11,7 @@ android/app/.cxx/
 # ─── Expo / Metro caches ──────────────────────────────────────────────────────
 .expo/
 .expo-shared/
+dist/
 
 # ─── Node modules (EAS installs these fresh on their servers) ─────────────────
 # Note: EAS already excludes node_modules by default, but being explicit helps
