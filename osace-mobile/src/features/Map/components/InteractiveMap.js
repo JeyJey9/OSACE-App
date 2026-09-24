@@ -3,8 +3,6 @@ import { View, StyleSheet, Dimensions, Animated, Easing } from 'react-native';
 import Svg from 'react-native-svg';
 import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
 import { MAP_DIMENSIONS, ROOM_TYPE_COLORS, getRoomsByFloor } from '../data/buildingData';
-import { floorOutlines } from '../data/floorOutlines';
-import { floorWalls } from '../data/floorWalls';
 import { getStairsByFloor } from '../data/buildingStairs';
 import { NAV_NODES, NAV_EDGES } from '../data/navigationGraph';
 import { useThemeColor } from '../../../constants/useThemeColor';
@@ -62,9 +60,6 @@ const InteractiveMap = forwardRef(({
 
   const themeColors = isDark ? ROOM_TYPE_COLORS.dark : ROOM_TYPE_COLORS.light;
 
-  // Obținem contururile etajului curent
-  const outlines = useMemo(() => floorOutlines[floorId] || [], [floorId]);
-
   // Calculăm etajul inferior vizibil în fundal ca sub-strat fantomă (ghost underlay)
   const currentFloorIndex = useMemo(() => {
     return FLOOR_ORDER.indexOf(floorId);
@@ -74,9 +69,6 @@ const InteractiveMap = forwardRef(({
     if (isNavigating || !showUnderlay || currentFloorIndex <= 0) return [];
     return [FLOOR_ORDER[currentFloorIndex - 1]];
   }, [isNavigating, showUnderlay, currentFloorIndex]);
-
-  // Obținem pereții interiori ai etajului curent
-  const wallsPathData = useMemo(() => floorWalls[floorId] || null, [floorId]);
 
   // Obținem scările și conectorii verticali ai etajului curent
   const stairs = useMemo(() => getStairsByFloor(floorId), [floorId]);
@@ -365,9 +357,7 @@ const InteractiveMap = forwardRef(({
           {/* 0, 1, 4. Strat Outlines, Ghost Underlays, Demisol Base și Pereți Interiori */}
           <FloorBaseLayer
             floorId={floorId}
-            outlines={outlines}
             underlyingFloors={underlyingFloors}
-            wallsPathData={wallsPathData}
             showWalls={showWalls}
             showUnderlay={showUnderlay}
             isNavigating={isNavigating}

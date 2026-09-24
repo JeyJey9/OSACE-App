@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { G, Path } from 'react-native-svg';
 import { floorOutlines, demisolUnfinishedAreas, demisolHatchPath } from '../../data/floorOutlines';
+import { floorWalls } from '../../data/floorWalls';
 
 /**
  * FloorBaseLayer renders architectural outlines, ghost underlays from lower floors,
@@ -8,14 +9,15 @@ import { floorOutlines, demisolUnfinishedAreas, demisolHatchPath } from '../../d
  */
 const FloorBaseLayer = ({
   floorId,
-  outlines,
-  underlyingFloors,
-  wallsPathData,
-  showWalls,
-  showUnderlay,
-  isNavigating,
-  isDark,
+  underlyingFloors = [],
+  showWalls = true,
+  showUnderlay = true,
+  isNavigating = false,
+  isDark = false,
 }) => {
+  const outlines = useMemo(() => floorOutlines[floorId] || [], [floorId]);
+  const wallsPathData = useMemo(() => (showWalls ? floorWalls[floorId] || null : null), [floorId, showWalls]);
+
   const outlineFill = isDark ? '#161f30' : '#ffffff';
   const outlineStroke = isDark ? '#334155' : '#1e293b';
 
