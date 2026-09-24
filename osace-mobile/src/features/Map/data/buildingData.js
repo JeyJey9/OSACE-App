@@ -677,7 +677,7 @@ export const buildingFloors = {
       },
       {
         "id": "room-G-san-sud",
-        "code": "GR. SAN.",
+        "code": "GR-SAN-G-SUD",
         "name": "Grup Sanitar (Corp G Sud)",
         "type": "service",
         "floor": "P",
@@ -801,7 +801,7 @@ export const buildingFloors = {
       },
       {
         "id": "room-G-san-nord-1",
-        "code": "GR. SAN.",
+        "code": "GR-SAN-G-N1",
         "name": "Grup Sanitar 1 (Corp G Nord)",
         "type": "service",
         "floor": "P",
@@ -832,7 +832,7 @@ export const buildingFloors = {
       },
       {
         "id": "room-G-san-nord-2",
-        "code": "GR. SAN.",
+        "code": "GR-SAN-G-N2",
         "name": "Grup Sanitar 2 (Corp G Nord)",
         "type": "service",
         "floor": "P",

@@ -1258,7 +1258,7 @@ export const NAV_NODES = {
     "y": 657.5,
     "floor": "P",
     "type": "room",
-    "roomCode": "GR. SAN."
+    "roomCode": "GR-SAN-G-SUD"
   },
   "P-R-G-san-nord-1": {
     "id": "P-R-G-san-nord-1",
@@ -1266,7 +1266,7 @@ export const NAV_NODES = {
     "y": 241,
     "floor": "P",
     "type": "room",
-    "roomCode": "GR. SAN."
+    "roomCode": "GR-SAN-G-N1"
   },
   "P-R-G-san-nord-2": {
     "id": "P-R-G-san-nord-2",
@@ -1274,7 +1274,7 @@ export const NAV_NODES = {
     "y": 301,
     "floor": "P",
     "type": "room",
-    "roomCode": "GR. SAN."
+    "roomCode": "GR-SAN-G-N2"
   },
   "P-R-G012": {
     "id": "P-R-G012",
@@ -5294,7 +5294,9 @@ export function resolveToNodeId(roomOrCode) {
     }
   }
 
-  return 'P-C026';
+  // Nu s-a găsit niciun nod pentru acest identificator — returnăm null
+  // pentru ca findPath să afișeze alerta "Rută Indisponibilă"
+  return null;
 }
 
 /**
