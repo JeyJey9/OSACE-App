@@ -214,7 +214,7 @@ const MapScreen = ({ navigation }) => {
       name: 'Intrarea Principală',
       floor: 'B',
     };
-    const startId = startPoint ? (startPoint.code || startPoint.id) : null;
+    const startId = startPoint ? (startPoint.code || startPoint.id) : 'GD04';
     const result = findPath(startId, room.code || room.id);
 
     if (result && result.nodes && result.nodes.length > 0) {
