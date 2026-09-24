@@ -32,7 +32,7 @@ function isPointInPolygon(px, py, vertices) {
 }
 
 const InteractiveMap = forwardRef(({
-  floorId = 'P',
+  floorId = 'B',
   selectedRoomId = null,
   onRoomSelect,
   onStairSelect,
@@ -44,6 +44,9 @@ const InteractiveMap = forwardRef(({
   showDebugGraph = false,
   onDebugTap = null,
   onDebugNodeSelect = null,
+  initialZoom = 1.15,
+  initialOffsetX = 284.4,
+  initialOffsetY = -374,
   style,
 }, ref) => {
   const zoomableViewRef = useRef(null);
@@ -977,7 +980,9 @@ const InteractiveMap = forwardRef(({
         ref={zoomableViewRef}
         maxZoom={3.5}
         minZoom={0.35}
-        initialZoom={0.65}
+        initialZoom={initialZoom}
+        initialOffsetX={initialOffsetX}
+        initialOffsetY={initialOffsetY}
         bindToBorders={false}
         contentWidth={MAP_DIMENSIONS.width}
         contentHeight={MAP_DIMENSIONS.height}

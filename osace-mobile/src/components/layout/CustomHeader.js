@@ -8,6 +8,8 @@ import {
   Animated,
   Image,
   Easing,
+  Linking,
+  Alert,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -73,12 +75,48 @@ const getTimeIcon = () => {
   return 'moon-outline';
 };
 
-export default function CustomHeader({ title, showRole = true, isHidden = false }) {
+export default function CustomHeader({ title, showRole = true, isHidden = false, isGuestMode = false }) {
   const { user } = useAuth();
+  const isGuest = isGuestMode || !user;
   const { colors, isDark } = useThemeColor();
   const STANDARD_BLUE = colors.primary;
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+
+  const handleSendFeedback = async () => {
+    const email = 'developers@osace.ro';
+    const subject = encodeURIComponent('[Feedback Hartă OSACE] Raportare problemă / Sugestie');
+    const body = encodeURIComponent(
+      `Salutare echipei de dezvoltare OSACE,\n\n` +
+      `Doresc să raportez o problemă sau să trimit o sugestie legată de Harta Facultății:\n\n` +
+      `1. Etajul pe care se află problema (Demisol / Parter / Etaj 1 / Etaj 2 / Etaj 3):\n\n` +
+      `2. Sala sau zona exactă (ex: Corp K, Sala K010, Amfiteatru etc.):\n\n` +
+      `3. Descrierea detaliată a problemei întâmpinate (te rugăm să explici cât mai clar posibil):\n\n\n` +
+      `4. Dispozitiv folosit (opțional - ex: iPhone 13, Samsung Galaxy S22 etc.):\n\n` +
+      `Mulțumesc!`
+    );
+
+    const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
+
+    try {
+      const supported = await Linking.canOpenURL(mailtoUrl);
+      if (supported) {
+        await Linking.openURL(mailtoUrl);
+      } else {
+        Alert.alert(
+          'Feedback Hartă',
+          `Nu s-a putut deschide automat aplicația de email.\n\nTe rugăm să trimiți feedback-ul direct la:\n${email}`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (err) {
+      Alert.alert(
+        'Feedback Hartă',
+        `Ne poți trimite feedback direct la adresa:\n${email}`,
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   const isAdmin = user?.role === 'admin';
   const isCoordonator = user?.role === 'coordonator';
@@ -174,7 +212,48 @@ export default function CustomHeader({ title, showRole = true, isHidden = false 
         ]} />
 
         {/* Content row */}
-        <View style={styles.contentRow}>
+        {isGuest ? (
+          <View style={styles.contentRow}>
+            {/* Left: Back button + title */}
+            <View style={styles.headerLeftGuest}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (navigation?.canGoBack()) {
+                    navigation.goBack();
+                  } else {
+                    navigation.navigate('Login');
+                  }
+                }}
+                style={[styles.guestBackBtn, {
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
+                }]}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
+              </TouchableOpacity>
+              <Text style={[styles.headerTitleBig, { color: colors.textPrimary, marginLeft: 10 }]}>
+                {title || 'Harta Facultății'}
+              </Text>
+            </View>
+
+            {/* Right: Feedback button */}
+            <View style={styles.headerRight}>
+              <TouchableOpacity
+                onPress={handleSendFeedback}
+                style={[styles.feedbackBtn, {
+                  backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(21, 102, 185, 0.1)',
+                  borderColor: isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(21, 102, 185, 0.25)',
+                }]}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="mail-outline" size={17} color={STANDARD_BLUE} style={{ marginRight: 6 }} />
+                <Text style={[styles.feedbackBtnText, { color: STANDARD_BLUE }]}>Feedback</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.contentRow}>
             {/* Left: greeting + name + role */}
             <View style={styles.headerLeft}>
               {title ? (
@@ -262,6 +341,7 @@ export default function CustomHeader({ title, showRole = true, isHidden = false 
               </TouchableOpacity>
             </View>
           </View>
+        )}
         </BlurView>
 
         {/* ── Bottom separator: role-colored accent line only ── */}
@@ -340,6 +420,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  headerLeftGuest: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  guestBackBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  feedbackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  feedbackBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   iconButton: {
     width: 42,

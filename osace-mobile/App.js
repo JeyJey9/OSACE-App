@@ -22,6 +22,8 @@ import ForgotPasswordScreen from './src/features/Auth/screens/ForgotPasswordScre
 import ResetPasswordScreen from './src/features/Auth/screens/ResetPasswordScreen';
 import ConfirmEmailScreen from './src/features/Auth/screens/ConfirmEmailScreen';
 import OnboardingScreen from './src/features/Auth/screens/OnboardingScreen';
+import MapScreen from './src/features/Map/screens/MapScreen';
+import CustomHeader from './src/components/layout/CustomHeader';
 import { PermissionProvider } from './src/features/Auth/PermissionContext';
 import NetworkBanner from './src/components/NetworkBanner';
 import { Platform } from 'react-native';
@@ -186,6 +188,14 @@ function AppNavigator() {
             name="ResetPassword"
             component={ResetPasswordScreen}
             options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="GuestMap"
+            component={MapScreen}
+            options={{
+              headerShown: true,
+              header: ({ options }) => <CustomHeader title="Harta Facultății" isGuestMode={true} />,
+            }}
           />
         </>
       )}

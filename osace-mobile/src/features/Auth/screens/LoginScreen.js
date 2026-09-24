@@ -166,6 +166,32 @@ export default function LoginScreen() {
                 <Text style={[styles.registerLink, { color: STANDARD_BLUE }]}>Creează unul acum</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Divider */}
+            <View style={styles.guestDivider}>
+              <View style={[styles.guestDividerLine, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]} />
+              <Text style={[styles.guestDividerText, { color: colors.textSecondary }]}>SAU</Text>
+              <View style={[styles.guestDividerLine, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]} />
+            </View>
+
+            {/* Direct Map Access for Guests */}
+            <TouchableOpacity
+              style={[styles.guestMapButton, {
+                backgroundColor: isDark ? 'rgba(59, 130, 246, 0.12)' : 'rgba(21, 102, 185, 0.08)',
+                borderColor: isDark ? 'rgba(59, 130, 246, 0.28)' : 'rgba(21, 102, 185, 0.22)',
+              }]}
+              onPress={() => !loading && navigation.navigate('GuestMap')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.guestMapIconWrap}>
+                <Ionicons name="map-outline" size={20} color={STANDARD_BLUE} />
+              </View>
+              <View style={styles.guestMapContent}>
+                <Text style={[styles.guestMapTitle, { color: STANDARD_BLUE }]}>Explorează Harta Facultății</Text>
+                <Text style={[styles.guestMapSubtitle, { color: colors.textSecondary }]}>Navighează fără cont sau autentificare</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={STANDARD_BLUE} />
+            </TouchableOpacity>
           </View>
 
           {/* Legal footer */}
@@ -362,6 +388,51 @@ const createStyles = (colors, isDark, insets, STANDARD_BLUE) => StyleSheet.creat
   registerLink: {
     fontSize: 14,
     fontWeight: '800',
+  },
+  guestDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+  },
+  guestDividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  guestDividerText: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginHorizontal: 12,
+    letterSpacing: 1,
+  },
+  guestMapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  guestMapIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: STANDARD_BLUE + '18',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  guestMapContent: {
+    flex: 1,
+  },
+  guestMapTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  guestMapSubtitle: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    marginTop: 1,
   },
   legalFooter: {
     alignItems: 'center',

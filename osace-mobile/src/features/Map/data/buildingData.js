@@ -58,7 +58,7 @@ export const buildingFloors = {
       {
         "id": "corridor-GD01",
         "code": "GD01",
-        "name": "GD01 (Hol Demisol)",
+        "name": "Hol GD01 (Demisol)",
         "type": "corridor",
         "floor": "B",
         "level": "-2.63",
@@ -120,8 +120,8 @@ export const buildingFloors = {
       {
         "id": "room-GD02",
         "code": "GD02",
-        "name": "ASOCIATIE STUDENTI",
-        "type": "student-space",
+        "name": "Sala GD02",
+        "type": "classroom",
         "floor": "B",
         "level": "-2.63",
         "area_plan_m2": 35.03,
@@ -151,8 +151,8 @@ export const buildingFloors = {
       {
         "id": "room-GD03",
         "code": "GD03",
-        "name": "ASOCIATIE STUDENTI",
-        "type": "student-space",
+        "name": "Sala GD03",
+        "type": "classroom",
         "floor": "B",
         "level": "-2.63",
         "area_plan_m2": 34.9,
@@ -182,7 +182,7 @@ export const buildingFloors = {
       {
         "id": "room-GD05",
         "code": "GD05",
-        "name": "COPIATOR",
+        "name": "Copiator",
         "type": "other-public-space",
         "floor": "B",
         "level": "-2.63",
@@ -213,7 +213,7 @@ export const buildingFloors = {
       {
         "id": "corridor-ID01",
         "code": "ID01",
-        "name": "HOL",
+        "name": "Hol ID01 (Demisol)",
         "type": "corridor",
         "floor": "B",
         "level": "-2.63",
@@ -244,7 +244,7 @@ export const buildingFloors = {
       {
         "id": "corridor-ID02",
         "code": "ID02",
-        "name": "HOL",
+        "name": "Hol ID02 (Demisol)",
         "type": "corridor",
         "floor": "B",
         "level": "-3.33",
@@ -275,7 +275,7 @@ export const buildingFloors = {
       {
         "id": "room-ID03",
         "code": "ID03",
-        "name": "LABORATOR MULTIMEDIA",
+        "name": "Laborator Multimedia (ID03)",
         "type": "laboratory",
         "floor": "B",
         "level": "-2.63",
@@ -306,7 +306,7 @@ export const buildingFloors = {
       {
         "id": "room-ID04",
         "code": "ID04",
-        "name": "BIROU",
+        "name": "Birou ID04",
         "type": "office",
         "floor": "B",
         "level": "-2.63",
@@ -337,7 +337,7 @@ export const buildingFloors = {
       {
         "id": "room-ID09",
         "code": "ID09",
-        "name": "BIROU",
+        "name": "Birou ID09",
         "type": "office",
         "floor": "B",
         "level": "-3.33",
@@ -492,7 +492,7 @@ export const buildingFloors = {
       {
         "id": "room-G003",
         "code": "G003",
-        "name": "BIROU",
+        "name": "Birou G003",
         "type": "office",
         "floor": "P",
         "level": "+1.05",
@@ -523,7 +523,7 @@ export const buildingFloors = {
       {
         "id": "room-G004",
         "code": "G004",
-        "name": "BIROU",
+        "name": "Birou G004",
         "type": "office",
         "floor": "P",
         "level": "+1.05",
@@ -554,7 +554,7 @@ export const buildingFloors = {
       {
         "id": "room-G005",
         "code": "G005",
-        "name": "BIROU",
+        "name": "Birou G005",
         "type": "office",
         "floor": "P",
         "level": "+1.05",
@@ -585,7 +585,7 @@ export const buildingFloors = {
       {
         "id": "room-G006",
         "code": "G006",
-        "name": "BIROU",
+        "name": "Birou G006",
         "type": "office",
         "floor": "P",
         "level": "+1.05",
@@ -616,7 +616,7 @@ export const buildingFloors = {
       {
         "id": "corridor-G007",
         "code": "G007",
-        "name": "CORIDOR",
+        "name": "Coridor G007 (Parter)",
         "type": "corridor",
         "floor": "P",
         "level": "±0.00",
@@ -647,7 +647,7 @@ export const buildingFloors = {
       {
         "id": "room-G008",
         "code": "G008",
-        "name": "BIROU",
+        "name": "Birou G008",
         "type": "office",
         "floor": "P",
         "level": "±0.00",
@@ -678,7 +678,7 @@ export const buildingFloors = {
       {
         "id": "room-G-san-sud",
         "code": "GR. SAN.",
-        "name": "GRUP SANITAR",
+        "name": "Grup Sanitar (Corp G Sud)",
         "type": "service",
         "floor": "P",
         "level": "±0.00",
@@ -709,7 +709,7 @@ export const buildingFloors = {
       {
         "id": "room-G009",
         "code": "G009",
-        "name": "BIROU",
+        "name": "Birou G009",
         "type": "office",
         "floor": "P",
         "level": "±0.00",
@@ -740,7 +740,7 @@ export const buildingFloors = {
       {
         "id": "room-G010",
         "code": "G010",
-        "name": "BIROU",
+        "name": "Birou G010",
         "type": "office",
         "floor": "P",
         "level": "±0.00",
@@ -771,7 +771,7 @@ export const buildingFloors = {
       {
         "id": "room-G011",
         "code": "G011",
-        "name": "BIROU",
+        "name": "Birou G011",
         "type": "office",
         "floor": "P",
         "level": "±0.00",
@@ -802,7 +802,7 @@ export const buildingFloors = {
       {
         "id": "room-G-san-nord-1",
         "code": "GR. SAN.",
-        "name": "GRUP SANITAR",
+        "name": "Grup Sanitar 1 (Corp G Nord)",
         "type": "service",
         "floor": "P",
         "level": "±0.00",
@@ -833,7 +833,7 @@ export const buildingFloors = {
       {
         "id": "room-G-san-nord-2",
         "code": "GR. SAN.",
-        "name": "GRUP SANITAR",
+        "name": "Grup Sanitar 2 (Corp G Nord)",
         "type": "service",
         "floor": "P",
         "level": "±0.00",
@@ -864,7 +864,7 @@ export const buildingFloors = {
       {
         "id": "room-G012",
         "code": "G012",
-        "name": "LABORATOR",
+        "name": "Laborator G012",
         "type": "laboratory",
         "floor": "P",
         "level": "±0.00",
@@ -895,7 +895,7 @@ export const buildingFloors = {
       {
         "id": "room-G013",
         "code": "G013",
-        "name": "BIROU",
+        "name": "Birou G013",
         "type": "office",
         "floor": "P",
         "level": "±0.00",
@@ -926,7 +926,7 @@ export const buildingFloors = {
       {
         "id": "room-G014",
         "code": "G014",
-        "name": "LABORATOR",
+        "name": "Laborator G014",
         "type": "laboratory",
         "floor": "P",
         "level": "±0.00",
@@ -957,7 +957,7 @@ export const buildingFloors = {
       {
         "id": "room-G015",
         "code": "G015",
-        "name": "LABORATOR",
+        "name": "Laborator G015",
         "type": "laboratory",
         "floor": "P",
         "level": "±0.00",
@@ -988,7 +988,7 @@ export const buildingFloors = {
       {
         "id": "room-G016",
         "code": "G016",
-        "name": "TABLOU ELECTRIC GENERAL",
+        "name": "Tablou Electric General",
         "type": "technical",
         "floor": "P",
         "level": "±0.00",
@@ -1019,7 +1019,7 @@ export const buildingFloors = {
       {
         "id": "room-G002",
         "code": "G002",
-        "name": "BIBLIOTECA",
+        "name": "Biblioteca",
         "type": "other-public-space",
         "floor": "P",
         "level": "+1.05",
@@ -1050,7 +1050,7 @@ export const buildingFloors = {
       {
         "id": "corridor-G001",
         "code": "G001",
-        "name": "HOL",
+        "name": "Hol G001 (Parter)",
         "type": "corridor",
         "floor": "P",
         "level": "+1.05",
@@ -1081,7 +1081,7 @@ export const buildingFloors = {
       {
         "id": "room-K001",
         "code": "K001",
-        "name": "LABORATOR E.L.F.",
+        "name": "Laborator K001 (E.L.F.)",
         "type": "laboratory",
         "floor": "P",
         "level": "±0.00",
@@ -1112,7 +1112,7 @@ export const buildingFloors = {
       {
         "id": "room-K002",
         "code": "K002",
-        "name": "BIROU",
+        "name": "Birou K002",
         "type": "office",
         "floor": "P",
         "level": "±0.00",
@@ -1143,7 +1143,7 @@ export const buildingFloors = {
       {
         "id": "room-K003",
         "code": "K003",
-        "name": "BIROU",
+        "name": "Birou K003",
         "type": "office",
         "floor": "P",
         "level": "±0.00",
@@ -1174,7 +1174,7 @@ export const buildingFloors = {
       {
         "id": "room-K004",
         "code": "K004",
-        "name": "BIROU",
+        "name": "Birou K004",
         "type": "office",
         "floor": "P",
         "level": "±0.00",
@@ -1205,7 +1205,7 @@ export const buildingFloors = {
       {
         "id": "room-K005",
         "code": "K005",
-        "name": "LABORATOR SERVOSIST.",
+        "name": "Laborator K005 (Servosisteme)",
         "type": "laboratory",
         "floor": "P",
         "level": "±0.00",
@@ -1236,7 +1236,7 @@ export const buildingFloors = {
       {
         "id": "room-K006",
         "code": "K006",
-        "name": "CABINET M.E.",
+        "name": "Cabinet K006 (M.E.)",
         "type": "cabinet",
         "floor": "P",
         "level": "±0.00",
@@ -1267,7 +1267,7 @@ export const buildingFloors = {
       {
         "id": "room-K007",
         "code": "K007",
-        "name": "BIROU",
+        "name": "Birou K007",
         "type": "office",
         "floor": "P",
         "level": "±0.00",
@@ -1298,7 +1298,7 @@ export const buildingFloors = {
       {
         "id": "corridor-K009",
         "code": "K009",
-        "name": "CORIDOR",
+        "name": "Coridor K009 (Parter)",
         "type": "corridor",
         "floor": "P",
         "level": "±0.00",
@@ -1329,7 +1329,7 @@ export const buildingFloors = {
       {
         "id": "room-K010",
         "code": "K010",
-        "name": "GR. SAN.",
+        "name": "Grup Sanitar K010 (Corp K Sud)",
         "type": "service",
         "floor": "P",
         "level": "±0.00",
@@ -1337,30 +1337,30 @@ export const buildingFloors = {
         "area_calc_m2": 27.8,
         "confidence": "medium",
         "labelPos": {
-            "x": 1038,
-            "y": 726.9
+          "x": 1038,
+          "y": 726.9
         },
         "center": {
-            "x": 1038,
-            "y": 726.9
+          "x": 1038,
+          "y": 726.9
         },
         "bounds": {
-            "minX": 963.9,
-            "minY": 684.1,
-            "maxX": 1112,
-            "maxY": 769.6,
-            "width": 148.1,
-            "height": 85.5
+          "minX": 963.9,
+          "minY": 684.1,
+          "maxX": 1112,
+          "maxY": 769.6,
+          "width": 148.1,
+          "height": 85.5
         },
         "pathData": "M 963.9 684.1 L 1112 684.1 L 1112 769.6 L 963.9 769.6 Z",
         "wing": "Corp K",
         "isCorridor": false,
         "isTechnical": false
-    },
+      },
       {
         "id": "room-K011",
         "code": "K011",
-        "name": "GR. SAN.",
+        "name": "Grup Sanitar K011 (Corp K Nord)",
         "type": "service",
         "floor": "P",
         "level": "±0.00",
@@ -1368,30 +1368,30 @@ export const buildingFloors = {
         "area_calc_m2": 17,
         "confidence": "medium",
         "labelPos": {
-            "x": 1038,
-            "y": 181.2
+          "x": 1038,
+          "y": 181.2
         },
         "center": {
-            "x": 1038,
-            "y": 181.2
+          "x": 1038,
+          "y": 181.2
         },
         "bounds": {
-            "minX": 963.9,
-            "minY": 155.1,
-            "maxX": 1112,
-            "maxY": 207.3,
-            "width": 148.1,
-            "height": 52.2
+          "minX": 963.9,
+          "minY": 155.1,
+          "maxX": 1112,
+          "maxY": 207.3,
+          "width": 148.1,
+          "height": 52.2
         },
         "pathData": "M 963.9 155.1 L 1112 155.1 L 1112 207.3 L 963.9 207.3 Z",
         "wing": "Corp K",
         "isCorridor": false,
         "isTechnical": false
-    },
+      },
       {
         "id": "room-K008",
         "code": "K008",
-        "name": "LABORATOR INST. TERM.",
+        "name": "Birou K008",
         "type": "laboratory",
         "floor": "P",
         "level": "±0.00",
@@ -1422,7 +1422,7 @@ export const buildingFloors = {
       {
         "id": "corridor-I001",
         "code": "I001",
-        "name": "I001 + I002",
+        "name": "Hol I001 (Parter)",
         "type": "corridor",
         "floor": "P",
         "level": "+1.05",
@@ -1453,7 +1453,7 @@ export const buildingFloors = {
       {
         "id": "room-I003",
         "code": "I003",
-        "name": "LABORATOR",
+        "name": "Laborator I003",
         "type": "laboratory",
         "floor": "P",
         "level": "+1.05",
@@ -1484,7 +1484,7 @@ export const buildingFloors = {
       {
         "id": "room-I004",
         "code": "I004",
-        "name": "BIROU",
+        "name": "Birou I004",
         "type": "office",
         "floor": "P",
         "level": "+1.05",
@@ -1515,7 +1515,7 @@ export const buildingFloors = {
       {
         "id": "room-I005",
         "code": "I005",
-        "name": "BIROU",
+        "name": "Birou I005",
         "type": "office",
         "floor": "P",
         "level": "+1.05",
@@ -1577,7 +1577,7 @@ export const buildingFloors = {
       {
         "id": "room-P-birou-7",
         "code": "P-birou-7",
-        "name": "BIROU",
+        "name": "Birou Corp G (P-7)",
         "type": "office",
         "floor": "P",
         "level": "",
@@ -1733,7 +1733,6 @@ export const buildingFloors = {
         "y": 493.6,
         "type": "level-change"
       },
-
       {
         "id": "stair-P-16",
         "annotation": "15 Tr.",
@@ -1756,7 +1755,7 @@ export const buildingFloors = {
       {
         "id": "corridor-G101",
         "code": "G101",
-        "name": "CORIDOR",
+        "name": "Coridor G101 (Etaj 1)",
         "type": "corridor",
         "floor": "E1",
         "level": "+4.20",
@@ -1787,8 +1786,8 @@ export const buildingFloors = {
       {
         "id": "room-G102",
         "code": "G102",
-        "name": "SAS",
-        "type": "service",
+        "name": "Birou G102",
+        "type": "office",
         "floor": "E1",
         "level": "+4.20",
         "area_plan_m2": 11.09,
@@ -1818,7 +1817,7 @@ export const buildingFloors = {
       {
         "id": "room-G103",
         "code": "G103",
-        "name": "BIROU",
+        "name": "Birou G103",
         "type": "office",
         "floor": "E1",
         "level": "+4.20",
@@ -1849,7 +1848,7 @@ export const buildingFloors = {
       {
         "id": "room-G104",
         "code": "G104",
-        "name": "LABORATOR",
+        "name": "Laborator G104",
         "type": "laboratory",
         "floor": "E1",
         "level": "+4.20",
@@ -1880,7 +1879,7 @@ export const buildingFloors = {
       {
         "id": "room-G105",
         "code": "G105",
-        "name": "DEPENDINTA",
+        "name": "Dependință G105",
         "type": "technical",
         "floor": "E1",
         "level": "+4.20",
@@ -1911,7 +1910,7 @@ export const buildingFloors = {
       {
         "id": "room-G106",
         "code": "G106",
-        "name": "CABINET",
+        "name": "Cabinet G106",
         "type": "cabinet",
         "floor": "E1",
         "level": "+4.20",
@@ -1942,7 +1941,7 @@ export const buildingFloors = {
       {
         "id": "room-G108",
         "code": "G108",
-        "name": "LABORATOR",
+        "name": "Laborator G108",
         "type": "laboratory",
         "floor": "E1",
         "level": "+4.20",
@@ -1973,7 +1972,7 @@ export const buildingFloors = {
       {
         "id": "room-G109",
         "code": "G109",
-        "name": "LABORATOR",
+        "name": "Laborator G109",
         "type": "laboratory",
         "floor": "E1",
         "level": "+4.20",
@@ -2004,7 +2003,7 @@ export const buildingFloors = {
       {
         "id": "room-G110",
         "code": "G110",
-        "name": "LABORATOR",
+        "name": "Laborator G110",
         "type": "laboratory",
         "floor": "E1",
         "level": "+4.20",
@@ -2035,7 +2034,7 @@ export const buildingFloors = {
       {
         "id": "room-G111",
         "code": "G111",
-        "name": "LABORATOR",
+        "name": "Laborator G111",
         "type": "laboratory",
         "floor": "E1",
         "level": "+4.20",
@@ -2066,7 +2065,7 @@ export const buildingFloors = {
       {
         "id": "room-G112",
         "code": "G112",
-        "name": "BIROU",
+        "name": "Birou G112",
         "type": "office",
         "floor": "E1",
         "level": "+4.20",
@@ -2097,7 +2096,7 @@ export const buildingFloors = {
       {
         "id": "room-G114",
         "code": "G114",
-        "name": "GR. SAN.",
+        "name": "Grup Sanitar G114",
         "type": "service",
         "floor": "E1",
         "level": "+4.20",
@@ -2128,7 +2127,7 @@ export const buildingFloors = {
       {
         "id": "room-G115",
         "code": "G115",
-        "name": "GR. SAN.",
+        "name": "Grup Sanitar G115",
         "type": "service",
         "floor": "E1",
         "level": "+4.20",
@@ -2159,7 +2158,7 @@ export const buildingFloors = {
       {
         "id": "room-G116",
         "code": "G116",
-        "name": "BIROU",
+        "name": "Birou G116",
         "type": "office",
         "floor": "E1",
         "level": "+4.20",
@@ -2190,7 +2189,7 @@ export const buildingFloors = {
       {
         "id": "room-G117",
         "code": "G117",
-        "name": "BIROU",
+        "name": "Birou G117",
         "type": "office",
         "floor": "E1",
         "level": "+4.20",
@@ -2221,7 +2220,7 @@ export const buildingFloors = {
       {
         "id": "room-G118",
         "code": "G118",
-        "name": "BIROU",
+        "name": "Birou G118",
         "type": "office",
         "floor": "E1",
         "level": "+4.20",
@@ -2252,7 +2251,7 @@ export const buildingFloors = {
       {
         "id": "room-G119",
         "code": "G119",
-        "name": "BIROU",
+        "name": "Birou G119",
         "type": "office",
         "floor": "E1",
         "level": "+4.20",
@@ -2283,7 +2282,7 @@ export const buildingFloors = {
       {
         "id": "room-G120",
         "code": "G120",
-        "name": "BIROU",
+        "name": "Birou G120",
         "type": "office",
         "floor": "E1",
         "level": "+4.20",
@@ -2314,7 +2313,7 @@ export const buildingFloors = {
       {
         "id": "room-G107",
         "code": "G107",
-        "name": "LABORATOR",
+        "name": "Laborator G107",
         "type": "laboratory",
         "floor": "E1",
         "level": "+4.20",
@@ -2345,7 +2344,7 @@ export const buildingFloors = {
       {
         "id": "room-G113",
         "code": "G113",
-        "name": "LABORATOR",
+        "name": "Laborator G113",
         "type": "laboratory",
         "floor": "E1",
         "level": "+4.20",
@@ -2376,7 +2375,7 @@ export const buildingFloors = {
       {
         "id": "room-K101",
         "code": "K101",
-        "name": "SALA DE CURS",
+        "name": "Sală de Curs K101",
         "type": "classroom",
         "floor": "E1",
         "level": "+4.20",
@@ -2407,7 +2406,7 @@ export const buildingFloors = {
       {
         "id": "room-K102",
         "code": "K102",
-        "name": "LABORATOR",
+        "name": "Laborator K102",
         "type": "laboratory",
         "floor": "E1",
         "level": "+4.20",
@@ -2438,7 +2437,7 @@ export const buildingFloors = {
       {
         "id": "room-K103",
         "code": "K103",
-        "name": "CABINET",
+        "name": "Cabinet K103",
         "type": "cabinet",
         "floor": "E1",
         "level": "+4.20",
@@ -2469,7 +2468,7 @@ export const buildingFloors = {
       {
         "id": "room-K104",
         "code": "K104",
-        "name": "SALA DE CURS",
+        "name": "Sală de Curs K104",
         "type": "classroom",
         "floor": "E1",
         "level": "+4.20",
@@ -2500,7 +2499,7 @@ export const buildingFloors = {
       {
         "id": "room-K105",
         "code": "K105",
-        "name": "SALA DE CURS",
+        "name": "Sală de Curs K105",
         "type": "classroom",
         "floor": "E1",
         "level": "+4.20",
@@ -2531,7 +2530,7 @@ export const buildingFloors = {
       {
         "id": "corridor-K106",
         "code": "K106",
-        "name": "CORIDOR",
+        "name": "Coridor K106 (Etaj 1)",
         "type": "corridor",
         "floor": "E1",
         "level": "+4.20",
@@ -2562,7 +2561,7 @@ export const buildingFloors = {
       {
         "id": "room-K107",
         "code": "K107",
-        "name": "GR. SAN.",
+        "name": "Grup Sanitar K107 (Corp K Sud)",
         "type": "service",
         "floor": "E1",
         "level": "+4.20",
@@ -2593,7 +2592,7 @@ export const buildingFloors = {
       {
         "id": "room-K108",
         "code": "K108",
-        "name": "GR. SAN.",
+        "name": "Grup Sanitar K108 (Corp K Nord)",
         "type": "service",
         "floor": "E1",
         "level": "+4.20",
@@ -2681,7 +2680,7 @@ export const buildingFloors = {
       {
         "id": "room-K201",
         "code": "K201",
-        "name": "SALA DE CURS",
+        "name": "Sală de Curs K201",
         "type": "classroom",
         "floor": "E2",
         "level": "+8.40",
@@ -2712,7 +2711,7 @@ export const buildingFloors = {
       {
         "id": "room-K202",
         "code": "K202",
-        "name": "LABORATOR",
+        "name": "Laborator K202",
         "type": "laboratory",
         "floor": "E2",
         "level": "+8.40",
@@ -2743,7 +2742,7 @@ export const buildingFloors = {
       {
         "id": "room-K203",
         "code": "K203",
-        "name": "CABINET",
+        "name": "Cabinet K203",
         "type": "cabinet",
         "floor": "E2",
         "level": "+8.40",
@@ -2774,7 +2773,7 @@ export const buildingFloors = {
       {
         "id": "room-K204",
         "code": "K204",
-        "name": "LABORATOR",
+        "name": "Laborator K204",
         "type": "laboratory",
         "floor": "E2",
         "level": "+8.40",
@@ -2805,7 +2804,7 @@ export const buildingFloors = {
       {
         "id": "room-K205",
         "code": "K205",
-        "name": "SALA DE CURS",
+        "name": "Sală de Curs K205",
         "type": "classroom",
         "floor": "E2",
         "level": "+8.40",
@@ -2836,7 +2835,7 @@ export const buildingFloors = {
       {
         "id": "corridor-K206",
         "code": "K206",
-        "name": "CORIDOR",
+        "name": "Coridor K206 (Etaj 2)",
         "type": "corridor",
         "floor": "E2",
         "level": "+8.40",
@@ -2867,7 +2866,7 @@ export const buildingFloors = {
       {
         "id": "room-K207",
         "code": "K207",
-        "name": "GR. SAN.",
+        "name": "Grup Sanitar K207 (Corp K Sud)",
         "type": "service",
         "floor": "E2",
         "level": "+8.40",
@@ -2898,7 +2897,7 @@ export const buildingFloors = {
       {
         "id": "room-K208",
         "code": "K208",
-        "name": "GR. SAN.",
+        "name": "Grup Sanitar K208 (Corp K Nord)",
         "type": "service",
         "floor": "E2",
         "level": "+8.40",
@@ -2959,7 +2958,7 @@ export const buildingFloors = {
       {
         "id": "room-K303",
         "code": "K303",
-        "name": "CABINET",
+        "name": "Cabinet K303",
         "type": "cabinet",
         "floor": "E3",
         "level": "",
@@ -2990,7 +2989,7 @@ export const buildingFloors = {
       {
         "id": "corridor-K306",
         "code": "K306",
-        "name": "CORIDOR",
+        "name": "Coridor K306 (Etaj 3)",
         "type": "corridor",
         "floor": "E3",
         "level": "",
@@ -3021,7 +3020,7 @@ export const buildingFloors = {
       {
         "id": "room-K301",
         "code": "K301",
-        "name": "SALA DE CURS",
+        "name": "Sală de Curs K301",
         "type": "classroom",
         "floor": "E3",
         "level": "",
@@ -3052,7 +3051,7 @@ export const buildingFloors = {
       {
         "id": "room-K302",
         "code": "K302",
-        "name": "LABORATOR",
+        "name": "Laborator K302",
         "type": "laboratory",
         "floor": "E3",
         "level": "",
@@ -3083,7 +3082,7 @@ export const buildingFloors = {
       {
         "id": "room-K304",
         "code": "K304",
-        "name": "LABORATOR",
+        "name": "Laborator K304",
         "type": "laboratory",
         "floor": "E3",
         "level": "",
@@ -3114,7 +3113,7 @@ export const buildingFloors = {
       {
         "id": "room-K305",
         "code": "K305",
-        "name": "SALA DE CURS",
+        "name": "Sală de Curs K305",
         "type": "classroom",
         "floor": "E3",
         "level": "",
@@ -3145,7 +3144,7 @@ export const buildingFloors = {
       {
         "id": "room-K308",
         "code": "K308",
-        "name": "GR. SAN.",
+        "name": "Grup Sanitar K308 (Corp K Nord)",
         "type": "service",
         "floor": "E3",
         "level": "",
@@ -3176,7 +3175,7 @@ export const buildingFloors = {
       {
         "id": "room-K307",
         "code": "K307",
-        "name": "GR. SAN.",
+        "name": "Grup Sanitar K307 (Corp K Sud)",
         "type": "service",
         "floor": "E3",
         "level": "",
@@ -3244,42 +3243,236 @@ export const getRoomByCode = (code) => {
   return allRooms.find((r) => r.code.toUpperCase() === upper) || null;
 };
 
+export const normalizeSearchStr = (str) => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+};
+
+export const getRoomCategory = (room) => {
+  if (!room) {
+    return {
+      category: 'other',
+      label: 'Sală',
+      icon: 'business-outline',
+      badge: 'SALĂ',
+      color: '#64748b',
+      tags: ['sală'],
+      tagsList: [],
+    };
+  }
+
+  const name = (room.name || '').toLowerCase();
+  const code = (room.code || '').toLowerCase();
+  const type = (room.type || '').toLowerCase();
+  const floor = room.floor || 'P';
+  const floorLabel =
+    floor === 'B' ? 'Demisol' : floor === 'P' ? 'Parter' : `Etaj ${floor.replace('E', '')}`;
+  const wing = room.wing || 'Corp Central';
+
+  let category = 'other';
+  let label = room.isCorridor ? 'Coridor' : 'Sală';
+  let icon = room.isCorridor ? 'walk-outline' : 'business-outline';
+  let badge = room.code || 'SALĂ';
+  let color = '#64748b';
+  let searchTags = [code, name, wing.toLowerCase(), floorLabel.toLowerCase()];
+  let primaryTag = { label, icon, isPrimary: true };
+  let pdfSubSpec = null;
+
+  if (
+    /sanitar|wc|toalet|gr\.\s*san/i.test(name) ||
+    /sanitar|wc|gr\.\s*san/i.test(code) ||
+    (type === 'service' && !/birou/i.test(name))
+  ) {
+    category = 'toilet';
+    label = 'Grup Sanitar';
+    icon = 'water-outline';
+    badge = 'WC';
+    color = '#06b6d4';
+    searchTags.push('grup sanitar', 'toaleta', 'toaletă', 'toalete', 'wc', 'baie', 'bai', 'băi');
+    primaryTag = { label: 'Grup Sanitar', icon: 'water-outline', isPrimary: true };
+  } else if (
+    type === 'amphitheatre' ||
+    /amfiteatru|aula|belea/i.test(name) ||
+    code === 'acb' ||
+    code === 'ak1'
+  ) {
+    category = 'amphitheatre';
+    label = 'Amfiteatru';
+    icon = 'people-outline';
+    badge = code === 'acb' ? 'AULA' : 'AK1';
+    color = '#8b5cf6';
+    searchTags.push('amfiteatru', 'aula', 'ak1', 'acb', 'belea');
+    primaryTag = { label: code === 'acb' ? 'Aulă' : 'Amfiteatru', icon: 'people-outline', isPrimary: true };
+  } else if (type === 'laboratory' || /laborator|lab\b/i.test(name)) {
+    category = 'laboratory';
+    label = 'Laborator';
+    icon = 'flask-outline';
+    badge = 'LAB';
+    color = '#0284c7';
+    searchTags.push('laborator', 'lab');
+    if (/e\.l\.f/i.test(name)) {
+      pdfSubSpec = 'E.L.F.';
+      searchTags.push('elf', 'e.l.f.');
+    } else if (/servosist/i.test(name)) {
+      pdfSubSpec = 'Servosisteme';
+      searchTags.push('servosisteme', 'servosist.');
+    } else if (/multimedia/i.test(name)) {
+      pdfSubSpec = 'Multimedia';
+      searchTags.push('multimedia');
+    }
+    primaryTag = { label: 'Laborator', icon: 'flask-outline', isPrimary: true };
+  } else if (type === 'classroom' || /curs|seminar/i.test(name)) {
+    category = 'classroom';
+    label = 'Sală de Curs';
+    icon = 'school-outline';
+    badge = 'CURS';
+    color = '#3b82f6';
+    searchTags.push('sala de curs', 'sală de curs', 'curs');
+    primaryTag = { label: 'Sală de Curs', icon: 'school-outline', isPrimary: true };
+  } else if (type === 'cabinet' || /cabinet/i.test(name)) {
+    category = 'cabinet';
+    label = 'Cabinet';
+    icon = 'briefcase-outline';
+    badge = 'CABINET';
+    color = '#0d9488';
+    searchTags.push('cabinet');
+    if (/m\.e\./i.test(name)) {
+      pdfSubSpec = 'M.E.';
+      searchTags.push('m.e.');
+    }
+    primaryTag = { label: 'Cabinet', icon: 'briefcase-outline', isPrimary: true };
+  } else if (type === 'office' || /birou/i.test(name)) {
+    category = 'office';
+    label = 'Birou';
+    icon = 'folder-outline';
+    badge = 'BIROU';
+    color = '#10b981';
+    searchTags.push('birou');
+    primaryTag = { label: 'Birou', icon: 'folder-outline', isPrimary: true };
+  } else if (/bibliotec/i.test(name)) {
+    category = 'library';
+    label = 'Bibliotecă';
+    icon = 'book-outline';
+    badge = 'BIBLIOTECĂ';
+    color = '#f59e0b';
+    searchTags.push('biblioteca', 'bibliotecă');
+    primaryTag = { label: 'Bibliotecă', icon: 'book-outline', isPrimary: true };
+  } else if (/copiator/i.test(name)) {
+    category = 'copier';
+    label = 'Copiator';
+    icon = 'print-outline';
+    badge = 'COPIATOR';
+    color = '#0284c7';
+    searchTags.push('copiator');
+    primaryTag = { label: 'Copiator', icon: 'print-outline', isPrimary: true };
+  } else if (type === 'entrance' || code === 'gd04' || /intrare/i.test(name)) {
+    category = 'entrance';
+    label = 'Intrare Facultate';
+    icon = 'log-in-outline';
+    badge = 'INTRARE';
+    color = '#10b981';
+    searchTags.push('intrare', 'acces');
+    primaryTag = { label: 'Intrare Principală', icon: 'log-in-outline', isPrimary: true };
+  } else if (room.isCorridor || /hol|coridor|culoar/i.test(name)) {
+    category = 'corridor';
+    label = /hol/i.test(name) ? 'Hol' : 'Coridor';
+    icon = 'walk-outline';
+    badge = 'HOL';
+    color = '#64748b';
+    searchTags.push('hol', 'coridor', 'culoar');
+    primaryTag = { label, icon: 'walk-outline', isPrimary: true };
+  }
+
+  const tagsList = [
+    primaryTag,
+    { label: wing, icon: 'location-outline' },
+    { label: floorLabel, icon: 'layers-outline' },
+  ];
+  if (pdfSubSpec) {
+    tagsList.push({ label: pdfSubSpec, icon: 'bookmark-outline' });
+  }
+
+  return {
+    category,
+    label,
+    icon,
+    badge,
+    color,
+    tags: searchTags,
+    tagsList,
+  };
+};
+
 export const searchRooms = (query, currentFloor = null) => {
   if (!query || typeof query !== 'string') return [];
-  const q = query.trim().toLowerCase();
+  const q = normalizeSearchStr(query);
   if (q.length === 0) return [];
 
-  return allRooms.filter((room) => {
-    // Ignore corridors and technical rooms in user searches by default unless searched directly
-    if (room.isCorridor && !q.includes('coridor') && !q.includes('hol')) return false;
+  const scored = [];
 
-    const matchesCode = room.code.toLowerCase().includes(q);
-    const matchesName = room.name.toLowerCase().includes(q);
-    const typeRo = room.type === 'amphitheatre' ? 'amfiteatru amfiteatre aula' :
-                   room.type === 'laboratory' ? 'laborator' :
-                   room.type === 'classroom' ? 'sala curs seminar' :
-                   room.type === 'office' ? 'birou cabinet' :
-                   room.type === 'entrance' ? 'intrare' : '';
-    const matchesType = room.type.toLowerCase().includes(q) || typeRo.includes(q);
-    const matchesWing = room.wing.toLowerCase().includes(q);
-    const matchesId = room.id.toLowerCase().includes(q);
+  for (const room of allRooms) {
+    // Ignore corridors and technical rooms unless searched directly
+    if (room.isCorridor && !q.includes('coridor') && !q.includes('hol')) continue;
 
-    return matchesCode || matchesName || matchesType || matchesWing || matchesId;
-  }).sort((a, b) => {
-    // Exact code match first
-    const aExact = a.code.toLowerCase() === q;
-    const bExact = b.code.toLowerCase() === q;
-    if (aExact && !bExact) return -1;
-    if (!aExact && bExact) return 1;
+    const codeNorm = normalizeSearchStr(room.code);
+    const nameNorm = normalizeSearchStr(room.name);
+    const cat = getRoomCategory(room);
+    const tagsNorm = cat.tags.map((t) => normalizeSearchStr(t));
 
-    // Same floor first if currentFloor provided
-    if (currentFloor) {
-      if (a.floor === currentFloor && b.floor !== currentFloor) return -1;
-      if (a.floor !== currentFloor && b.floor === currentFloor) return 1;
+    let score = 0;
+
+    // Exact code match (e.g. "K101", "ACB", "AK1", "GD04")
+    if (codeNorm === q) {
+      score += 100;
+    } else if (codeNorm.startsWith(q)) {
+      score += 75;
+    } else if (codeNorm.includes(q)) {
+      score += 50;
     }
 
-    return a.code.localeCompare(b.code);
+    // Name match
+    if (nameNorm === q) {
+      score += 90;
+    } else if (nameNorm.startsWith(q)) {
+      score += 70;
+    } else if (nameNorm.includes(q)) {
+      score += 45;
+    }
+
+    // Tag matches (e.g. "toaleta", "baie", "wc", "lab", "curs", "amfiteatru")
+    for (const t of tagsNorm) {
+      if (t === q) {
+        score = Math.max(score, 65);
+      } else if (t.startsWith(q)) {
+        score = Math.max(score, 55);
+      } else if (t.includes(q) && q.length >= 3) {
+        score = Math.max(score, 40);
+      }
+    }
+
+    if (score > 0) {
+      // Prioritate pentru etajul curent
+      if (currentFloor && room.floor === currentFloor) {
+        score += 15;
+      }
+      scored.push({ room, score });
+    }
+  }
+
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (currentFloor) {
+      if (a.room.floor === currentFloor && b.room.floor !== currentFloor) return -1;
+      if (a.room.floor !== currentFloor && b.room.floor === currentFloor) return 1;
+    }
+    return a.room.code.localeCompare(b.room.code);
   });
+
+  return scored.map((s) => s.room);
 };
 
 export default {
@@ -3290,5 +3483,8 @@ export default {
   getRoomsByFloor,
   getRoomById,
   getRoomByCode,
+  getRoomCategory,
+  normalizeSearchStr,
   searchRooms,
 };
+

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useThemeColor } from '../../../constants/useThemeColor';
+import { useAuth } from '../../Auth/AuthContext';
 import InteractiveMap from '../components/InteractiveMap';
 import FloorSelector from '../components/FloorSelector';
 import RoomSearchBar from '../components/RoomSearchBar';
@@ -22,7 +23,9 @@ import { getRoomById, getRoomByCode } from '../data/buildingData';
 
 const MapScreen = ({ navigation }) => {
   const { colors, isDark } = useThemeColor();
-  const [activeFloor, setActiveFloor] = useState('P');
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const [activeFloor, setActiveFloor] = useState('B');
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [selectedStair, setSelectedStair] = useState(null);
   const [activeRoute, setActiveRoute] = useState(null);
@@ -43,6 +46,14 @@ const MapScreen = ({ navigation }) => {
       });
     }
   }, [navigation]);
+
+  // La prima intrare pe ecranul de hartă, focalizăm camera pe Intrarea Principală (Demisol, zoomed in)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      mapRef.current?.focusOnPoint({ x: 389.0, y: 1010.0 }, 1.15);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Selectare sală din hartă
   const handleRoomSelect = useCallback((room) => {
@@ -291,9 +302,9 @@ const MapScreen = ({ navigation }) => {
             targetRoom={activeRoute?.targetRoom || null}
             showWalls={showWalls}
             showUnderlay={showUnderlay}
-            showDebugGraph={showDebugGraph}
-            onDebugTap={handleDebugTap}
-            onDebugNodeSelect={handleDebugNodeSelect}
+            showDebugGraph={isAdmin && showDebugGraph}
+            onDebugTap={isAdmin ? handleDebugTap : undefined}
+            onDebugNodeSelect={isAdmin ? handleDebugNodeSelect : undefined}
           />
 
           {/* 2. Top Header Overlay: Căutare sau Banner Navigație Activă */}
@@ -330,67 +341,69 @@ const MapScreen = ({ navigation }) => {
             </View>
           )}
 
-          {/* 3. Controale Flotante Hartă (Stânga ecranului) */}
-          <View style={styles.floatingControls}>
-            {/* Buton Toggle Debug Graf */}
-            <TouchableOpacity
-              style={[
-                styles.floatingControlBtn,
-                showDebugGraph && styles.floatingControlBtnActive,
-              ]}
-              onPress={() => {
-                setShowDebugGraph((prev) => !prev);
-                setSelectedDebugNode(null);
-                setDebugTapCoords(null);
-              }}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              accessibilityLabel={showDebugGraph ? 'Ascunde debug graf' : 'Afișează debug graf'}
-            >
-              <Ionicons
-                name={showDebugGraph ? 'git-network' : 'git-network-outline'}
-                size={20}
-                color={showDebugGraph ? '#ffffff' : isDark ? '#94a3b8' : '#64748b'}
-              />
-            </TouchableOpacity>
+          {/* 3. Controale Flotante Hartă (Stânga ecranului) - Vizibile doar pentru Admini */}
+          {isAdmin && (
+            <View style={styles.floatingControls}>
+              {/* Buton Toggle Debug Graf */}
+              <TouchableOpacity
+                style={[
+                  styles.floatingControlBtn,
+                  showDebugGraph && styles.floatingControlBtnActive,
+                ]}
+                onPress={() => {
+                  setShowDebugGraph((prev) => !prev);
+                  setSelectedDebugNode(null);
+                  setDebugTapCoords(null);
+                }}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                accessibilityLabel={showDebugGraph ? 'Ascunde debug graf' : 'Afișează debug graf'}
+              >
+                <Ionicons
+                  name={showDebugGraph ? 'git-network' : 'git-network-outline'}
+                  size={20}
+                  color={showDebugGraph ? '#ffffff' : isDark ? '#94a3b8' : '#64748b'}
+                />
+              </TouchableOpacity>
 
-            {/* Buton Pereți */}
-            <TouchableOpacity
-              style={styles.floatingControlBtn}
-              onPress={() => setShowWalls((prev) => !prev)}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              accessibilityLabel={showWalls ? 'Ascunde pereți' : 'Afișează pereți'}
-            >
-              <Ionicons
-                name={showWalls ? 'grid' : 'grid-outline'}
-                size={20}
-                color={showWalls ? colors.primary : isDark ? '#94a3b8' : '#64748b'}
-              />
-            </TouchableOpacity>
+              {/* Buton Pereți */}
+              <TouchableOpacity
+                style={styles.floatingControlBtn}
+                onPress={() => setShowWalls((prev) => !prev)}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                accessibilityLabel={showWalls ? 'Ascunde pereți' : 'Afișează pereți'}
+              >
+                <Ionicons
+                  name={showWalls ? 'grid' : 'grid-outline'}
+                  size={20}
+                  color={showWalls ? colors.primary : isDark ? '#94a3b8' : '#64748b'}
+                />
+              </TouchableOpacity>
 
-            {/* Buton Etaje Inferioare (Underlay) */}
-            <TouchableOpacity
-              style={styles.floatingControlBtn}
-              onPress={() => setShowUnderlay((prev) => !prev)}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              accessibilityLabel={showUnderlay ? 'Ascunde etaje inferioare' : 'Afișează etaje inferioare'}
-            >
-              <Ionicons
-                name={showUnderlay ? 'layers' : 'layers-outline'}
-                size={20}
-                color={showUnderlay ? colors.primary : isDark ? '#94a3b8' : '#64748b'}
-              />
-            </TouchableOpacity>
+              {/* Buton Etaje Inferioare (Underlay) */}
+              <TouchableOpacity
+                style={styles.floatingControlBtn}
+                onPress={() => setShowUnderlay((prev) => !prev)}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                accessibilityLabel={showUnderlay ? 'Ascunde etaje inferioare' : 'Afișează etaje inferioare'}
+              >
+                <Ionicons
+                  name={showUnderlay ? 'layers' : 'layers-outline'}
+                  size={20}
+                  color={showUnderlay ? colors.primary : isDark ? '#94a3b8' : '#64748b'}
+                />
+              </TouchableOpacity>
 
-            {/* Buton Recentrare */}
-            <TouchableOpacity
-              style={styles.floatingControlBtn}
-              onPress={() => mapRef.current?.resetView()}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              accessibilityLabel="Recentrare hartă"
-            >
-              <Ionicons name="scan-outline" size={20} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
+              {/* Buton Recentrare */}
+              <TouchableOpacity
+                style={styles.floatingControlBtn}
+                onPress={() => mapRef.current?.resetView()}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                accessibilityLabel="Recentrare hartă"
+              >
+                <Ionicons name="scan-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* 4. Selector Flotant de Etaje (dreapta ecranului) */}
           <FloorSelector
@@ -421,8 +434,8 @@ const MapScreen = ({ navigation }) => {
             />
           )}
 
-          {/* 6. Banner Coordonate & Noduri Mod Debug */}
-          {showDebugGraph && (
+          {/* 6. Banner Coordonate & Noduri Mod Debug (Doar pentru Admini) */}
+          {isAdmin && showDebugGraph && (
             <View style={styles.debugCoordsBanner}>
               <View style={styles.debugHeaderRow}>
                 <View style={styles.debugBadge}>

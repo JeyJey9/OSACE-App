@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useThemeColor } from '../../../constants/useThemeColor';
+import { getRoomCategory } from '../data/buildingData';
 
 const RoomDetailsSheet = ({
   room,
@@ -14,7 +15,7 @@ const RoomDetailsSheet = ({
   const { colors, isDark } = useThemeColor();
   const bottomSheetRef = useRef(null);
 
-  const snapPoints = useMemo(() => ['26%', '45%'], []);
+  const snapPoints = useMemo(() => ['25%', '42%'], []);
 
   useEffect(() => {
     if (room) {
@@ -33,19 +34,12 @@ const RoomDetailsSheet = ({
       ? 'Parter'
       : `Etaj ${room.floor.replace('E', '')}`;
 
+  const categoryInfo = getRoomCategory(room);
   const styles = createStyles(colors, isDark);
 
   const isEntrance = room.type === 'entrance' || room.code === 'GD04';
-  const isSpecialVenue =
-    room.type === 'amphitheatre' ||
-    room.code === 'ACB' ||
-    room.code === 'AK1' ||
-    room.code?.toLowerCase().includes('aula') ||
-    room.code?.toLowerCase().includes('belea') ||
-    room.id?.includes('amfiteatru');
-
-  const badgeBg = isEntrance ? '#10b981' : isSpecialVenue ? '#8b5cf6' : colors.primary;
-  const badgeLabel = isEntrance ? 'INTRARE' : room.code || (isSpecialVenue ? 'AMFITEATRU' : 'SALĂ');
+  const badgeBg = categoryInfo.color || colors.primary;
+  const badgeLabel = categoryInfo.badge;
 
   return (
     <BottomSheet
@@ -95,29 +89,35 @@ const RoomDetailsSheet = ({
           </TouchableOpacity>
         </View>
 
-        {/* Metadate Sală */}
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Ionicons name="layers-outline" size={16} color={badgeBg} />
-            <Text style={styles.statLabel}>Nivel</Text>
-            <Text style={styles.statValue}>{room.level || floorLabel}</Text>
-          </View>
-
-          <View style={styles.statBox}>
-            <Ionicons name="expand-outline" size={16} color={badgeBg} />
-            <Text style={styles.statLabel}>Suprafață</Text>
-            <Text style={styles.statValue}>
-              {room.area_plan_m2 > 0 ? `${room.area_plan_m2} mp` : 'N/A'}
-            </Text>
-          </View>
-
-          <View style={styles.statBox}>
-            <Ionicons name="pricetag-outline" size={16} color={badgeBg} />
-            <Text style={styles.statLabel}>Destinație</Text>
-            <Text style={styles.statValue} numberOfLines={1}>
-              {isEntrance ? 'Intrare Facultate' : room.type}
-            </Text>
-          </View>
+        {/* Tag-uri Sală (Categorii, Servicii & Facilități) */}
+        <View style={styles.tagsContainer}>
+          {categoryInfo.tagsList.map((tagItem, idx) => (
+            <View
+              key={`tag-${idx}`}
+              style={[
+                styles.tagChip,
+                tagItem.isPrimary && {
+                  backgroundColor: isDark ? 'rgba(14, 165, 233, 0.15)' : 'rgba(14, 165, 233, 0.1)',
+                  borderColor: isDark ? 'rgba(14, 165, 233, 0.35)' : 'rgba(14, 165, 233, 0.3)',
+                },
+              ]}
+            >
+              <Ionicons
+                name={tagItem.icon}
+                size={13}
+                color={tagItem.isPrimary ? colors.primary : isDark ? '#94a3b8' : '#64748b'}
+                style={{ marginRight: 5 }}
+              />
+              <Text
+                style={[
+                  styles.tagChipText,
+                  tagItem.isPrimary && { color: colors.primary, fontWeight: '700' },
+                ]}
+              >
+                {tagItem.label}
+              </Text>
+            </View>
+          ))}
         </View>
 
         {/* Butoane de Navigare: Punct de Plecare + Destinație */}
@@ -168,30 +168,33 @@ const createStyles = (colors, isDark) =>
     contentContainer: {
       paddingHorizontal: 20,
       paddingTop: 8,
-      paddingBottom: 24,
+      paddingBottom: 20,
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 16,
+      marginBottom: 12,
     },
     codeBadge: {
       backgroundColor: colors.primary,
       paddingHorizontal: 12,
-      paddingVertical: 8,
+      paddingVertical: 7,
       borderRadius: 12,
       marginRight: 12,
+      minWidth: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     codeBadgeText: {
       color: '#ffffff',
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '800',
     },
     titleContainer: {
       flex: 1,
     },
     roomName: {
-      fontSize: 18,
+      fontSize: 17,
       fontWeight: '700',
       color: colors.textPrimary,
       marginBottom: 2,
@@ -203,32 +206,26 @@ const createStyles = (colors, isDark) =>
     closeBtn: {
       padding: 4,
     },
-    statsRow: {
+    tagsContainer: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      gap: 10,
+      flexWrap: 'wrap',
+      gap: 8,
       marginBottom: 16,
     },
-    statBox: {
-      flex: 1,
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#f8fafc',
-      borderRadius: 12,
-      padding: 10,
+    tagChip: {
+      flexDirection: 'row',
       alignItems: 'center',
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#f1f5f9',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 10,
       borderWidth: 1,
-      borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#e2e8f0',
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0',
     },
-    statLabel: {
-      fontSize: 11,
-      color: colors.textSecondary,
-      marginTop: 4,
-      marginBottom: 2,
-    },
-    statValue: {
-      fontSize: 13,
-      fontWeight: '700',
+    tagChipText: {
+      fontSize: 12,
       color: colors.textPrimary,
-      textTransform: 'capitalize',
+      fontWeight: '500',
     },
     actionButtonsRow: {
       flexDirection: 'row',
@@ -238,7 +235,7 @@ const createStyles = (colors, isDark) =>
     actionBtn: {
       flexDirection: 'row',
       borderRadius: 14,
-      paddingVertical: 13,
+      paddingVertical: 12,
       alignItems: 'center',
       justifyContent: 'center',
     },
