@@ -34,22 +34,34 @@ const NavigationBanner = ({
     const floors = route.floors || [];
 
     const nodesOnCurrentFloor = allNodes.filter((n) => n.floor === currentFloor);
-    const isDestinationFloor = targetRoom && targetRoom.floor === currentFloor;
+    const floorOrder = ['B', 'P', 'E1', 'E2', 'E3'];
 
-    // Determinăm următoarea acțiune dacă nu suntem la destinație
+    let isDestinationFloor = false;
     let nextFloor = null;
     let isClimbing = false;
 
-    if (!isDestinationFloor) {
-      const currentFloorIdx = floors.indexOf(currentFloor);
-      if (currentFloorIdx !== -1 && currentFloorIdx < floors.length - 1) {
-        nextFloor = floors[currentFloorIdx + 1];
-        // Comparație ordinea etajelor (B < P < E1 < E2 < E3)
-        const floorOrder = ['B', 'P', 'E1', 'E2', 'E3'];
+    if (nodesOnCurrentFloor.length === 0) {
+      // Dacă utilizatorul se uită la un etaj care nu este pe traseu, îl ghidăm spre primul etaj al traseului
+      nextFloor = allNodes[0]?.floor || floors[0];
+      if (nextFloor) {
         isClimbing = floorOrder.indexOf(nextFloor) > floorOrder.indexOf(currentFloor);
-      } else if (currentFloorIdx === -1) {
-        // Dacă utilizatorul se uită la un etaj care nu este pe traseu, îl ghidăm spre primul etaj
-        nextFloor = floors[0];
+      }
+    } else {
+      // Determinăm dacă segmentul traseului de pe etajul curent părăsește acest etaj spre alt etaj
+      const firstIdx = allNodes.findIndex((n) => n.floor === currentFloor);
+      let exitIdx = firstIdx;
+      while (exitIdx < allNodes.length && allNodes[exitIdx].floor === currentFloor) {
+        exitIdx++;
+      }
+
+      if (exitIdx < allNodes.length) {
+        // Traseul părăsește etajul curent spre următorul etaj din succesiunea traseului
+        nextFloor = allNodes[exitIdx].floor;
+        isClimbing = floorOrder.indexOf(nextFloor) > floorOrder.indexOf(currentFloor);
+        isDestinationFloor = false;
+      } else {
+        // Traseul nu mai părăsește acest etaj și ajunge la destinație
+        isDestinationFloor = targetRoom && targetRoom.floor === currentFloor;
       }
     }
 

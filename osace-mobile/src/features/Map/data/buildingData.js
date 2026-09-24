@@ -229,14 +229,14 @@ export const buildingFloors = {
           "y": 936.3
         },
         "bounds": {
-          "minX": 577.8,
-          "minY": 868.2,
-          "maxX": 901.8,
+          "minX": 556.0,
+          "minY": 884.8,
+          "maxX": 920.5,
           "maxY": 1031.3,
-          "width": 324,
-          "height": 163.1
+          "width": 364.5,
+          "height": 146.5
         },
-        "pathData": "M 577.8 868.2 L 577.8 878.5 L 599.3 879.2 L 598.6 889.8 L 577.8 889.8 L 577.8 938.5 L 778.6 938.5 L 779.3 981.2 L 828.4 981.2 L 829 998.1 L 839.3 998.8 L 838.9 1031.3 L 887.7 1031.3 L 887.7 998.8 L 901.8 998.1 L 901.8 929.7 L 897.5 928.9 L 897.9 889.8 L 888.3 889.8 L 887.7 884.8 L 839.3 884.8 L 838.6 889.8 L 828.4 889.8 L 827.6 884.8 L 779.3 884.8 L 778.6 889.8 L 768.3 889.8 L 767.7 879.2 L 772.9 878.5 L 772.9 868.2 Z",
+        "pathData": "M 556.0 885.2 L 769.0 885.2 L 769.0 889.8 L 778.6 889.8 L 779.3 884.8 L 827.6 884.8 L 828.4 889.8 L 838.6 889.8 L 839.3 884.8 L 920.5 884.8 L 920.5 998.1 L 887.7 998.8 L 887.7 1031.3 L 838.9 1031.3 L 839.3 998.8 L 829 998.1 L 828.4 981.2 L 779.3 981.2 L 778.6 938.5 L 556.0 938.5 Z",
         "wing": "Corp I",
         "isCorridor": true,
         "isTechnical": false
@@ -260,14 +260,14 @@ export const buildingFloors = {
           "y": 962.8
         },
         "bounds": {
-          "minX": 921.2,
-          "minY": 919.8,
+          "minX": 920.5,
+          "minY": 884.1,
           "maxX": 1067.3,
           "maxY": 1031.3,
-          "width": 146.1,
-          "height": 111.5
+          "width": 146.8,
+          "height": 147.2
         },
-        "pathData": "M 921.2 919.8 L 921.2 998.1 L 958.3 998.1 L 958.9 1031.3 L 1007.7 1031.3 L 1008.3 998.1 L 1019 998.8 L 1019 1031.3 L 1067.3 1031.3 L 1067.3 1009.4 L 1045 986.8 L 1045 919.8 Z",
+        "pathData": "M 920.5 884.1 L 1045 884.1 L 1045 986.8 L 1067.3 1009.4 L 1067.3 1031.3 L 1019 1031.3 L 1019 998.8 L 1008.3 998.1 L 1007.7 1031.3 L 958.9 1031.3 L 958.3 998.1 L 920.5 998.1 Z",
         "wing": "Corp I",
         "isCorridor": true,
         "isTechnical": false
@@ -367,7 +367,7 @@ export const buildingFloors = {
       },
       {
         "id": "room-B-amfiteatru",
-        "code": "Aula Constantin Belea",
+        "code": "ACB",
         "name": "Aula Constantin Belea",
         "type": "amphitheatre",
         "floor": "B",
@@ -376,22 +376,22 @@ export const buildingFloors = {
         "area_calc_m2": 205.7,
         "confidence": "low",
         "labelPos": {
-          "x": 949.4,
-          "y": 1169.7
+          "x": 934.4,
+          "y": 1182.4
         },
         "center": {
-          "x": 949.4,
-          "y": 1169.7
+          "x": 934.4,
+          "y": 1182.4
         },
         "bounds": {
-          "minX": 812.5,
+          "minX": 782.0,
           "minY": 1032.7,
           "maxX": 1086.7,
           "maxY": 1332,
-          "width": 274.2,
+          "width": 304.7,
           "height": 299.3
         },
-        "pathData": "M 812.5 1032.7 L 812.5 1332 L 1086.7 1332 L 1086.7 1032.7 Z",
+        "pathData": "M 782.0 1032.7 L 782.0 1332 L 1086.7 1332 L 1086.7 1032.7 Z",
         "wing": "Corp Central",
         "isCorridor": false,
         "isTechnical": false
@@ -881,13 +881,13 @@ export const buildingFloors = {
         },
         "bounds": {
           "minX": 412.2,
-          "minY": 510.5,
+          "minY": 597.3,
           "maxX": 559.1,
           "maxY": 813.7,
           "width": 146.9,
-          "height": 303.2
+          "height": 216.4
         },
-        "pathData": "M 423.5 510.5 L 423.5 595.9 L 422.1 595.9 L 422.1 573.3 L 419.6 573.3 L 419.6 595.2 L 422.1 595.9 L 422.1 598.4 L 412.2 599.1 L 412.2 618.1 L 422.1 618.1 L 422.1 598.7 L 423.5 598.7 L 423.5 813.7 L 552 813.7 L 552 802.4 L 559.1 801.7 L 559.1 753 L 552 752.2 L 552 742.4 L 559.1 741.7 L 559.1 693 L 552 692.3 L 552 682.4 L 559.1 681.7 L 559.1 633.3 L 552.7 633.3 L 552 629.8 L 485.3 629.8 L 484.6 565.9 L 552 565.2 L 552.7 562 L 559.1 562 L 559.1 513.3 L 552.7 513.3 L 552 510.5 Z",
+        "pathData": "M 423.5 597.3 L 485.4 597.3 L 485.3 629.8 L 552 629.8 L 552.7 633.3 L 559.1 633.3 L 559.1 681.7 L 552 682.4 L 552 692.3 L 559.1 693 L 559.1 741.7 L 552 742.4 L 552 752.2 L 559.1 753 L 559.1 801.7 L 552 802.4 L 552 813.7 L 423.5 813.7 L 423.5 618.1 L 412.2 618.1 L 412.2 599.1 L 422.1 598.4 L 423.5 597.3 Z",
         "wing": "Corp G",
         "isCorridor": false,
         "isTechnical": false
@@ -1461,22 +1461,22 @@ export const buildingFloors = {
         "area_calc_m2": 34.6,
         "confidence": "low",
         "labelPos": {
-          "x": 632.8,
-          "y": 904.7
+          "x": 663.4,
+          "y": 913.3
         },
         "center": {
-          "x": 632.8,
-          "y": 904.7
+          "x": 663.4,
+          "y": 913.3
         },
         "bounds": {
-          "minX": 577.8,
-          "minY": 868.4,
-          "maxX": 774.7,
+          "minX": 556.0,
+          "minY": 885.2,
+          "maxX": 770.8,
           "maxY": 941.4,
-          "width": 196.9,
-          "height": 73
+          "width": 214.8,
+          "height": 56.2
         },
-        "pathData": "M 577.8 868.4 L 577.8 878.6 L 599.3 879.3 L 598.6 889.9 L 577.8 889.9 L 577.8 938.3 L 598.6 938.6 L 599.3 941.4 L 648 941.4 L 648.7 938.6 L 658.6 938.6 L 659.3 941.4 L 708 941.4 L 708.7 938.6 L 718.6 938.6 L 719.3 941.4 L 767.7 941.4 L 768.3 938.6 L 770.8 938.6 L 770.8 889.9 L 767.7 889.2 L 767.7 879.3 L 774.7 878.6 L 774.7 868.4 Z",
+        "pathData": "M 556.0 885.2 L 769.0 885.2 L 769.0 889.9 L 770.8 889.9 L 770.8 938.6 L 767.7 941.4 L 719.3 941.4 L 718.6 938.6 L 708.7 938.6 L 708 941.4 L 659.3 941.4 L 658.6 938.6 L 648.7 938.6 L 648 941.4 L 599.3 941.4 L 598.6 938.6 L 556.0 938.6 Z",
         "wing": "Corp I",
         "isCorridor": false,
         "isTechnical": false
@@ -1545,8 +1545,8 @@ export const buildingFloors = {
       },
       {
         "id": "room-P-amfiteatru",
-        "code": "P-amfiteatru",
-        "name": "SALA AMFITEATRU",
+        "code": "AK1",
+        "name": "Amfiteatrul AK1",
         "type": "amphitheatre",
         "floor": "P",
         "level": "",
@@ -3255,10 +3255,16 @@ export const searchRooms = (query, currentFloor = null) => {
 
     const matchesCode = room.code.toLowerCase().includes(q);
     const matchesName = room.name.toLowerCase().includes(q);
-    const matchesType = room.type.toLowerCase().includes(q);
+    const typeRo = room.type === 'amphitheatre' ? 'amfiteatru amfiteatre aula' :
+                   room.type === 'laboratory' ? 'laborator' :
+                   room.type === 'classroom' ? 'sala curs seminar' :
+                   room.type === 'office' ? 'birou cabinet' :
+                   room.type === 'entrance' ? 'intrare' : '';
+    const matchesType = room.type.toLowerCase().includes(q) || typeRo.includes(q);
     const matchesWing = room.wing.toLowerCase().includes(q);
+    const matchesId = room.id.toLowerCase().includes(q);
 
-    return matchesCode || matchesName || matchesType || matchesWing;
+    return matchesCode || matchesName || matchesType || matchesWing || matchesId;
   }).sort((a, b) => {
     // Exact code match first
     const aExact = a.code.toLowerCase() === q;

@@ -258,6 +258,17 @@ const MapScreen = ({ navigation }) => {
     }
   }, [activeRoute]);
 
+  // Handlere debug graf memoizate
+  const handleDebugTap = useCallback((coords) => {
+    setDebugTapCoords(coords);
+    setSelectedDebugNode(null);
+  }, []);
+
+  const handleDebugNodeSelect = useCallback((node) => {
+    setSelectedDebugNode(node);
+    setDebugTapCoords(null);
+  }, []);
+
   const styles = createStyles(colors, isDark);
 
   return (
@@ -281,14 +292,8 @@ const MapScreen = ({ navigation }) => {
             showWalls={showWalls}
             showUnderlay={showUnderlay}
             showDebugGraph={showDebugGraph}
-            onDebugTap={(coords) => {
-              setDebugTapCoords(coords);
-              setSelectedDebugNode(null);
-            }}
-            onDebugNodeSelect={(node) => {
-              setSelectedDebugNode(node);
-              setDebugTapCoords(null);
-            }}
+            onDebugTap={handleDebugTap}
+            onDebugNodeSelect={handleDebugNodeSelect}
           />
 
           {/* 2. Top Header Overlay: Căutare sau Banner Navigație Activă */}

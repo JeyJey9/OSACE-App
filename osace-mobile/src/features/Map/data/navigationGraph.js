@@ -190,7 +190,7 @@ export const NAV_NODES = {
   },
   "B-C025": {
     "id": "B-C025",
-    "x": 382,
+    "x": 379,
     "y": 826.2,
     "floor": "B",
     "type": "corridor",
@@ -198,7 +198,7 @@ export const NAV_NODES = {
   },
   "B-C026": {
     "id": "B-C026",
-    "x": 382,
+    "x": 379,
     "y": 878.2,
     "floor": "B",
     "type": "corridor",
@@ -278,16 +278,8 @@ export const NAV_NODES = {
   },
   "B-C036": {
     "id": "B-C036",
-    "x": 538,
+    "x": 530,
     "y": 930.2,
-    "floor": "B",
-    "type": "corridor",
-    "roomCode": null
-  },
-  "B-C037": {
-    "id": "B-C037",
-    "x": 581.3,
-    "y": 871.8,
     "floor": "B",
     "type": "corridor",
     "roomCode": null
@@ -300,14 +292,6 @@ export const NAV_NODES = {
     "type": "corridor",
     "roomCode": null
   },
-  "B-C039": {
-    "id": "B-C039",
-    "x": 633.3,
-    "y": 871.8,
-    "floor": "B",
-    "type": "corridor",
-    "roomCode": null
-  },
   "B-C040": {
     "id": "B-C040",
     "x": 633.3,
@@ -316,26 +300,10 @@ export const NAV_NODES = {
     "type": "corridor",
     "roomCode": null
   },
-  "B-C041": {
-    "id": "B-C041",
-    "x": 685.3,
-    "y": 871.8,
-    "floor": "B",
-    "type": "corridor",
-    "roomCode": null
-  },
   "B-C042": {
     "id": "B-C042",
     "x": 685.3,
     "y": 923.8,
-    "floor": "B",
-    "type": "corridor",
-    "roomCode": null
-  },
-  "B-C043": {
-    "id": "B-C043",
-    "x": 737.3,
-    "y": 871.8,
     "floor": "B",
     "type": "corridor",
     "roomCode": null
@@ -350,7 +318,7 @@ export const NAV_NODES = {
   },
   "B-C045": {
     "id": "B-C045",
-    "x": 789.3,
+    "x": 801,
     "y": 923.8,
     "floor": "B",
     "type": "corridor",
@@ -358,7 +326,7 @@ export const NAV_NODES = {
   },
   "B-C046": {
     "id": "B-C046",
-    "x": 789.3,
+    "x": 801,
     "y": 975.8,
     "floor": "B",
     "type": "corridor",
@@ -367,7 +335,7 @@ export const NAV_NODES = {
   "B-C047": {
     "id": "B-C047",
     "x": 841.3,
-    "y": 923.8,
+    "y": 901.3,
     "floor": "B",
     "type": "corridor",
     "roomCode": null
@@ -383,7 +351,7 @@ export const NAV_NODES = {
   "B-C050": {
     "id": "B-C050",
     "x": 893.3,
-    "y": 923.8,
+    "y": 901.3,
     "floor": "B",
     "type": "corridor",
     "roomCode": null
@@ -399,7 +367,7 @@ export const NAV_NODES = {
   "B-C052": {
     "id": "B-C052",
     "x": 924.7,
-    "y": 923.3,
+    "y": 901.3,
     "floor": "B",
     "type": "corridor",
     "roomCode": null
@@ -514,7 +482,7 @@ export const NAV_NODES = {
     "y": 1169.7,
     "floor": "B",
     "type": "room",
-    "roomCode": "Aula Constantin Belea"
+    "roomCode": "ACB"
   },
   "B-S01": {
     "id": "B-S01",
@@ -1087,7 +1055,7 @@ export const NAV_NODES = {
   "P-C065": {
     "id": "P-C065",
     "x": 808,
-    "y": 880.4,
+    "y": 900,
     "floor": "P",
     "type": "corridor",
     "roomCode": null
@@ -1142,8 +1110,8 @@ export const NAV_NODES = {
   },
   "P-C072": {
     "id": "P-C072",
-    "x": 964,
-    "y": 932.4,
+    "x": 1016,
+    "y": 902,
     "floor": "P",
     "type": "corridor",
     "roomCode": null
@@ -1152,14 +1120,6 @@ export const NAV_NODES = {
     "id": "P-C073",
     "x": 964,
     "y": 984.4,
-    "floor": "P",
-    "type": "corridor",
-    "roomCode": null
-  },
-  "P-C074": {
-    "id": "P-C074",
-    "x": 1016,
-    "y": 932.4,
     "floor": "P",
     "type": "corridor",
     "roomCode": null
@@ -1175,7 +1135,7 @@ export const NAV_NODES = {
   "P-C076": {
     "id": "P-C076",
     "x": 1068,
-    "y": 932.4,
+    "y": 902,
     "floor": "P",
     "type": "corridor",
     "roomCode": null
@@ -1190,8 +1150,8 @@ export const NAV_NODES = {
   },
   "P-C078": {
     "id": "P-C078",
-    "x": 1120,
-    "y": 932.4,
+    "x": 1094,
+    "y": 902,
     "floor": "P",
     "type": "corridor",
     "roomCode": null
@@ -1206,8 +1166,8 @@ export const NAV_NODES = {
   },
   "P-C080": {
     "id": "P-C080",
-    "x": 1172,
-    "y": 932.4,
+    "x": 1160,
+    "y": 902,
     "floor": "P",
     "type": "corridor",
     "roomCode": null
@@ -1466,7 +1426,7 @@ export const NAV_NODES = {
     "y": 447,
     "floor": "P",
     "type": "room",
-    "roomCode": "P-amfiteatru"
+    "roomCode": "AK1"
   },
   "P-R-P-birou-7": {
     "id": "P-R-P-birou-7",
@@ -1484,42 +1444,10 @@ export const NAV_NODES = {
     "type": "stair",
     "roomCode": null
   },
-  "P-S02": {
-    "id": "P-S02",
-    "x": 237.7,
-    "y": 185.2,
-    "floor": "P",
-    "type": "stair",
-    "roomCode": null
-  },
-  "P-S03": {
-    "id": "P-S03",
-    "x": 249,
-    "y": 166.3,
-    "floor": "P",
-    "type": "stair",
-    "roomCode": null
-  },
-  "P-S04": {
-    "id": "P-S04",
-    "x": 249,
-    "y": 209.5,
-    "floor": "P",
-    "type": "stair",
-    "roomCode": null
-  },
   "P-S05": {
     "id": "P-S05",
     "x": 287.7,
     "y": 138.9,
-    "floor": "P",
-    "type": "stair",
-    "roomCode": null
-  },
-  "P-S06": {
-    "id": "P-S06",
-    "x": 287.7,
-    "y": 756.7,
     "floor": "P",
     "type": "stair",
     "roomCode": null
@@ -1560,30 +1488,6 @@ export const NAV_NODES = {
     "id": "P-S11",
     "x": 1039.1,
     "y": 792.9,
-    "floor": "P",
-    "type": "stair",
-    "roomCode": null
-  },
-  "P-S12": {
-    "id": "P-S12",
-    "x": 793.4,
-    "y": 397.3,
-    "floor": "P",
-    "type": "stair",
-    "roomCode": null
-  },
-  "P-S13": {
-    "id": "P-S13",
-    "x": 768,
-    "y": 442.7,
-    "floor": "P",
-    "type": "stair",
-    "roomCode": null
-  },
-  "P-S14": {
-    "id": "P-S14",
-    "x": 793.7,
-    "y": 493.6,
     "floor": "P",
     "type": "stair",
     "roomCode": null
@@ -1894,8 +1798,40 @@ export const NAV_NODES = {
   },
   "E1-C038": {
     "id": "E1-C038",
-    "x": 1127.4,
-    "y": 808.2,
+    "x": 1127,
+    "y": 798,
+    "floor": "E1",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "E1-C040": {
+    "id": "E1-C040",
+    "x": 1094,
+    "y": 798,
+    "floor": "E1",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "E1-C041": {
+    "id": "E1-C041",
+    "x": 1094,
+    "y": 720,
+    "floor": "E1",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "E1-C042": {
+    "id": "E1-C042",
+    "x": 1094,
+    "y": 96,
+    "floor": "E1",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "E1-C043": {
+    "id": "E1-C043",
+    "x": 1094,
+    "y": 181,
     "floor": "E1",
     "type": "corridor",
     "roomCode": null
@@ -2343,7 +2279,39 @@ export const NAV_NODES = {
   "E2-C025": {
     "id": "E2-C025",
     "x": 1134.5,
-    "y": 808.4,
+    "y": 798,
+    "floor": "E2",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "E2-C027": {
+    "id": "E2-C027",
+    "x": 1094,
+    "y": 798,
+    "floor": "E2",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "E2-C028": {
+    "id": "E2-C028",
+    "x": 1094,
+    "y": 720,
+    "floor": "E2",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "E2-C029": {
+    "id": "E2-C029",
+    "x": 1094,
+    "y": 96,
+    "floor": "E2",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "E2-C030": {
+    "id": "E2-C030",
+    "x": 1094,
+    "y": 181,
     "floor": "E2",
     "type": "corridor",
     "roomCode": null
@@ -2615,7 +2583,39 @@ export const NAV_NODES = {
   "E3-C024": {
     "id": "E3-C024",
     "x": 1124.4,
-    "y": 808.1,
+    "y": 798,
+    "floor": "E3",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "E3-C026": {
+    "id": "E3-C026",
+    "x": 1094,
+    "y": 798,
+    "floor": "E3",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "E3-C027": {
+    "id": "E3-C027",
+    "x": 1094,
+    "y": 720,
+    "floor": "E3",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "E3-C028": {
+    "id": "E3-C028",
+    "x": 1094,
+    "y": 96,
+    "floor": "E3",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "E3-C029": {
+    "id": "E3-C029",
+    "x": 1094,
+    "y": 181,
     "floor": "E3",
     "type": "corridor",
     "roomCode": null
@@ -2742,8 +2742,72 @@ export const NAV_NODES = {
   },
   "P-C088": {
     "id": "P-C088",
-    "x": 1116,
+    "x": 1127,
     "y": 798,
+    "floor": "P",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "P-C089": {
+    "id": "P-C089",
+    "x": 1158,
+    "y": 833,
+    "floor": "P",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "P-C090": {
+    "id": "P-C090",
+    "x": 1198,
+    "y": 772,
+    "floor": "P",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "P-C091": {
+    "id": "P-C091",
+    "x": 1204,
+    "y": 304,
+    "floor": "P",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "P-C092": {
+    "id": "P-C092",
+    "x": 1094,
+    "y": 181,
+    "floor": "P",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "P-C093": {
+    "id": "P-C093",
+    "x": 442,
+    "y": 509,
+    "floor": "P",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "P-C094": {
+    "id": "P-C094",
+    "x": 1094,
+    "y": 798,
+    "floor": "P",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "P-C095": {
+    "id": "P-C095",
+    "x": 1094,
+    "y": 720,
+    "floor": "P",
+    "type": "corridor",
+    "roomCode": null
+  },
+  "P-C096": {
+    "id": "P-C096",
+    "x": 307,
+    "y": 195,
     "floor": "P",
     "type": "corridor",
     "roomCode": null
@@ -3028,26 +3092,8 @@ export const NAV_EDGES = [
     "weight": 52
   },
   {
-    "from": "B-C037",
-    "to": "B-C039",
-    "kind": "corridor",
-    "weight": 52
-  },
-  {
     "from": "B-C038",
     "to": "B-C040",
-    "kind": "corridor",
-    "weight": 52
-  },
-  {
-    "from": "B-C039",
-    "to": "B-C040",
-    "kind": "corridor",
-    "weight": 52
-  },
-  {
-    "from": "B-C039",
-    "to": "B-C041",
     "kind": "corridor",
     "weight": 52
   },
@@ -3058,25 +3104,7 @@ export const NAV_EDGES = [
     "weight": 52
   },
   {
-    "from": "B-C041",
-    "to": "B-C042",
-    "kind": "corridor",
-    "weight": 52
-  },
-  {
-    "from": "B-C041",
-    "to": "B-C043",
-    "kind": "corridor",
-    "weight": 52
-  },
-  {
     "from": "B-C042",
-    "to": "B-C044",
-    "kind": "corridor",
-    "weight": 52
-  },
-  {
-    "from": "B-C043",
     "to": "B-C044",
     "kind": "corridor",
     "weight": 52
@@ -3223,7 +3251,7 @@ export const NAV_EDGES = [
     "from": "B-S03",
     "to": "B-C025",
     "kind": "corridor-stair",
-    "weight": 35.8
+    "weight": 35.6
   },
   {
     "from": "B-entrance-main",
@@ -3241,7 +3269,7 @@ export const NAV_EDGES = [
     "from": "B-S08",
     "to": "B-C046",
     "kind": "corridor-stair",
-    "weight": 19.1
+    "weight": 14.2
   },
   {
     "from": "B-S08",
@@ -3253,13 +3281,13 @@ export const NAV_EDGES = [
     "from": "B-S09",
     "to": "B-C046",
     "kind": "corridor-stair",
-    "weight": 15.1
+    "weight": 10.2
   },
   {
     "from": "B-S10",
     "to": "B-C052",
     "kind": "corridor-stair",
-    "weight": 29.9
+    "weight": 20.3
   },
   {
     "from": "P-C001",
@@ -3697,7 +3725,7 @@ export const NAV_EDGES = [
     "from": "P-C065",
     "to": "P-C066",
     "kind": "corridor",
-    "weight": 52
+    "weight": 32.4
   },
   {
     "from": "P-C066",
@@ -3743,25 +3771,13 @@ export const NAV_EDGES = [
   },
   {
     "from": "P-C070",
-    "to": "P-C072",
+    "to": "P-S16",
     "kind": "corridor",
-    "weight": 52
+    "weight": 57.1
   },
   {
     "from": "P-C071",
     "to": "P-C073",
-    "kind": "corridor",
-    "weight": 52
-  },
-  {
-    "from": "P-C072",
-    "to": "P-C073",
-    "kind": "corridor",
-    "weight": 52
-  },
-  {
-    "from": "P-C072",
-    "to": "P-C074",
     "kind": "corridor",
     "weight": 52
   },
@@ -3772,13 +3788,13 @@ export const NAV_EDGES = [
     "weight": 52
   },
   {
-    "from": "P-C074",
+    "from": "P-C072",
     "to": "P-C075",
     "kind": "corridor",
-    "weight": 52
+    "weight": 82.4
   },
   {
-    "from": "P-C074",
+    "from": "P-C072",
     "to": "P-C076",
     "kind": "corridor",
     "weight": 52
@@ -3793,13 +3809,13 @@ export const NAV_EDGES = [
     "from": "P-C076",
     "to": "P-C077",
     "kind": "corridor",
-    "weight": 52
+    "weight": 82.4
   },
   {
     "from": "P-C076",
     "to": "P-C078",
     "kind": "corridor",
-    "weight": 52
+    "weight": 26
   },
   {
     "from": "P-C077",
@@ -3811,13 +3827,13 @@ export const NAV_EDGES = [
     "from": "P-C078",
     "to": "P-C079",
     "kind": "corridor",
-    "weight": 52
+    "weight": 86.4
   },
   {
     "from": "P-C078",
     "to": "P-C080",
     "kind": "corridor",
-    "weight": 52
+    "weight": 66
   },
   {
     "from": "P-C079",
@@ -3829,7 +3845,7 @@ export const NAV_EDGES = [
     "from": "P-C080",
     "to": "P-C081",
     "kind": "corridor",
-    "weight": 52
+    "weight": 83.3
   },
   {
     "from": "P-C081",
@@ -3841,7 +3857,7 @@ export const NAV_EDGES = [
     "from": "P-S16",
     "to": "P-C072",
     "kind": "stair-access",
-    "weight": 30.2
+    "weight": 55.4
   },
   {
     "from": "P-R-G003",
@@ -3911,15 +3927,9 @@ export const NAV_EDGES = [
   },
   {
     "from": "P-R-G012",
-    "to": "P-C030",
+    "to": "P-C012",
     "kind": "door",
-    "weight": 137.4
-  },
-  {
-    "from": "P-R-G013",
-    "to": "P-C011",
-    "kind": "door",
-    "weight": 138.3
+    "weight": 124
   },
   {
     "from": "P-R-G014",
@@ -3938,12 +3948,6 @@ export const NAV_EDGES = [
     "to": "P-C016",
     "kind": "door",
     "weight": 84.1
-  },
-  {
-    "from": "P-R-K002",
-    "to": "P-C059",
-    "kind": "door",
-    "weight": 82.3
   },
   {
     "from": "P-R-K003",
@@ -3970,12 +3974,6 @@ export const NAV_EDGES = [
     "weight": 115.4
   },
   {
-    "from": "P-R-K007",
-    "to": "P-C051",
-    "kind": "door",
-    "weight": 137.9
-  },
-  {
     "from": "P-R-K008",
     "to": "P-C049",
     "kind": "door",
@@ -3983,9 +3981,9 @@ export const NAV_EDGES = [
   },
   {
     "from": "P-R-I003",
-    "to": "P-C038",
+    "to": "P-C065",
     "kind": "door",
-    "weight": 80.5
+    "weight": 175.3
   },
   {
     "from": "P-R-I004",
@@ -4012,36 +4010,6 @@ export const NAV_EDGES = [
     "weight": 75.8
   },
   {
-    "from": "P-S02",
-    "to": "P-C003",
-    "kind": "corridor-stair",
-    "weight": 141.6
-  },
-  {
-    "from": "P-S03",
-    "to": "P-C002",
-    "kind": "corridor-stair",
-    "weight": 132.2
-  },
-  {
-    "from": "P-S04",
-    "to": "P-C003",
-    "kind": "corridor-stair",
-    "weight": 130.9
-  },
-  {
-    "from": "P-S05",
-    "to": "P-C002",
-    "kind": "corridor-stair",
-    "weight": 91.4
-  },
-  {
-    "from": "P-S06",
-    "to": "P-C026",
-    "kind": "corridor-stair",
-    "weight": 86.2
-  },
-  {
     "from": "P-S07",
     "to": "P-C026",
     "kind": "corridor-stair",
@@ -4052,30 +4020,6 @@ export const NAV_EDGES = [
     "to": "P-C046",
     "kind": "corridor-stair",
     "weight": 46.3
-  },
-  {
-    "from": "P-S12",
-    "to": "P-C042",
-    "kind": "corridor-stair",
-    "weight": 282
-  },
-  {
-    "from": "P-S13",
-    "to": "P-C042",
-    "kind": "corridor-stair",
-    "weight": 311.5
-  },
-  {
-    "from": "P-S14",
-    "to": "P-C043",
-    "kind": "corridor-stair",
-    "weight": 281.7
-  },
-  {
-    "from": "P-S16",
-    "to": "P-C072",
-    "kind": "corridor-stair",
-    "weight": 30.2
   },
   {
     "from": "E1-C001",
@@ -4291,13 +4235,37 @@ export const NAV_EDGES = [
     "from": "E1-C037",
     "to": "E1-C038",
     "kind": "corridor",
-    "weight": 52
+    "weight": 41.8
   },
   {
     "from": "E1-C038",
     "to": "E1-C039",
     "kind": "corridor",
-    "weight": 52
+    "weight": 62.2
+  },
+  {
+    "from": "E1-C038",
+    "to": "E1-C040",
+    "kind": "corridor",
+    "weight": 33
+  },
+  {
+    "from": "E1-C040",
+    "to": "E1-C041",
+    "kind": "corridor",
+    "weight": 78
+  },
+  {
+    "from": "E1-C024",
+    "to": "E1-C042",
+    "kind": "corridor",
+    "weight": 36.9
+  },
+  {
+    "from": "E1-C042",
+    "to": "E1-C043",
+    "kind": "corridor",
+    "weight": 85
   },
   {
     "from": "E1-R-G102",
@@ -4438,16 +4406,16 @@ export const NAV_EDGES = [
     "weight": 129.2
   },
   {
-    "from": "E1-R-K107",
-    "to": "E1-C022",
+    "from": "E1-C041",
+    "to": "E1-R-K107",
     "kind": "door",
-    "weight": 94.3
+    "weight": 75.2
   },
   {
-    "from": "E1-R-K108",
-    "to": "E1-C015",
+    "from": "E1-C043",
+    "to": "E1-R-K108",
     "kind": "door",
-    "weight": 92.3
+    "weight": 76.9
   },
   {
     "from": "E1-S01",
@@ -4469,15 +4437,15 @@ export const NAV_EDGES = [
   },
   {
     "from": "E1-S04",
-    "to": "E1-C023",
+    "to": "E1-C042",
     "kind": "corridor-stair",
-    "weight": 99.4
+    "weight": 83.2
   },
   {
     "from": "E1-S05",
-    "to": "E1-C038",
+    "to": "E1-C040",
     "kind": "corridor-stair",
-    "weight": 107.8
+    "weight": 73.5
   },
   {
     "from": "E2-C001",
@@ -4669,13 +4637,37 @@ export const NAV_EDGES = [
     "from": "E2-C024",
     "to": "E2-C025",
     "kind": "corridor",
-    "weight": 52
+    "weight": 41.6
   },
   {
     "from": "E2-C025",
     "to": "E2-C026",
     "kind": "corridor",
-    "weight": 52
+    "weight": 62.4
+  },
+  {
+    "from": "E2-C025",
+    "to": "E2-C027",
+    "kind": "corridor",
+    "weight": 40.5
+  },
+  {
+    "from": "E2-C027",
+    "to": "E2-C028",
+    "kind": "corridor",
+    "weight": 78
+  },
+  {
+    "from": "E2-C011",
+    "to": "E2-C029",
+    "kind": "corridor",
+    "weight": 43.4
+  },
+  {
+    "from": "E2-C029",
+    "to": "E2-C030",
+    "kind": "corridor",
+    "weight": 85
   },
   {
     "from": "E2-R-K201",
@@ -4708,28 +4700,28 @@ export const NAV_EDGES = [
     "weight": 118.9
   },
   {
-    "from": "E2-R-K207",
-    "to": "E2-C009",
+    "from": "E2-C028",
+    "to": "E2-R-K207",
     "kind": "door",
-    "weight": 98.5
+    "weight": 75.2
   },
   {
-    "from": "E2-R-K208",
-    "to": "E2-C001",
+    "from": "E2-C030",
+    "to": "E2-R-K208",
     "kind": "door",
-    "weight": 96.9
+    "weight": 76.9
   },
   {
     "from": "E2-S01",
-    "to": "E2-C025",
+    "to": "E2-C027",
     "kind": "corridor-stair",
-    "weight": 110.2
+    "weight": 68.8
   },
   {
     "from": "E2-S02",
-    "to": "E2-C010",
+    "to": "E2-C029",
     "kind": "corridor-stair",
-    "weight": 117.8
+    "weight": 92.3
   },
   {
     "from": "E3-C001",
@@ -4867,13 +4859,37 @@ export const NAV_EDGES = [
     "from": "E3-C023",
     "to": "E3-C024",
     "kind": "corridor",
-    "weight": 52
+    "weight": 41.9
   },
   {
     "from": "E3-C024",
     "to": "E3-C025",
     "kind": "corridor",
-    "weight": 52
+    "weight": 62.1
+  },
+  {
+    "from": "E3-C024",
+    "to": "E3-C026",
+    "kind": "corridor",
+    "weight": 30.4
+  },
+  {
+    "from": "E3-C026",
+    "to": "E3-C027",
+    "kind": "corridor",
+    "weight": 78
+  },
+  {
+    "from": "E3-C010",
+    "to": "E3-C028",
+    "kind": "corridor",
+    "weight": 34.3
+  },
+  {
+    "from": "E3-C028",
+    "to": "E3-C029",
+    "kind": "corridor",
+    "weight": 85
   },
   {
     "from": "E3-R-K303",
@@ -4906,28 +4922,28 @@ export const NAV_EDGES = [
     "weight": 132
   },
   {
-    "from": "E3-R-K308",
-    "to": "E3-C001",
+    "from": "E3-C027",
+    "to": "E3-R-K307",
     "kind": "door",
-    "weight": 99.3
+    "weight": 99.4
   },
   {
-    "from": "E3-R-K307",
-    "to": "E3-C008",
+    "from": "E3-C029",
+    "to": "E3-R-K308",
     "kind": "door",
-    "weight": 99.7
+    "weight": 104.2
   },
   {
     "from": "E3-S01",
-    "to": "E3-C009",
+    "to": "E3-C028",
     "kind": "corridor-stair",
-    "weight": 99.5
+    "weight": 85.4
   },
   {
     "from": "E3-S02",
-    "to": "E3-C024",
+    "to": "E3-C026",
     "kind": "corridor-stair",
-    "weight": 105.2
+    "weight": 73.9
   },
   {
     "from": "P-C039",
@@ -4939,7 +4955,7 @@ export const NAV_EDGES = [
     "from": "B-C036",
     "to": "B-C038",
     "kind": "corridor-bridge",
-    "weight": 43.8
+    "weight": 51.7
   },
   {
     "from": "B-C050",
@@ -4948,58 +4964,64 @@ export const NAV_EDGES = [
     "weight": 31.4
   },
   {
+    "from": "B-C051",
+    "to": "B-C053",
+    "kind": "corridor-bridge",
+    "weight": 31.4
+  },
+  {
     "from": "P-S10",
     "to": "E1-S04",
     "kind": "vertical-stair",
-    "weight": 50
+    "weight": 150
   },
   {
     "from": "E1-S04",
     "to": "E2-S02",
     "kind": "vertical-stair",
-    "weight": 50
+    "weight": 150
   },
   {
     "from": "E2-S02",
     "to": "E3-S01",
     "kind": "vertical-stair",
-    "weight": 50
+    "weight": 150
   },
   {
     "from": "P-S11",
     "to": "E1-S05",
     "kind": "vertical-stair",
-    "weight": 50
+    "weight": 150
   },
   {
     "from": "E1-S05",
     "to": "E2-S01",
     "kind": "vertical-stair",
-    "weight": 50
+    "weight": 150
   },
   {
     "from": "E2-S01",
     "to": "E3-S02",
     "kind": "vertical-stair",
-    "weight": 50
+    "weight": 150
   },
   {
     "from": "P-S05",
     "to": "E1-S02",
     "kind": "vertical-stair",
-    "weight": 50
+    "weight": 150
   },
   {
     "from": "P-S07",
     "to": "E1-S01",
     "kind": "vertical-stair",
-    "weight": 50
+    "weight": 150
   },
   {
     "from": "B-S10",
     "to": "P-S16",
     "kind": "vertical-stair",
-    "weight": 50
+    "weight": 150
   },
   {
     "from": "B-R-GD03",
@@ -5017,7 +5039,7 @@ export const NAV_EDGES = [
     "from": "B-R-GD05",
     "to": "B-C036",
     "kind": "door",
-    "weight": 96.5
+    "weight": 96.2
   },
   {
     "from": "P-C012",
@@ -5035,7 +5057,7 @@ export const NAV_EDGES = [
     "from": "B-S03",
     "to": "P-S08",
     "kind": "vertical-stair",
-    "weight": 50
+    "weight": 150
   },
   {
     "from": "P-C084",
@@ -5053,55 +5075,13 @@ export const NAV_EDGES = [
     "from": "P-C060",
     "to": "P-C088",
     "kind": "corridor",
-    "weight": 43.1
-  },
-  {
-    "from": "P-C088",
-    "to": "P-C085",
-    "kind": "corridor",
-    "weight": 75.3
-  },
-  {
-    "from": "P-C088",
-    "to": "P-C086",
-    "kind": "corridor",
-    "weight": 91.3
-  },
-  {
-    "from": "P-C085",
-    "to": "P-C086",
-    "kind": "corridor",
-    "weight": 66.5
+    "weight": 41.6
   },
   {
     "from": "P-C085",
     "to": "P-C078",
     "kind": "corridor",
-    "weight": 67.6
-  },
-  {
-    "from": "P-C086",
-    "to": "P-C078",
-    "kind": "corridor",
-    "weight": 67.5
-  },
-  {
-    "from": "P-C085",
-    "to": "P-S11",
-    "kind": "corridor-stair",
-    "weight": 94.6
-  },
-  {
-    "from": "P-C085",
-    "to": "P-R-K010",
-    "kind": "door",
-    "weight": 153.7
-  },
-  {
-    "from": "P-C086",
-    "to": "P-R-K001",
-    "kind": "door",
-    "weight": 112.7
+    "weight": 32
   },
   {
     "from": "P-C087",
@@ -5116,10 +5096,118 @@ export const NAV_EDGES = [
     "weight": 56.5
   },
   {
+    "from": "P-C080",
+    "to": "P-C086",
+    "kind": "corridor",
+    "weight": 24
+  },
+  {
+    "from": "P-C086",
+    "to": "P-C089",
+    "kind": "corridor",
+    "weight": 45
+  },
+  {
+    "from": "P-C089",
+    "to": "P-R-K001",
+    "kind": "door",
+    "weight": 92.8
+  },
+  {
+    "from": "P-C090",
+    "to": "P-R-K002",
+    "kind": "door",
+    "weight": 59.3
+  },
+  {
+    "from": "P-R-K001",
+    "to": "P-C090",
+    "kind": "corridor-room",
+    "weight": 59.7
+  },
+  {
+    "from": "P-R-K006",
+    "to": "P-C091",
+    "kind": "corridor-room",
+    "weight": 92.2
+  },
+  {
+    "from": "P-C091",
+    "to": "P-R-K007",
+    "kind": "door",
+    "weight": 61.1
+  },
+  {
     "from": "P-C087",
+    "to": "P-C092",
+    "kind": "corridor",
+    "weight": 85
+  },
+  {
+    "from": "P-C092",
     "to": "P-R-K011",
     "kind": "door",
-    "weight": 102
+    "weight": 56
+  },
+  {
+    "from": "P-C088",
+    "to": "P-C089",
+    "kind": "corridor",
+    "weight": 46.8
+  },
+  {
+    "from": "P-R-G014",
+    "to": "P-C093",
+    "kind": "door",
+    "weight": 103.2
+  },
+  {
+    "from": "P-C093",
+    "to": "P-R-G013",
+    "kind": "door",
+    "weight": 116
+  },
+  {
+    "from": "P-C085",
+    "to": "P-C094",
+    "kind": "corridor",
+    "weight": 72
+  },
+  {
+    "from": "P-C088",
+    "to": "P-C094",
+    "kind": "corridor",
+    "weight": 33
+  },
+  {
+    "from": "P-C094",
+    "to": "P-C095",
+    "kind": "corridor",
+    "weight": 78
+  },
+  {
+    "from": "P-C095",
+    "to": "P-R-K010",
+    "kind": "door",
+    "weight": 56.4
+  },
+  {
+    "from": "P-C096",
+    "to": "P-C003",
+    "kind": "corridor",
+    "weight": 72
+  },
+  {
+    "from": "P-C096",
+    "to": "P-S05",
+    "kind": "corridor-stair",
+    "weight": 59.3
+  },
+  {
+    "from": "P-C094",
+    "to": "P-S11",
+    "kind": "corridor-stair",
+    "weight": 55.1
   }
 ];
 
@@ -5168,8 +5256,10 @@ export function resolveToNodeId(roomOrCode) {
     return 'B-entrance-main';
   }
 
-  // Aula Constantin Belea -> rutează direct la Punctul Informativ (Intrare Aula B-S08)
+  // Aula Constantin Belea (ACB) -> rutează direct la Punctul Informativ (Intrare Aula B-S08)
   if (
+    upper === 'ACB' ||
+    upper === 'ROOM-B-AMFITEATRU' ||
     upper.includes('BELEA') ||
     upper.includes('AULA') ||
     upper.includes('B-AMFITEATRU') ||
@@ -5177,6 +5267,16 @@ export function resolveToNodeId(roomOrCode) {
     upper === 'B-S08'
   ) {
     return 'B-S08';
+  }
+
+  // Amfiteatrul Parter (AK1)
+  if (
+    upper === 'AK1' ||
+    upper === 'P-AMFITEATRU' ||
+    upper === 'ROOM-P-AMFITEATRU' ||
+    upper.includes('AMFITEATRU')
+  ) {
+    return 'P-R-P-amfiteatru';
   }
 
   if (NAV_NODES[str]) return str;

@@ -3,15 +3,13 @@ import { View, StyleSheet, Dimensions, Animated, Easing } from 'react-native';
 import Svg, { G, Path, Text as SvgText, Circle, Polyline, Rect, Line } from 'react-native-svg';
 import { ReactNativeZoomableView } from '@openspacelabs/react-native-zoomable-view';
 import { MAP_DIMENSIONS, ROOM_TYPE_COLORS, getRoomsByFloor } from '../data/buildingData';
-import { floorOutlines, demisolUnfinishedAreas } from '../data/floorOutlines';
+import { floorOutlines, demisolUnfinishedAreas, demisolHatchPath } from '../data/floorOutlines';
 import { floorWalls } from '../data/floorWalls';
 import { getStairsByFloor } from '../data/buildingStairs';
 import { NAV_NODES, NAV_EDGES } from '../data/navigationGraph';
 import { useThemeColor } from '../../../constants/useThemeColor';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const AnimatedPolyline = Animated.createAnimatedComponent(Polyline);
 
 // Ordinea nivelurilor de jos în sus pentru stratificarea arhitecturală (underlay)
 const FLOOR_ORDER = ['B', 'P', 'E1', 'E2', 'E3'];
@@ -49,43 +47,26 @@ const InteractiveMap = forwardRef(({
   style,
 }, ref) => {
   const zoomableViewRef = useRef(null);
-  const dashOffset = useRef(new Animated.Value(0)).current;
   const lastSelectTime = useRef(0);
   const { colors, isDark } = useThemeColor();
 
   const themeColors = isDark ? ROOM_TYPE_COLORS.dark : ROOM_TYPE_COLORS.light;
 
-  // Animație linie navigație când navigarea este activă
-  useEffect(() => {
-    if (isNavigating && routePoints && routePoints.length > 0) {
-      dashOffset.setValue(0);
-      const animation = Animated.loop(
-        Animated.timing(dashOffset, {
-          toValue: -24,
-          duration: 900,
-          easing: Easing.linear,
-          useNativeDriver: false,
-        })
-      );
-      animation.start();
-      return () => animation.stop();
-    } else {
-      dashOffset.stopAnimation();
-    }
-  }, [isNavigating, routePoints]);
-
   // Obținem contururile etajului curent
   const outlines = useMemo(() => floorOutlines[floorId] || [], [floorId]);
 
-  // Calculăm etajele inferioare vizibile în fundal ca sub-strat fantomă (ghost underlay)
+  // Calculăm etajul inferior vizibil în fundal ca sub-strat fantomă (ghost underlay)
   const currentFloorIndex = useMemo(() => {
     return FLOOR_ORDER.indexOf(floorId);
   }, [floorId]);
 
   const underlyingFloors = useMemo(() => {
-    if (currentFloorIndex <= 0) return [];
-    return FLOOR_ORDER.slice(0, currentFloorIndex);
-  }, [currentFloorIndex]);
+    // În timpul navigării active dezactivăm complet sub-straturile pentru performanță maximă și claritate
+    if (isNavigating || !showUnderlay || currentFloorIndex <= 0) return [];
+    // Rendăm doar etajul direct inferior (n-1) pentru referință arhitecturală curată,
+    // evitând stivuirea a până la 4 etaje simultan în SVG (care supraîncărca dispozitivul)
+    return [FLOOR_ORDER[currentFloorIndex - 1]];
+  }, [isNavigating, showUnderlay, currentFloorIndex]);
 
   // Obținem pereții interiori ai etajului curent
   const wallsPathData = useMemo(() => floorWalls[floorId] || null, [floorId]);
@@ -330,26 +311,27 @@ const InteractiveMap = forwardRef(({
     }
   }, [selectedRoomId, floorId]);
 
-  // Puncte navigație pentru etajul curent
-  const currentFloorRoute = useMemo(() => {
-    if (!routePoints || !Array.isArray(routePoints)) return null;
-    return routePoints.filter((pt) => !pt.floor || pt.floor === floorId);
-  }, [routePoints, floorId]);
+  // Segmente de navigație contigue pentru etajul curent
+  const currentFloorSegments = useMemo(() => {
+    if (!routePoints || !Array.isArray(routePoints) || routePoints.length === 0) return [];
+    const segments = [];
+    let currentSegment = [];
 
-  const routePolylineString = useMemo(() => {
-    if (!currentFloorRoute || currentFloorRoute.length < 2) return '';
-    return currentFloorRoute.map((p) => `${p.x},${p.y}`).join(' ');
-  }, [currentFloorRoute]);
-
-  // Verificăm dacă începutul sau sfârșitul întregului traseu este pe acest etaj
-  const isStartOfTotalRoute = useMemo(() => {
-    if (!routePoints || routePoints.length === 0) return false;
-    return routePoints[0].floor === floorId;
-  }, [routePoints, floorId]);
-
-  const isEndOfTotalRoute = useMemo(() => {
-    if (!routePoints || routePoints.length === 0) return false;
-    return routePoints[routePoints.length - 1].floor === floorId;
+    for (let i = 0; i < routePoints.length; i++) {
+      const pt = routePoints[i];
+      if (!pt.floor || pt.floor === floorId) {
+        currentSegment.push(pt);
+      } else {
+        if (currentSegment.length > 0) {
+          segments.push(currentSegment);
+          currentSegment = [];
+        }
+      }
+    }
+    if (currentSegment.length > 0) {
+      segments.push(currentSegment);
+    }
+    return segments;
   }, [routePoints, floorId]);
 
   // Calculăm stilul pentru fiecare încăpere
@@ -379,6 +361,616 @@ const InteractiveMap = forwardRef(({
   const outlineFill = isDark ? '#161f30' : '#ffffff';
   const outlineStroke = isDark ? '#334155' : '#1e293b';
 
+  // 0. Strat Ghost Underlays memoizat
+  const memoizedGhostUnderlays = useMemo(() => {
+    if (isNavigating || !showUnderlay || underlyingFloors.length === 0) return null;
+    return (
+      <G id="Ghost_Underlays" pointerEvents="none">
+        {underlyingFloors.map((underFloorId) => {
+          const underPaths = floorOutlines[underFloorId] || [];
+          return underPaths.map((d, i) => (
+            <Path
+              key={`ghost-${underFloorId}-${i}`}
+              d={d}
+              fill={isDark ? 'rgba(30, 41, 59, 0.22)' : 'rgba(226, 232, 240, 0.4)'}
+              stroke={isDark ? '#64748b' : '#94a3b8'}
+              strokeWidth={1.8}
+              strokeDasharray="6 4"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              opacity={0.45}
+            />
+          ));
+        })}
+      </G>
+    );
+  }, [isNavigating, showUnderlay, underlyingFloors, isDark]);
+
+  // 1. Strat Outline Clădire memoizat
+  const memoizedOutlines = useMemo(() => (
+    <G id="Building_Outline">
+      {outlines.map((d, index) => (
+        <Path
+          key={`outline-${index}`}
+          d={d}
+          fill={outlineFill}
+          stroke={outlineStroke}
+          strokeWidth={4.5}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      ))}
+    </G>
+  ), [outlines, outlineFill, outlineStroke]);
+
+  // 1.1 Strat Demisol Foundation Slab memoizat
+  const memoizedDemisolBase = useMemo(() => {
+    if (floorId !== 'B' || !demisolUnfinishedAreas) return null;
+    return (
+      <G id="Demisol_Base">
+        {demisolUnfinishedAreas.map((d, index) => (
+          <Path
+            key={`demisol-unfinished-${index}`}
+            d={d}
+            fill={isDark ? '#1e293b' : '#e2e8f0'}
+            fillOpacity={0.65}
+            stroke={isDark ? '#334155' : '#94a3b8'}
+            strokeWidth={1.2}
+          />
+        ))}
+        {demisolHatchPath && (
+          <Path
+            d={demisolHatchPath}
+            stroke={isDark ? '#475569' : '#94a3b8'}
+            strokeWidth={0.9}
+            strokeOpacity={0.7}
+          />
+        )}
+      </G>
+    );
+  }, [floorId, isDark]);
+
+  // 2. Strat Coridoare memoizat
+  const memoizedCorridors = useMemo(() => (
+    <G id="Corridors">
+      {corridors.map((corridor) => (
+        <Path
+          key={corridor.id}
+          d={corridor.pathData}
+          fill={themeColors.corridor}
+          stroke={isDark ? '#334155' : '#94a3b8'}
+          strokeWidth={1.2}
+        />
+      ))}
+    </G>
+  ), [corridors, themeColors.corridor, isDark]);
+
+  // 3. Strat Săli Interactive memoizat (doar poligoane fundal)
+  const memoizedRooms = useMemo(() => (
+    <G id="Rooms">
+      {regularRooms.map((room) => {
+        const roomStyle = getRoomStyle(room);
+
+        return (
+          <Path
+            key={room.id}
+            d={room.pathData}
+            fill={roomStyle.fill}
+            stroke={roomStyle.stroke}
+            strokeWidth={roomStyle.strokeWidth}
+            opacity={roomStyle.opacity}
+          />
+        );
+      })}
+    </G>
+  ), [regularRooms, selectedRoomId, targetRoom?.id, themeColors, isDark]);
+
+  // 4.1 Strat Etichete Săli memoizat (randat deasupra pereților pentru lizibilitate maximă)
+  const memoizedRoomLabels = useMemo(() => (
+    <G id="Room_Labels" pointerEvents="none">
+      {regularRooms.map((room) => {
+        if (!room.labelPos) return null;
+        const isSelected = selectedRoomId === room.id || targetRoom?.id === room.id;
+        const textStr = String(room.code || '');
+        const isSanitary = room.id.includes('san') || room.code === 'GR. SAN.';
+        const badgeW = isSanitary ? 52 : Math.max(28, textStr.length * 7.5 + 10);
+        const badgeH = isSelected ? 18 : 14;
+
+        return (
+          <G key={`label-${room.id}`}>
+            {/* Pill de fundal pentru grupuri sanitare sau sala selectată, acoperind orice linie de perete */}
+            {(isSanitary || isSelected) && (
+              <Rect
+                x={room.labelPos.x - badgeW / 2}
+                y={room.labelPos.y - badgeH / 2}
+                width={badgeW}
+                height={badgeH}
+                rx={4}
+                ry={4}
+                fill={
+                  isSelected
+                    ? '#0284c7'
+                    : isDark
+                    ? 'rgba(15, 23, 42, 0.96)'
+                    : 'rgba(255, 255, 255, 0.96)'
+                }
+                stroke={
+                  isSelected
+                    ? '#ffffff'
+                    : isSanitary
+                    ? (isDark ? '#475569' : '#cbd5e1')
+                    : 'none'
+                }
+                strokeWidth={1}
+              />
+            )}
+            {/* Halo text pentru sălile obișnuite */}
+            {!isSanitary && !isSelected && (
+              <SvgText
+                x={room.labelPos.x}
+                y={room.labelPos.y + 0.5}
+                stroke={isDark ? '#0f172a' : '#ffffff'}
+                strokeWidth={3}
+                fill="none"
+                fontSize="11"
+                fontWeight="700"
+                textAnchor="middle"
+                alignmentBaseline="middle"
+              >
+                {room.code}
+              </SvgText>
+            )}
+            <SvgText
+              x={room.labelPos.x}
+              y={room.labelPos.y + 0.5}
+              fill={
+                isSelected
+                  ? '#ffffff'
+                  : isDark
+                  ? '#f1f5f9'
+                  : '#0f172a'
+              }
+              fontSize={isSelected ? '12.5' : isSanitary ? '9' : '11'}
+              fontWeight={isSelected ? '800' : '700'}
+              textAnchor="middle"
+              alignmentBaseline="middle"
+            >
+              {room.code}
+            </SvgText>
+          </G>
+        );
+      })}
+    </G>
+  ), [regularRooms, selectedRoomId, targetRoom?.id, isDark]);
+
+  // 4. Strat Pereți Interiori memoizat
+  const memoizedWalls = useMemo(() => {
+    if (!showWalls || !wallsPathData) return null;
+    return (
+      <G id="Walls">
+        <Path
+          d={wallsPathData}
+          fill="none"
+          stroke={isDark ? '#64748b' : '#3f4652'}
+          strokeWidth={2.2}
+          strokeLinecap="square"
+        />
+      </G>
+    );
+  }, [showWalls, wallsPathData, isDark]);
+
+  // 4.0 Strat Uși și Badge Intrare Principală Demisol memoizat
+  const memoizedMainEntrance = useMemo(() => {
+    if (floorId !== 'B') return null;
+    return (
+      <G id="Main_Entrance">
+        {/* Trepte exterioare de acces */}
+        <Path
+          d="M 285 1083.5 L 495 1083.5 M 288 1087.5 L 492 1087.5 M 291 1091.5 L 489 1091.5"
+          stroke={isDark ? '#64748b' : '#94a3b8'}
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          pointerEvents="none"
+        />
+        {/* 4 Uși Duble de Intrare cu deschidere arc */}
+        {[310, 365, 415, 470].map((doorX, dIdx) => (
+          <G key={`main-door-${dIdx}`} pointerEvents="none">
+            <Path
+              d={`M ${doorX - 14} 1079.7 L ${doorX - 14} 1069 A 14 14 0 0 1 ${doorX} 1079.7`}
+              fill="none"
+              stroke="#10b981"
+              strokeWidth={1.4}
+              strokeDasharray="2 2"
+            />
+            <Path
+              d={`M ${doorX + 14} 1079.7 L ${doorX + 14} 1069 A 14 14 0 0 0 ${doorX} 1079.7`}
+              fill="none"
+              stroke="#10b981"
+              strokeWidth={1.4}
+              strokeDasharray="2 2"
+            />
+            <Path
+              d={`M ${doorX - 14} 1079.7 L ${doorX - 14} 1069 M ${doorX + 14} 1079.7 L ${doorX + 14} 1069`}
+              stroke={isDark ? '#34d399' : '#059669'}
+              strokeWidth={2}
+              strokeLinecap="round"
+            />
+          </G>
+        ))}
+
+        {/* Badge Interactiv Intrare Principală Facultate */}
+        <G
+          onPress={() => {
+            const gd04 = rooms.find((r) => r.code === 'GD04' || r.id === 'room-GD04');
+            if (gd04 && onRoomSelect) {
+              onRoomSelect(gd04);
+            }
+          }}
+        >
+          <Circle
+            cx={389.0}
+            cy={1050.0}
+            r={22}
+            fill="#10b981"
+            opacity={isDark ? 0.3 : 0.2}
+          />
+          <Rect
+            x={389.0 - 95}
+            y={1050.0 - 13}
+            width={190}
+            height={26}
+            rx={13}
+            ry={13}
+            fill={isDark ? '#064e3b' : '#ecfdf5'}
+            stroke="#10b981"
+            strokeWidth={2}
+          />
+          <Circle
+            cx={389.0 - 78}
+            cy={1050.0}
+            r={8}
+            fill="#10b981"
+          />
+          <SvgText
+            x={389.0 - 78}
+            y={1050.0 + 3.5}
+            fill="#ffffff"
+            fontSize="10"
+            textAnchor="middle"
+          >
+            🚪
+          </SvgText>
+          <SvgText
+            x={389.0 + 10}
+            y={1050.0 + 4}
+            fill={isDark ? '#6ee7b7' : '#047857'}
+            fontSize="10.5"
+            fontWeight="800"
+            textAnchor="middle"
+          >
+            INTRAREA PRINCIPALĂ
+          </SvgText>
+        </G>
+      </G>
+    );
+  }, [floorId, isDark, onRoomSelect, rooms]);
+
+  // 4.1 Strat Scări / Conectori Verticali memoizat
+  const memoizedStairs = useMemo(() => {
+    if (!stairs || stairs.length === 0) return null;
+    return (
+      <G id="Stairs">
+        {stairs.map((stair) => {
+          const isPOI = stair.type === 'poi' || stair.direction === 'none';
+          const isUp = stair.direction === 'up';
+          const isDown = stair.direction === 'down';
+          const dirSymbol = isPOI ? '➜' : isUp ? '▲' : isDown ? '▼' : '⇅';
+          const dirColor = isPOI ? '#8b5cf6' : isUp ? '#10b981' : isDown ? '#f59e0b' : '#3b82f6';
+
+          const badgeWidth = isPOI
+            ? Math.max(80, stair.label.length * 8 + 28)
+            : Math.max(46, stair.label.length * 8 + 26);
+          const badgeHeight = 22;
+          const badgeX = stair.x - badgeWidth / 2;
+          const badgeY = stair.y - badgeHeight / 2;
+
+          return (
+            <G key={stair.id}>
+              <Circle
+                cx={stair.x}
+                cy={stair.y}
+                r={16}
+                fill={dirColor}
+                opacity={isDark ? 0.25 : 0.18}
+              />
+              <Rect
+                x={badgeX}
+                y={badgeY}
+                width={badgeWidth}
+                height={badgeHeight}
+                rx={11}
+                ry={11}
+                fill={isDark ? '#1e293b' : '#ffffff'}
+                stroke={dirColor}
+                strokeWidth={2}
+              />
+              <Circle
+                cx={badgeX + 11}
+                cy={stair.y}
+                r={7}
+                fill={dirColor}
+              />
+              <SvgText
+                x={badgeX + 11}
+                y={stair.y + 1}
+                fill="#ffffff"
+                fontSize="8"
+                fontWeight="900"
+                textAnchor="middle"
+                alignmentBaseline="middle"
+              >
+                {dirSymbol}
+              </SvgText>
+              <SvgText
+                x={badgeX + 11 + (badgeWidth - 11) / 2}
+                y={stair.y + 1}
+                fill={isDark ? '#f8fafc' : '#0f172a'}
+                fontSize="10"
+                fontWeight="800"
+                textAnchor="middle"
+                alignmentBaseline="middle"
+              >
+                {stair.label}
+              </SvgText>
+            </G>
+          );
+        })}
+      </G>
+    );
+  }, [stairs, isDark]);
+
+  // 5. Strat Navigație (Rutare activă de înaltă performanță - static GPU accelerated)
+  const memoizedRouteLayer = useMemo(() => {
+    if (!currentFloorSegments || currentFloorSegments.length === 0) return null;
+    return (
+      <G id="Navigation_Route" pointerEvents="none">
+        {currentFloorSegments.map((segment, segIdx) => {
+          if (segment.length === 0) return null;
+          const pointsString = segment.map((p) => `${p.x},${p.y}`).join(' ');
+          const firstNode = segment[0];
+          const lastNode = segment[segment.length - 1];
+
+          const isStartNodeOfTotal = routePoints && routePoints[0]?.id === firstNode?.id;
+          const isEndNodeOfTotal = routePoints && routePoints[routePoints.length - 1]?.id === lastNode?.id;
+
+          return (
+            <G key={`route-segment-${segIdx}`}>
+              {/* Linia de traseu este randată dacă segmentul conține cel puțin 2 noduri */}
+              {segment.length >= 2 && (
+                <>
+                  {/* Layer 1: Glow exterior / Halo de fundal pentru vizibilitate maximă */}
+                  <Polyline
+                    points={pointsString}
+                    fill="none"
+                    stroke="#0284c7"
+                    strokeWidth={10}
+                    strokeOpacity={0.25}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+
+                  {/* Layer 2: Traseu principal vibrant */}
+                  <Polyline
+                    points={pointsString}
+                    fill="none"
+                    stroke="#0284c7"
+                    strokeWidth={5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+
+                  {/* Layer 3: Ghidaj central punctat pentru orientare intuitivă */}
+                  <Polyline
+                    points={pointsString}
+                    fill="none"
+                    stroke="#e0f2fe"
+                    strokeWidth={2}
+                    strokeDasharray="8 6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </>
+              )}
+
+              {/* Pin Start pe acest segment de etaj */}
+              <G key={`start-marker-${segIdx}`}>
+                <Circle
+                  cx={firstNode.x}
+                  cy={firstNode.y}
+                  r={13}
+                  fill={isStartNodeOfTotal ? '#10b981' : '#0284c7'}
+                  opacity={0.25}
+                />
+                <Circle
+                  cx={firstNode.x}
+                  cy={firstNode.y}
+                  r={7.5}
+                  fill={isStartNodeOfTotal ? '#10b981' : '#0284c7'}
+                  stroke="#ffffff"
+                  strokeWidth={2.5}
+                />
+                <Circle
+                  cx={firstNode.x}
+                  cy={firstNode.y}
+                  r={3}
+                  fill="#ffffff"
+                />
+              </G>
+
+              {/* Pin Sosire / Schimbare etaj pe acest segment */}
+              {segment.length >= 2 && (
+                <G key={`end-marker-${segIdx}`}>
+                  <Circle
+                    cx={lastNode.x}
+                    cy={lastNode.y}
+                    r={13}
+                    fill={isEndNodeOfTotal ? '#ef4444' : '#f59e0b'}
+                    opacity={0.25}
+                  />
+                  <Circle
+                    cx={lastNode.x}
+                    cy={lastNode.y}
+                    r={7.5}
+                    fill={isEndNodeOfTotal ? '#ef4444' : '#f59e0b'}
+                    stroke="#ffffff"
+                    strokeWidth={2.5}
+                  />
+                  <Circle
+                    cx={lastNode.x}
+                    cy={lastNode.y}
+                    r={3}
+                    fill="#ffffff"
+                  />
+                </G>
+              )}
+            </G>
+          );
+        })}
+      </G>
+    );
+  }, [currentFloorSegments, routePoints]);
+
+  // 6. Strat Debug Graf Navigație memoizat
+  const memoizedDebugGraph = useMemo(() => {
+    if (!showDebugGraph) return null;
+    return (
+      <G id="Debug_Nav_Graph">
+        {/* Liniile muchiilor */}
+        <G id="Debug_Edges" pointerEvents="none">
+          {debugEdges.map((e, idx) => {
+            const n1 = NAV_NODES[e.from];
+            const n2 = NAV_NODES[e.to];
+            if (!n1 || !n2) return null;
+            const isCrossFloor = n1.floor !== n2.floor;
+            const edgeColor = isCrossFloor
+              ? '#ec4899'
+              : e.kind === 'corridor-room'
+              ? '#10b981'
+              : e.kind === 'corridor-stair'
+              ? '#8b5cf6'
+              : '#06b6d4';
+            return (
+              <Line
+                key={`dbg-edge-${idx}`}
+                x1={n1.x}
+                y1={n1.y}
+                x2={n2.x}
+                y2={n2.y}
+                stroke={edgeColor}
+                strokeWidth={1.8}
+                strokeDasharray={isCrossFloor ? '4 3' : undefined}
+                opacity={0.8}
+              />
+            );
+          })}
+        </G>
+
+        {/* Nodurile de navigație cu ID și coordonate */}
+        <G id="Debug_Nodes">
+          {debugNodes.map((n) => {
+            const nodeColor =
+              n.type === 'entrance'
+                ? '#f59e0b'
+                : n.type === 'stair'
+                ? '#8b5cf6'
+                : n.type === 'room'
+                ? '#10b981'
+                : '#06b6d4';
+
+            const idText = n.id;
+            const coordsText = `${Math.round(n.x)}, ${Math.round(n.y)}`;
+            const badgeW = Math.max(54, idText.length * 6.5 + 10);
+            const badgeH = 17;
+            const badgeX = n.x - badgeW / 2;
+            const badgeY = n.y - badgeH - 5;
+
+            return (
+              <G
+                key={`dbg-node-${n.id}`}
+                onPress={() => onDebugNodeSelect && onDebugNodeSelect(n)}
+              >
+                {/* Glow & Punct Nod */}
+                <Circle
+                  cx={n.x}
+                  cy={n.y}
+                  r={8}
+                  fill={nodeColor}
+                  opacity={0.3}
+                />
+                <Circle
+                  cx={n.x}
+                  cy={n.y}
+                  r={3.8}
+                  fill={nodeColor}
+                  stroke="#ffffff"
+                  strokeWidth={1.2}
+                />
+
+                {/* Linie mică conector spre etichetă */}
+                <Line
+                  x1={n.x}
+                  y1={n.y - 3.8}
+                  x2={n.x}
+                  y2={badgeY + badgeH}
+                  stroke={nodeColor}
+                  strokeWidth={1}
+                  opacity={0.8}
+                />
+
+                {/* Pill fundal etichetă */}
+                <Rect
+                  x={badgeX}
+                  y={badgeY}
+                  width={badgeW}
+                  height={badgeH}
+                  rx={3}
+                  ry={3}
+                  fill={isDark ? '#0f172a' : '#ffffff'}
+                  stroke={nodeColor}
+                  strokeWidth={1.5}
+                />
+
+                {/* Text ID Nod */}
+                <SvgText
+                  x={n.x}
+                  y={badgeY + 7}
+                  fill={isDark ? '#f8fafc' : '#0f172a'}
+                  fontSize="6"
+                  fontWeight="900"
+                  textAnchor="middle"
+                >
+                  {idText}
+                </SvgText>
+
+                {/* Text Coordonate X, Y */}
+                <SvgText
+                  x={n.x}
+                  y={badgeY + 14}
+                  fill={nodeColor}
+                  fontSize="5.2"
+                  fontWeight="700"
+                  textAnchor="middle"
+                >
+                  {coordsText}
+                </SvgText>
+              </G>
+            );
+          })}
+        </G>
+      </G>
+    );
+  }, [showDebugGraph, debugEdges, debugNodes, isDark, onDebugNodeSelect]);
+
   return (
     <View style={[styles.container, { backgroundColor: mapBgColor }, style]}>
       <ReactNativeZoomableView
@@ -401,478 +993,38 @@ const InteractiveMap = forwardRef(({
           viewBox={MAP_DIMENSIONS.viewBox}
           pointerEvents="none"
         >
-          {/* 0. Strat Ghost Underlays (contururi și pereți exteriori etaje inferioare) */}
-          {showUnderlay && underlyingFloors.length > 0 && (
-            <G id="Ghost_Underlays" pointerEvents="none">
-              {underlyingFloors.map((underFloorId) => {
-                const underFloorIndex = FLOOR_ORDER.indexOf(underFloorId);
-                const distanceBelow = currentFloorIndex - underFloorIndex;
-                const baseOpacity =
-                  distanceBelow === 1 ? 0.6 :
-                  distanceBelow === 2 ? 0.45 :
-                  distanceBelow === 3 ? 0.35 : 0.25;
-
-                const underPaths = floorOutlines[underFloorId] || [];
-                return underPaths.map((d, i) => (
-                  <Path
-                    key={`ghost-${underFloorId}-${i}`}
-                    d={d}
-                    fill={isDark ? 'rgba(30, 41, 59, 0.22)' : 'rgba(226, 232, 240, 0.4)'}
-                    stroke={isDark ? '#64748b' : '#94a3b8'}
-                    strokeWidth={1.8}
-                    strokeDasharray="6 4"
-                    strokeLinejoin="round"
-                    strokeLinecap="round"
-                    opacity={baseOpacity}
-                  />
-                ));
-              })}
-            </G>
-          )}
+          {/* 0. Strat Ghost Underlays */}
+          {memoizedGhostUnderlays}
 
           {/* 1. Strat Outline Clădire */}
-          <G id="Building_Outline">
-            {outlines.map((d, index) => (
-              <Path
-                key={`outline-${index}`}
-                d={d}
-                fill={outlineFill}
-                stroke={outlineStroke}
-                strokeWidth={4.5}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-            ))}
-          </G>
+          {memoizedOutlines}
 
-          {/* 1.1 Strat Demisol Foundation Slab (corpuri G, K și canal tehnic) */}
-          {floorId === 'B' && demisolUnfinishedAreas && (
-            <G id="Demisol_Base">
-              {demisolUnfinishedAreas.map((d, index) => (
-                <Path
-                  key={`demisol-unfinished-${index}`}
-                  d={d}
-                  fill={themeColors.corridor}
-                  stroke={isDark ? '#334155' : '#94a3b8'}
-                  strokeWidth={1.2}
-                />
-              ))}
-            </G>
-          )}
+          {/* 1.1 Strat Demisol Foundation Slab */}
+          {memoizedDemisolBase}
 
           {/* 2. Strat Coridoare */}
-          <G id="Corridors">
-            {corridors.map((corridor) => (
-              <Path
-                key={corridor.id}
-                d={corridor.pathData}
-                fill={themeColors.corridor}
-                stroke={isDark ? '#334155' : '#94a3b8'}
-                strokeWidth={1.2}
-              />
-            ))}
-          </G>
+          {memoizedCorridors}
 
           {/* 3. Strat Săli Interactive */}
-          <G id="Rooms">
-            {regularRooms.map((room) => {
-              const roomStyle = getRoomStyle(room);
-              const isSelected = selectedRoomId === room.id || targetRoom?.id === room.id;
+          {memoizedRooms}
 
-              return (
-                <G key={room.id}>
-                  <Path
-                    d={room.pathData}
-                    fill={roomStyle.fill}
-                    stroke={roomStyle.stroke}
-                    strokeWidth={roomStyle.strokeWidth}
-                    opacity={roomStyle.opacity}
-                  />
-
-                  {/* Etichetă Cod Sală */}
-                  {room.labelPos && (
-                    <SvgText
-                      x={room.labelPos.x}
-                      y={room.labelPos.y}
-                      fill={
-                        isSelected
-                          ? '#ffffff'
-                          : isDark
-                          ? '#e2e8f0'
-                          : '#1e293b'
-                      }
-                      fontSize={isSelected ? '14' : '11'}
-                      fontWeight={isSelected ? '800' : '700'}
-                      textAnchor="middle"
-                      alignmentBaseline="middle"
-                    >
-                      {room.code}
-                    </SvgText>
-                  )}
-                </G>
-              );
-            })}
-          </G>
-
-          {/* 4. Strat Pereți Interiori (Walls Layer) */}
-          {showWalls && wallsPathData && (
-            <G id="Walls">
-              <Path
-                d={wallsPathData}
-                fill="none"
-                stroke={isDark ? '#64748b' : '#3f4652'}
-                strokeWidth={2.2}
-                strokeLinecap="square"
-              />
-            </G>
-          )}
+          {/* 4. Strat Pereți Interiori */}
+          {memoizedWalls}
 
           {/* 4.0 Strat Uși și Badge Intrare Principală Demisol */}
-          {floorId === 'B' && (
-            <G id="Main_Entrance">
-              {/* Trepte exterioare de acces */}
-              <Path
-                d="M 285 1083.5 L 495 1083.5 M 288 1087.5 L 492 1087.5 M 291 1091.5 L 489 1091.5"
-                stroke={isDark ? '#64748b' : '#94a3b8'}
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                pointerEvents="none"
-              />
-              {/* 4 Uși Duble de Intrare cu deschidere arc */}
-              {[310, 365, 415, 470].map((doorX, dIdx) => (
-                <G key={`main-door-${dIdx}`} pointerEvents="none">
-                  <Path
-                    d={`M ${doorX - 14} 1079.7 L ${doorX - 14} 1069 A 14 14 0 0 1 ${doorX} 1079.7`}
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth={1.4}
-                    strokeDasharray="2 2"
-                  />
-                  <Path
-                    d={`M ${doorX + 14} 1079.7 L ${doorX + 14} 1069 A 14 14 0 0 0 ${doorX} 1079.7`}
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth={1.4}
-                    strokeDasharray="2 2"
-                  />
-                  <Path
-                    d={`M ${doorX - 14} 1079.7 L ${doorX - 14} 1069 M ${doorX + 14} 1079.7 L ${doorX + 14} 1069`}
-                    stroke={isDark ? '#34d399' : '#059669'}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                  />
-                </G>
-              ))}
+          {memoizedMainEntrance}
 
-              {/* Badge Interactiv Intrare Principală Facultate */}
-              <G
-                onPress={() => {
-                  const gd04 = rooms.find((r) => r.code === 'GD04' || r.id === 'room-GD04');
-                  if (gd04 && onRoomSelect) {
-                    onRoomSelect(gd04);
-                  }
-                }}
-              >
-                {/* Glow verde smarald */}
-                <Circle
-                  cx={389.0}
-                  cy={1050.0}
-                  r={22}
-                  fill="#10b981"
-                  opacity={isDark ? 0.3 : 0.2}
-                />
-                {/* Container Badge Pill */}
-                <Rect
-                  x={389.0 - 95}
-                  y={1050.0 - 13}
-                  width={190}
-                  height={26}
-                  rx={13}
-                  ry={13}
-                  fill={isDark ? '#064e3b' : '#ecfdf5'}
-                  stroke="#10b981"
-                  strokeWidth={2}
-                />
-                {/* Icon cerc ușă */}
-                <Circle
-                  cx={389.0 - 78}
-                  cy={1050.0}
-                  r={8}
-                  fill="#10b981"
-                />
-                <SvgText
-                  x={389.0 - 78}
-                  y={1050.0 + 3.5}
-                  fill="#ffffff"
-                  fontSize="10"
-                  textAnchor="middle"
-                >
-                  🚪
-                </SvgText>
-                {/* Text Badge */}
-                <SvgText
-                  x={389.0 + 10}
-                  y={1050.0 + 4}
-                  fill={isDark ? '#6ee7b7' : '#047857'}
-                  fontSize="10.5"
-                  fontWeight="800"
-                  textAnchor="middle"
-                >
-                  INTRAREA PRINCIPALĂ
-                </SvgText>
-              </G>
-            </G>
-          )}
+          {/* 4.1 Strat Etichete Săli (Text deasupra pereților) */}
+          {memoizedRoomLabels}
 
-          {/* 4.1 Strat Scări / Conectori Verticali */}
-          {stairs && stairs.length > 0 && (
-            <G id="Stairs">
-              {stairs.map((stair) => {
-                const isPOI = stair.type === 'poi' || stair.direction === 'none';
-                const isUp = stair.direction === 'up';
-                const isDown = stair.direction === 'down';
-                const dirSymbol = isPOI ? '➜' : isUp ? '▲' : isDown ? '▼' : '⇅';
-                const dirColor = isPOI ? '#8b5cf6' : isUp ? '#10b981' : isDown ? '#f59e0b' : '#3b82f6';
+          {/* 4.2 Strat Scări / Conectori Verticali */}
+          {memoizedStairs}
 
-                // Dimensiuni badge
-                const badgeWidth = isPOI
-                  ? Math.max(80, stair.label.length * 8 + 28)
-                  : Math.max(46, stair.label.length * 8 + 26);
-                const badgeHeight = 22;
-                const badgeX = stair.x - badgeWidth / 2;
-                const badgeY = stair.y - badgeHeight / 2;
-
-                return (
-                  <G key={stair.id}>
-                    {/* Halo / Glow circular de fundal */}
-                    <Circle
-                      cx={stair.x}
-                      cy={stair.y}
-                      r={16}
-                      fill={dirColor}
-                      opacity={isDark ? 0.25 : 0.18}
-                    />
-
-                    {/* Pill Badge Container */}
-                    <Rect
-                      x={badgeX}
-                      y={badgeY}
-                      width={badgeWidth}
-                      height={badgeHeight}
-                      rx={11}
-                      ry={11}
-                      fill={isDark ? '#1e293b' : '#ffffff'}
-                      stroke={dirColor}
-                      strokeWidth={2}
-                    />
-
-                    {/* Indicator Cerc Direcție */}
-                    <Circle
-                      cx={badgeX + 11}
-                      cy={stair.y}
-                      r={7}
-                      fill={dirColor}
-                    />
-
-                    {/* Simbol Direcție (▲ / ▼ / ⇅) */}
-                    <SvgText
-                      x={badgeX + 11}
-                      y={stair.y + 1}
-                      fill="#ffffff"
-                      fontSize="8"
-                      fontWeight="900"
-                      textAnchor="middle"
-                      alignmentBaseline="middle"
-                    >
-                      {dirSymbol}
-                    </SvgText>
-
-                    {/* Etichetă Etaj Destinație (P, B, E1, E1–E3, etc.) */}
-                    <SvgText
-                      x={badgeX + 11 + (badgeWidth - 11) / 2}
-                      y={stair.y + 1}
-                      fill={isDark ? '#f8fafc' : '#0f172a'}
-                      fontSize="10"
-                      fontWeight="800"
-                      textAnchor="middle"
-                      alignmentBaseline="middle"
-                    >
-                      {stair.label}
-                    </SvgText>
-                  </G>
-                );
-              })}
-            </G>
-          )}
-
-          {/* 5. Strat Navigație (Rutare activă) */}
-          {routePolylineString !== '' && (
-            <G id="Navigation_Route">
-              {/* Linia de traseu cu animație dash */}
-              <AnimatedPolyline
-                points={routePolylineString}
-                fill="none"
-                stroke="#0284c7"
-                strokeWidth={5}
-                strokeDasharray="14, 8"
-                strokeDashoffset={dashOffset}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-
-              {currentFloorRoute && currentFloorRoute.length > 0 && (
-                <>
-                  {/* Nod de Start pe acest etaj */}
-                  <Circle
-                    cx={currentFloorRoute[0].x}
-                    cy={currentFloorRoute[0].y}
-                    r={8}
-                    fill={isStartOfTotalRoute ? '#10b981' : '#0284c7'}
-                    stroke="#ffffff"
-                    strokeWidth={2.5}
-                  />
-
-                  {/* Nod de Sosire / Ieșire pe acest etaj */}
-                  <Circle
-                    cx={currentFloorRoute[currentFloorRoute.length - 1].x}
-                    cy={currentFloorRoute[currentFloorRoute.length - 1].y}
-                    r={8}
-                    fill={isEndOfTotalRoute ? '#ef4444' : '#f59e0b'}
-                    stroke="#ffffff"
-                    strokeWidth={2.5}
-                  />
-                </>
-              )}
-            </G>
-          )}
+          {/* 5. Strat Navigație (Rutare activă de înaltă performanță) */}
+          {memoizedRouteLayer}
 
           {/* 6. Strat Debug Graf Navigație */}
-          {showDebugGraph && (
-            <G id="Debug_Nav_Graph">
-              {/* Liniile muchiilor */}
-              <G id="Debug_Edges" pointerEvents="none">
-                {debugEdges.map((e, idx) => {
-                  const n1 = NAV_NODES[e.from];
-                  const n2 = NAV_NODES[e.to];
-                  if (!n1 || !n2) return null;
-                  const isCrossFloor = n1.floor !== n2.floor;
-                  const edgeColor = isCrossFloor
-                    ? '#ec4899'
-                    : e.kind === 'corridor-room'
-                    ? '#10b981'
-                    : e.kind === 'corridor-stair'
-                    ? '#8b5cf6'
-                    : '#06b6d4';
-                  return (
-                    <Line
-                      key={`dbg-edge-${idx}`}
-                      x1={n1.x}
-                      y1={n1.y}
-                      x2={n2.x}
-                      y2={n2.y}
-                      stroke={edgeColor}
-                      strokeWidth={1.8}
-                      strokeDasharray={isCrossFloor ? '4 3' : undefined}
-                      opacity={0.8}
-                    />
-                  );
-                })}
-              </G>
-
-              {/* Nodurile de navigație cu ID și coordonate */}
-              <G id="Debug_Nodes">
-                {debugNodes.map((n) => {
-                  const nodeColor =
-                    n.type === 'entrance'
-                      ? '#f59e0b'
-                      : n.type === 'stair'
-                      ? '#8b5cf6'
-                      : n.type === 'room'
-                      ? '#10b981'
-                      : '#06b6d4';
-
-                  const idText = n.id;
-                  const coordsText = `${Math.round(n.x)}, ${Math.round(n.y)}`;
-                  const badgeW = Math.max(54, idText.length * 6.5 + 10);
-                  const badgeH = 17;
-                  const badgeX = n.x - badgeW / 2;
-                  const badgeY = n.y - badgeH - 5;
-
-                  return (
-                    <G
-                      key={`dbg-node-${n.id}`}
-                      onPress={() => onDebugNodeSelect && onDebugNodeSelect(n)}
-                    >
-                      {/* Glow & Punct Nod */}
-                      <Circle
-                        cx={n.x}
-                        cy={n.y}
-                        r={8}
-                        fill={nodeColor}
-                        opacity={0.3}
-                      />
-                      <Circle
-                        cx={n.x}
-                        cy={n.y}
-                        r={3.8}
-                        fill={nodeColor}
-                        stroke="#ffffff"
-                        strokeWidth={1.2}
-                      />
-
-                      {/* Linie mică conector spre etichetă */}
-                      <Line
-                        x1={n.x}
-                        y1={n.y - 3.8}
-                        x2={n.x}
-                        y2={badgeY + badgeH}
-                        stroke={nodeColor}
-                        strokeWidth={1}
-                        opacity={0.8}
-                      />
-
-                      {/* Pill fundal etichetă */}
-                      <Rect
-                        x={badgeX}
-                        y={badgeY}
-                        width={badgeW}
-                        height={badgeH}
-                        rx={3}
-                        ry={3}
-                        fill={isDark ? 'rgba(15, 23, 42, 0.94)' : 'rgba(255, 255, 255, 0.96)'}
-                        stroke={nodeColor}
-                        strokeWidth={1}
-                      />
-
-                      {/* Text ID Nod */}
-                      <SvgText
-                        x={n.x}
-                        y={badgeY + 7}
-                        fill={isDark ? '#f8fafc' : '#0f172a'}
-                        fontSize="6"
-                        fontWeight="900"
-                        textAnchor="middle"
-                      >
-                        {idText}
-                      </SvgText>
-
-                      {/* Text Coordonate X, Y */}
-                      <SvgText
-                        x={n.x}
-                        y={badgeY + 14}
-                        fill={nodeColor}
-                        fontSize="5.2"
-                        fontWeight="700"
-                        textAnchor="middle"
-                      >
-                        {coordsText}
-                      </SvgText>
-                    </G>
-                  );
-                })}
-              </G>
-            </G>
-          )}
+          {memoizedDebugGraph}
         </Svg>
       </ReactNativeZoomableView>
     </View>
@@ -886,4 +1038,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default InteractiveMap;
+export default React.memo(InteractiveMap);

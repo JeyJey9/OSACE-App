@@ -36,13 +36,16 @@ const RoomDetailsSheet = ({
   const styles = createStyles(colors, isDark);
 
   const isEntrance = room.type === 'entrance' || room.code === 'GD04';
-  const isAula =
+  const isSpecialVenue =
+    room.type === 'amphitheatre' ||
+    room.code === 'ACB' ||
+    room.code === 'AK1' ||
     room.code?.toLowerCase().includes('aula') ||
     room.code?.toLowerCase().includes('belea') ||
     room.id?.includes('amfiteatru');
 
-  const badgeBg = isEntrance ? '#10b981' : isAula ? '#8b5cf6' : colors.primary;
-  const badgeLabel = isEntrance ? 'INTRARE' : isAula ? 'AULA' : room.code;
+  const badgeBg = isEntrance ? '#10b981' : isSpecialVenue ? '#8b5cf6' : colors.primary;
+  const badgeLabel = isEntrance ? 'INTRARE' : room.code || (isSpecialVenue ? 'AMFITEATRU' : 'SALĂ');
 
   return (
     <BottomSheet

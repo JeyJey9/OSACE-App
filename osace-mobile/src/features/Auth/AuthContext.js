@@ -55,8 +55,8 @@ export const AuthProvider = ({ children }) => {
         
         if (e.response && (e.response.status === 401 || e.response.status === 403)) {
           // Interceptorul se ocupă de alertă
-        } else if (e.message.includes('Network Error')) {
-          Alert.alert("Eroare de Rețea", "Nu s-a putut conecta la server. Verifică conexiunea la internet.");
+        } else if (e.message?.includes('Network Error') || e.message?.includes('timeout') || e.code === 'ECONNABORTED') {
+          Alert.alert("Eroare de Conexiune", "Nu s-a putut contacta serverul API. Verifică conexiunea sau VPN-ul.");
         }
         
         await SecureStore.deleteItemAsync(TOKEN_KEY);
