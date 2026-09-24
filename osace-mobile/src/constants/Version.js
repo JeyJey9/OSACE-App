@@ -1,9 +1,16 @@
 // src/constants/Version.js
 // Centrul de stocare al versiunii aplicației mobile OSACE și istoricul de Patch Notes.
 
-export const APP_VERSION = '2.4.0';
+export const APP_VERSION = '3.0.0';
 
 export const PATCH_NOTES = [
+  {
+    version: '3.0.0',
+    items: [
+      'Hartă Interactivă: Navigare și orientare în cadrul facultății (săli de curs, laboratoare, etaje și trasee).',
+      'Îmbunătățiri de performanță și stabilitate.',
+    ],
+  },
   {
     version: '2.4.0',
     items: [
