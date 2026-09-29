@@ -27,8 +27,14 @@ module.exports = (pool, verifyToken) => {
           SELECT 
             u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.created_at, u.avatar_url, u.student_verification_status,
             (
-              (SELECT COALESCE(SUM(ea.awarded_hours), 0) FROM event_attendance ea WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended') +
-              (SELECT COALESCE(SUM(sc.awarded_hours), 0) FROM special_contributions sc WHERE sc.user_id = u.id AND sc.status = 'approved')
+              (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
+               FROM event_attendance ea 
+               JOIN events e ON ea.event_id = e.id 
+               WHERE ea.user_id = u.id 
+                 AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND e.end_time <= NOW()))) +
+              (SELECT COALESCE(SUM(sc.awarded_hours), 0) 
+               FROM special_contributions sc 
+               WHERE sc.user_id = u.id AND sc.status = 'approved')
             ) AS total_hours
           FROM users u 
           WHERE u.id = $1
@@ -42,7 +48,8 @@ module.exports = (pool, verifyToken) => {
               (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
                FROM event_attendance ea 
                JOIN events e ON ea.event_id = e.id
-               WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended'
+               WHERE ea.user_id = u.id 
+                 AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND e.end_time <= NOW()))
                  AND e.start_time >= $2 AND e.start_time < $3) +
               (SELECT COALESCE(SUM(sc.awarded_hours), 0) 
                FROM special_contributions sc 
@@ -97,7 +104,8 @@ module.exports = (pool, verifyToken) => {
          FROM events e
          JOIN event_attendance ea ON e.id = ea.event_id
          WHERE ea.user_id = $1 
-           AND (e.end_time <= NOW() OR ea.confirmation_status = 'attended')
+           AND e.end_time <= NOW()
+           AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND ea.check_in_time IS NOT NULL))
            AND e.start_time >= $2 AND e.start_time < $3
          ORDER BY e.start_time DESC`;
         params = [userId, yearFilter.start, yearFilter.end];
@@ -107,7 +115,8 @@ module.exports = (pool, verifyToken) => {
          FROM events e
          JOIN event_attendance ea ON e.id = ea.event_id
          WHERE ea.user_id = $1 
-           AND (e.end_time <= NOW() OR ea.confirmation_status = 'attended')
+           AND e.end_time <= NOW()
+           AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND ea.check_in_time IS NOT NULL))
          ORDER BY e.start_time DESC`;
         params = [userId];
       }
@@ -130,7 +139,8 @@ module.exports = (pool, verifyToken) => {
                 ea.confirmation_status, ea.awarded_hours 
          FROM events e
          LEFT JOIN event_attendance ea ON e.id = ea.event_id AND ea.user_id = $1
-         WHERE (e.end_time <= NOW() OR ea.confirmation_status = 'attended')
+         WHERE e.end_time <= NOW()
+           AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND ea.check_in_time IS NOT NULL))
            AND e.start_time >= $2 AND e.start_time < $3
          ORDER BY e.start_time DESC`;
         params = [userId, yearFilter.start, yearFilter.end];
@@ -139,7 +149,8 @@ module.exports = (pool, verifyToken) => {
                 ea.confirmation_status, ea.awarded_hours 
          FROM events e
          LEFT JOIN event_attendance ea ON e.id = ea.event_id AND ea.user_id = $1
-         WHERE (e.end_time <= NOW() OR ea.confirmation_status = 'attended')
+         WHERE e.end_time <= NOW()
+           AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND ea.check_in_time IS NOT NULL))
          ORDER BY e.start_time DESC`;
         params = [userId];
       }
@@ -490,8 +501,14 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
           SELECT
             u.id, u.display_name, u.first_name, u.last_name, u.avatar_url, u.role, u.created_at,
             (
-              (SELECT COALESCE(SUM(ea.awarded_hours), 0) FROM event_attendance ea WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended') +
-              (SELECT COALESCE(SUM(sc.awarded_hours), 0) FROM special_contributions sc WHERE sc.user_id = u.id AND sc.status = 'approved')
+              (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
+               FROM event_attendance ea 
+               JOIN events e ON ea.event_id = e.id
+               WHERE ea.user_id = u.id 
+                 AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND e.end_time <= NOW()))) +
+              (SELECT COALESCE(SUM(sc.awarded_hours), 0) 
+               FROM special_contributions sc 
+               WHERE sc.user_id = u.id AND sc.status = 'approved')
             ) AS total_hours
           FROM users u
           WHERE u.id = $1;
@@ -505,7 +522,8 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
               (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
                FROM event_attendance ea 
                JOIN events e ON ea.event_id = e.id
-               WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended'
+               WHERE ea.user_id = u.id 
+                 AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND e.end_time <= NOW()))
                  AND e.start_time >= $2 AND e.start_time < $3) +
               (SELECT COALESCE(SUM(sc.awarded_hours), 0) 
                FROM special_contributions sc 
@@ -587,8 +605,8 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
           FROM events e
           JOIN event_attendance ea ON e.id = ea.event_id
           WHERE ea.user_id = $1 
-            AND ea.confirmation_status = 'attended'
-            AND (e.end_time <= NOW() OR ea.confirmation_status = 'attended')
+            AND e.end_time <= NOW()
+            AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND ea.check_in_time IS NOT NULL))
             AND e.start_time >= $2 AND e.start_time < $3
           ORDER BY e.start_time DESC
         `;
@@ -600,8 +618,8 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
           FROM events e
           JOIN event_attendance ea ON e.id = ea.event_id
           WHERE ea.user_id = $1 
-            AND ea.confirmation_status = 'attended'
-            AND (e.end_time <= NOW() OR ea.confirmation_status = 'attended')
+            AND e.end_time <= NOW()
+            AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND ea.check_in_time IS NOT NULL))
           ORDER BY e.start_time DESC
         `;
         params = [id];
@@ -611,6 +629,89 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
     } catch (error) {
       console.error(`Eroare la preluarea activităților pentru user ${id}:`, error);
       res.status(500).json({ error: 'Eroare server la preluarea activităților.' });
+    }
+  });
+
+  // Traseu: GET /api/profile/my-available-years (Ani universitari cu activitate pentru profilul personal)
+  router.get('/my-available-years', verifyToken, async (req, res) => {
+    const userId = req.user.userId;
+    try {
+      const result = await pool.query(`
+        SELECT DISTINCT
+          CASE 
+            WHEN EXTRACT(MONTH FROM date_val) >= 9 THEN EXTRACT(YEAR FROM date_val)
+            ELSE EXTRACT(YEAR FROM date_val) - 1
+          END AS start_year
+        FROM (
+          SELECT e.start_time AS date_val 
+          FROM event_attendance ea 
+          JOIN events e ON ea.event_id = e.id 
+          WHERE ea.user_id = $1 
+            AND e.end_time <= NOW()
+            AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND ea.check_in_time IS NOT NULL))
+          UNION ALL
+          SELECT sc.created_at AS date_val 
+          FROM special_contributions sc
+          WHERE sc.user_id = $1 AND sc.status = 'approved'
+        ) combined_dates
+        WHERE date_val IS NOT NULL
+        ORDER BY start_year DESC
+      `, [userId]);
+
+      const years = result.rows
+        .filter(r => r.start_year !== null && !isNaN(parseInt(r.start_year, 10)))
+        .map(r => {
+          const sy = parseInt(r.start_year, 10);
+          return { startYear: sy, label: `${sy}-${sy + 1}` };
+        });
+
+      res.json(years);
+    } catch (error) {
+      console.error('Eroare la preluarea anilor disponibili pentru profilul personal:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
+  // Traseu: GET /api/profile/:id/available-years (Ani universitari cu activitate pentru profil public)
+  router.get('/:id/available-years', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const targetUserId = id === 'me' ? req.user.userId : id;
+    if (isNaN(targetUserId)) return res.status(400).json({ error: 'ID invalid' });
+
+    try {
+      const result = await pool.query(`
+        SELECT DISTINCT
+          CASE 
+            WHEN EXTRACT(MONTH FROM date_val) >= 9 THEN EXTRACT(YEAR FROM date_val)
+            ELSE EXTRACT(YEAR FROM date_val) - 1
+          END AS start_year
+        FROM (
+          SELECT e.start_time AS date_val 
+          FROM event_attendance ea 
+          JOIN events e ON ea.event_id = e.id 
+          WHERE ea.user_id = $1 
+            AND e.end_time <= NOW()
+            AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND ea.check_in_time IS NOT NULL))
+          UNION ALL
+          SELECT sc.created_at AS date_val 
+          FROM special_contributions sc
+          WHERE sc.user_id = $1 AND sc.status = 'approved'
+        ) combined_dates
+        WHERE date_val IS NOT NULL
+        ORDER BY start_year DESC
+      `, [targetUserId]);
+
+      const years = result.rows
+        .filter(r => r.start_year !== null && !isNaN(parseInt(r.start_year, 10)))
+        .map(r => {
+          const sy = parseInt(r.start_year, 10);
+          return { startYear: sy, label: `${sy}-${sy + 1}` };
+        });
+
+      res.json(years);
+    } catch (error) {
+      console.error(`Eroare la preluarea anilor disponibili pentru user ${id}:`, error);
+      res.status(500).json({ error: 'Eroare server.' });
     }
   });
   

@@ -84,32 +84,29 @@ export default function ScanScreen() {
       console.log('[QR SCAN] Răspuns primit cu succes de la server:', response.data);
 
       const serverMessage = response.data.message;
-      const status = response.data.status; // Luăm statusul de la backend
+      const hours = response.data.hours;
+      const alreadyRecorded = response.data.alreadyRecorded;
 
-      // Personalizăm titlul și mesajul
-      let title = 'Succes! ✅';
+      let title = 'Prezenta confirmata';
+      if (alreadyRecorded) {
+        title = 'Prezenta deja inregistrata';
+      }
+
       let finalMessage = serverMessage;
-
-      if (status === 'checked_in') {
-        title = 'Prezență Înregistrată! 📍';
-        finalMessage = serverMessage || 'Ești prezent! Ora sosirii tale a fost salvată.';
-      } else if (status === 'attended') {
-        title = 'Check-out Reușit! 🏆';
+      if (!finalMessage) {
+        finalMessage = hours !== undefined && hours !== null 
+          ? `Ai primit ${hours} ore pentru aceasta activitate.` 
+          : 'Participarea ta a fost inregistrata.';
       }
 
-      // ▼▼▼ Haptic feedback on success ▼▼▼
-      if (status === 'checked_in') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else if (status === 'attended') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       Toast.show({
         type: 'success',
         text1: title,
         text2: finalMessage,
-        visibilityTime: 3000, // Stă afișat 3 secunde
-        onHide: () => navigation.goBack() // Se întoarce automat după ce dispare Toast-ul
+        visibilityTime: 3000,
+        onHide: () => navigation.goBack()
       });
 
     } catch (error) {

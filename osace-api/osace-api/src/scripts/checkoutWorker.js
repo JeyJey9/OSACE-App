@@ -1,72 +1,76 @@
 // src/scripts/checkoutWorker.js
 
-const runAutoCheckout = async (pool) => {
-  console.log('[System] Se rulează verificarea pentru Auto-Checkout (24h grace period)...');
+const runAutoFinalize = async (pool) => {
   try {
-    // 1. Identificăm voluntarii "uituci" - cei care au scanat check-in dar NU au scanat check-out
-    //    după ce au trecut 24 de ore de la finalul evenimentului
+    // Identificăm prezențele cu status 'checked_in' pentru evenimente care s-au încheiat (end_time <= NOW())
     const queryFind = `
-      SELECT ea.user_id, ea.event_id, ea.check_in_time, e.end_time, e.duration_hours
+      SELECT ea.user_id, ea.event_id, ea.check_in_time, ea.awarded_hours, e.start_time, e.end_time, e.duration_hours
       FROM event_attendance ea
       JOIN events e ON ea.event_id = e.id
       WHERE ea.confirmation_status = 'checked_in'
-        AND e.end_time < NOW() - INTERVAL '24 hours'
+        AND e.end_time <= NOW()
     `;
-    const pendingCheckouts = await pool.query(queryFind);
+    const pendingFinalizations = await pool.query(queryFind);
 
-    if (pendingCheckouts.rowCount === 0) {
-      return; // Nimic de făcut
+    if (pendingFinalizations.rowCount === 0) {
+      return;
     }
 
-    console.log(`[Auto-Checkout] S-au găsit ${pendingCheckouts.rowCount} voluntari care nu au scanat la plecare. Procesare...`);
+    console.log(`[Event-Finalizer] S-au găsit ${pendingFinalizations.rowCount} prezențe de finalizat pentru evenimente încheiate.`);
 
-    // 2. Procesăm fiecare voluntar individual
-    for (const row of pendingCheckouts.rows) {
-      const { user_id, event_id, check_in_time, end_time, duration_hours } = row;
+    for (const row of pendingFinalizations.rows) {
+      const { user_id, event_id, check_in_time, awarded_hours, start_time, end_time, duration_hours } = row;
+      const fullDuration = parseFloat(duration_hours) || 2.0;
 
-      // Calculăm orele pe care ar fi trebuit să le primească (de la check-in până la finalul programat)
-      const checkIn = new Date(check_in_time);
-      const eventEnd = new Date(end_time);
-      const expectedDiffMs = Math.max(0, eventEnd - checkIn);
-      const requestedHours = Math.max(0.1, (expectedDiffMs / (1000 * 60 * 60))).toFixed(2);
+      let finalHours = awarded_hours !== null ? parseFloat(awarded_hours) : null;
 
-      // A. Marcăm voluntarul ca ABSENT (nu ca "attended")
-      //    Orele sunt 0 deoarece nu și-a confirmat prezența completă
-      //    check_out_time = end_time pentru a închide pontajul corect
+      // Dacă cumva awarded_hours era null (ex: date mai vechi), calculăm pe baza orei de check-in
+      if (finalHours === null) {
+        if (check_in_time) {
+          const checkIn = new Date(check_in_time);
+          const eventStart = new Date(start_time);
+          const eventEnd = new Date(end_time);
+          const minutesLate = Math.round((checkIn.getTime() - eventStart.getTime()) / (1000 * 60));
+
+          if (minutesLate <= 15) {
+            finalHours = fullDuration;
+          } else {
+            const remainingMs = Math.max(0, eventEnd.getTime() - checkIn.getTime());
+            const remainingHours = remainingMs / (1000 * 60 * 60);
+            if (remainingHours <= 0.5) {
+              finalHours = 0;
+            } else {
+              finalHours = Math.min(fullDuration, Math.max(0.25, Math.round(remainingHours * 4) / 4));
+            }
+          }
+        } else {
+          finalHours = fullDuration;
+        }
+      }
+
       await pool.query(
         `UPDATE event_attendance
-         SET confirmation_status = 'absent',
-             check_out_time = $1,
-             checkout_method = 'auto',
-             awarded_hours = 0,
-             confirmed_at = $1
-         WHERE user_id = $2 AND event_id = $3`,
-        [end_time, user_id, event_id]
+         SET confirmation_status = 'attended',
+             awarded_hours = $1,
+             check_out_time = COALESCE(check_out_time, $2),
+             confirmed_at = COALESCE(confirmed_at, $2),
+             checkout_method = 'auto_finalize'
+         WHERE user_id = $3 AND event_id = $4`,
+        [finalHours, end_time, user_id, event_id]
       );
 
-      // B. Creăm cererea de revizuire în hour_requests pentru coordonatori
-      //    Coordonatorul poate decide să aprobe orele parțiale dacă voluntarul a participat
-      await pool.query(
-        `INSERT INTO hour_requests (user_id, event_id, request_type, requested_hours)
-         VALUES ($1, $2, 'forgot_checkout', $3)
-         ON CONFLICT DO NOTHING`,
-        [user_id, event_id, requestedHours]
-      );
-
-      console.log(`[Auto-Checkout] User ${user_id} la event ${event_id}: marcat ABSENT, cerere ${requestedHours}h creată.`);
+      console.log(`[Event-Finalizer] Finalizat user ${user_id} la event ${event_id}: status 'attended', ${finalHours} ore.`);
     }
-    
-    console.log(`[Auto-Checkout] Procesare finalizată. ${pendingCheckouts.rowCount} utilizatori procesați.`);
 
   } catch (err) {
-    console.error('[Auto-Checkout] Eroare:', err);
+    console.error('[Event-Finalizer] Eroare:', err);
   }
 };
 
 const startCheckoutWorker = (pool) => {
-  // Rulăm imediat la pornire, apoi la fiecare 30 de minute
-  runAutoCheckout(pool);
-  setInterval(() => runAutoCheckout(pool), 30 * 60 * 1000);
+  // Rulăm la pornire, apoi la fiecare 5 minute
+  runAutoFinalize(pool);
+  setInterval(() => runAutoFinalize(pool), 5 * 60 * 1000);
 };
 
 module.exports = { startCheckoutWorker };

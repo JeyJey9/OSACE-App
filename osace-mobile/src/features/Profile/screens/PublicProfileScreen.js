@@ -74,8 +74,8 @@ export default function PublicProfileScreen() {
 
   const fetchAvailableYears = async () => {
     try {
-      const response = await api.get('/api/leaderboard/available-years');
-      setAvailableYears(response.data);
+      const response = await api.get(`/api/profile/${userId}/available-years`);
+      setAvailableYears(response.data || []);
     } catch (error) {
       console.error("Eroare la preluarea anilor disponibili:", error);
     }
@@ -116,15 +116,20 @@ export default function PublicProfileScreen() {
         roleText={displayRole(profile.role)} 
       />
 
-      {/* Hours Toggle -> Dropdown */}
-      <View style={styles.dropdownContainer}>
-        <DropdownPicker
-          options={[...availableYears.map(y => ({ label: `Anul ${y.label}`, value: y.startYear })), { label: 'Toate Orele', value: 'all' }]}
-          selectedValue={selectedYear}
-          onValueChange={handleYearChange}
-          placeholder="Selectează perioada"
-        />
-      </View>
+      {/* Hours Toggle -> Dropdown (afisat doar daca exista activitati inregistrate) */}
+      {availableYears.length > 0 && (
+        <View style={styles.dropdownContainer}>
+          <DropdownPicker
+            options={[
+              ...availableYears.map(y => ({ label: `Anul ${y.label}`, value: y.startYear })),
+              ...(availableYears.length > 1 ? [{ label: 'Toate Orele', value: 'all' }] : [])
+            ]}
+            selectedValue={selectedYear}
+            onValueChange={handleYearChange}
+            placeholder="Selectează perioada"
+          />
+        </View>
+      )}
       
       <ProfileStats 
         totalHours={parseFloat(profile.total_hours) || 0}

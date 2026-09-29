@@ -17,6 +17,8 @@ import Toast from 'react-native-toast-message';
 import ProfileSkeleton from '../components/ProfileSkeleton';
 import DropdownPicker from '../../../components/DropdownPicker';
 import ThemeSelector from '../../../components/ThemeSelector';
+import { format } from 'date-fns';
+import { ro } from 'date-fns/locale';
 
 // Hook pentru temă
 import { useThemeColor } from '../../../constants/useThemeColor';
@@ -73,8 +75,8 @@ export default function ProfileScreen() {
 
   const fetchAvailableYears = async () => {
     try {
-      const response = await api.get('/api/leaderboard/available-years');
-      setAvailableYears(response.data);
+      const response = await api.get('/api/profile/my-available-years');
+      setAvailableYears(response.data || []);
     } catch (error) {
       console.error("Eroare la preluarea anilor disponibili:", error);
     }
@@ -133,6 +135,10 @@ export default function ProfileScreen() {
       default: return 'Utilizator';
     }
   };
+
+  const memberSince = user?.created_at 
+    ? format(new Date(user.created_at.replace(' ', 'T')), 'dd MMMM yyyy', { locale: ro }) 
+    : '-';
 
   // --- Acțiuni Cont ---
   const handleLogout = () => {
@@ -233,20 +239,25 @@ export default function ProfileScreen() {
         onAvatarPress={handlePickAvatar}
       />
 
-      {/* Hours Toggle -> Dropdown */}
-      <View style={styles.dropdownContainer}>
-        <DropdownPicker
-          options={[...availableYears.map(y => ({ label: `Anul ${y.label}`, value: y.startYear })), { label: 'Toate Orele', value: 'all' }]}
-          selectedValue={selectedYear}
-          onValueChange={handleYearChange}
-          placeholder="Selectează perioada"
-        />
-      </View>
+      {/* Hours Toggle -> Dropdown (afisat doar daca exista activitati inregistrate) */}
+      {availableYears.length > 0 && (
+        <View style={styles.dropdownContainer}>
+          <DropdownPicker
+            options={[
+              ...availableYears.map(y => ({ label: `Anul ${y.label}`, value: y.startYear })),
+              ...(availableYears.length > 1 ? [{ label: 'Toate Orele', value: 'all' }] : [])
+            ]}
+            selectedValue={selectedYear}
+            onValueChange={handleYearChange}
+            placeholder="Selectează perioada"
+          />
+        </View>
+      )}
       
       <ProfileStats 
         totalHours={totalHours}
-        infoTitle="Email"
-        infoValue={user.email}
+        infoTitle="Voluntar din"
+        infoValue={memberSince}
       />
       
       <ThemeSelector />

@@ -554,180 +554,81 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
 
       // 3. Preluăm statusul actual al voluntarului
       const attendanceResult = await pool.query(
-        'SELECT confirmation_status, check_in_time FROM event_attendance WHERE user_id = $1 AND event_id = $2',
+        'SELECT confirmation_status, check_in_time, awarded_hours FROM event_attendance WHERE user_id = $1 AND event_id = $2',
         [userId, eventId]
       );
 
-      // CAZ NOU: Walk-in / Auto-înregistrare la scanare (dacă nu era înscris la eveniment)
-      if (attendanceResult.rows.length === 0) {
-        await pool.query(
-          `INSERT INTO event_attendance (user_id, event_id, confirmation_status, check_in_time)
-           VALUES ($1, $2, 'checked_in', NOW())
-           ON CONFLICT (user_id, event_id) DO UPDATE SET
-             confirmation_status = 'checked_in',
-             check_in_time = COALESCE(event_attendance.check_in_time, NOW())`,
-          [userId, eventId]
-        );
-        checkQuickRegisterBadge(userId, eventId, pool);
-        console.log(`[QR SCAN SUCCESS] Walk-in check-in realizat pentru user ${userId}, event ${eventId}`);
-        return res.status(200).json({
-          message: 'Prezență înregistrată! 📍 Spor la treabă.',
-          status: 'checked_in'
-        });
-      }
-
       const attendance = attendanceResult.rows[0];
+      const eventStart = new Date(event.start_time);
+      const eventEnd = new Date(event.end_time);
+      const fullDuration = parseFloat(event.duration_hours) || 2.0;
 
-      // --- LOGICA DE STATUS ---
-
-      // CAZ A: Voluntarul face CHECK-IN (este 'registered', 'pending' sau 'absent')
-      if (
-        attendance.confirmation_status === 'registered' || 
-        attendance.confirmation_status === 'pending' ||
-        attendance.confirmation_status === 'absent'
-      ) {
-        await pool.query(
-          `UPDATE event_attendance 
-           SET confirmation_status = 'checked_in', check_in_time = NOW() 
-           WHERE user_id = $1 AND event_id = $2`,
-          [userId, eventId]
-        );
-        console.log(`[QR SCAN SUCCESS] Check-in realizat pentru user ${userId}, event ${eventId}`);
+      // 4. Protecție scanare repetată: dacă utilizatorul a scanat deja, confirmăm fără eroare
+      if (attendance && attendance.check_in_time) {
+        const hoursNum = attendance.awarded_hours !== null ? parseFloat(attendance.awarded_hours) : fullDuration;
+        console.log(`[QR SCAN INFO] Utilizatorul ${userId} a scanat deja la event ${eventId}. Ore alocate: ${hoursNum}`);
         return res.status(200).json({
-          message: 'Check-in realizat cu succes! Spor la treabă.',
-          status: 'checked_in'
+          message: `Prezenta ta este deja inregistrata pentru acest eveniment. Ore alocate: ${hoursNum}.`,
+          status: attendance.confirmation_status || 'checked_in',
+          hours: hoursNum,
+          alreadyRecorded: true
         });
       }
 
-      // CAZ B: Voluntarul face CHECK-OUT (este 'checked_in')
-      if (attendance.confirmation_status === 'checked_in') {
-        const checkOutTime = new Date();
-        const checkInTime = new Date(attendance.check_in_time);
+      // 5. Calcul punctualitate și ore pe baza sosirii
+      const checkInTime = new Date();
+      const minutesLate = Math.round((checkInTime.getTime() - eventStart.getTime()) / (1000 * 60));
 
-        // Anti-double-scan protection: must wait at least 5 seconds after check-in before check-out
-        if (attendance.check_in_time && (checkOutTime - checkInTime) < 5000) {
-          console.warn(`[QR SCAN BLOCKED] Anti-double-scan (<5s) user ${userId}, event ${eventId}`);
-          return res.status(400).json({
-            error: 'Ai efectuat check-in-ul recent. Te rugăm să aștepți cel puțin 5 secunde înainte de a efectua check-out-ul.'
-          });
-        }
+      let awardedHours = fullDuration;
+      let punctualityStatus = 'on_time';
+      let feedbackMessage = '';
 
-        const eventStartTime = new Date(event.start_time);
-        const eventEndTime = new Date(event.end_time);
+      if (minutesLate <= 15) {
+        // Sosire la timp (în primele 15 minute sau mai devreme): 100% ore
+        awardedHours = fullDuration;
+        punctualityStatus = 'on_time';
+        feedbackMessage = `Prezenta confirmata. Ai primit ${awardedHours} ore.`;
+      } else {
+        // Sosire după primele 15 minute
+        const remainingMs = Math.max(0, eventEnd.getTime() - checkInTime.getTime());
+        const remainingHours = remainingMs / (1000 * 60 * 60);
 
-        let awardedHours = 0;
-        let isOvertime = false;
-        let overtimeHours = 0;
-
-        // Dacă overtime-ul este strict interzis pentru acest eveniment
-        if (event.allow_overtime === false) {
-          const diffMs = checkOutTime - checkInTime;
-          const maxMs = eventEndTime - eventStartTime;
-          awardedHours = (Math.min(diffMs, maxMs) / (1000 * 60 * 60));
+        if (remainingHours <= 0.5) {
+          // Sosire spre final (30 minute sau mai puțin rămase din eveniment)
+          punctualityStatus = 'late_critical';
+          awardedHours = 0;
+          feedbackMessage = 'Prezenta a fost notata (sosire spre finalul activitatii, 0 ore alocate).';
         } else {
-          // Tolerance window = 30 minutes on either side
-          const TOLERANCE_MS = 30 * 60 * 1000;
-
-          // --- BASE HOURS ---
-          // Always bounded strictly by the event schedule.
-          // Early arrival and late departure are NEVER auto-awarded.
-          const effectiveStart = checkInTime > eventStartTime ? checkInTime : eventStartTime;
-          const effectiveEnd = checkOutTime < eventEndTime ? checkOutTime : eventEndTime;
-
-          let overlapMs = Math.max(0, effectiveEnd - effectiveStart);
-          awardedHours = overlapMs / (1000 * 60 * 60);
-
-          // --- OVERTIME CHECK ---
-          // How early did they arrive before the event started?
-          const earlyMs = Math.max(0, eventStartTime - checkInTime);
-          // How long did they stay after the event ended?
-          const lateMs = Math.max(0, checkOutTime - eventEndTime);
-
-          let overtimeMs = 0;
-
-          // Early arrival: within 30 min → ignored (they may just be waiting around).
-          //                beyond 30 min → full early time sent to coordinator for review.
-          if (earlyMs > TOLERANCE_MS) {
-            overtimeMs += earlyMs;
-          }
-
-          // Late departure: within 30 min → ignored (post-event chat, etc).
-          //                 beyond 30 min → full late time sent to coordinator for review.
-          if (lateMs > TOLERANCE_MS) {
-            overtimeMs += lateMs;
-          }
-
-          overtimeHours = overtimeMs / (1000 * 60 * 60);
-
-          if (overtimeHours >= 0.1) {
-            isOvertime = true;
-          }
+          // Calcul proporțional rotunjit la sferturi de oră (0.25h)
+          punctualityStatus = 'late';
+          awardedHours = Math.min(fullDuration, Math.max(0.25, Math.round(remainingHours * 4) / 4));
+          feedbackMessage = `Prezenta inregistrata (intarziere ${minutesLate} min). Ai primit ${awardedHours} ore proportional.`;
         }
-
-        awardedHours = Math.max(0.1, awardedHours).toFixed(2);
-
-        // 1. Închidem prezența
-        await pool.query(
-          `UPDATE event_attendance 
-           SET confirmation_status = 'attended', 
-               check_out_time = $1, 
-               awarded_hours = $2, 
-               checkout_method = 'scanned',
-               confirmed_at = $1
-           WHERE user_id = $3 AND event_id = $4`,
-          [checkOutTime, awardedHours, userId, eventId]
-        );
-
-        // 2. Creăm cererea de overtime (dacă e cazul)
-        if (isOvertime) {
-          overtimeHours = Math.max(0.1, overtimeHours).toFixed(2);
-          await pool.query(
-            `INSERT INTO hour_requests (user_id, event_id, request_type, requested_hours)
-             VALUES ($1, $2, 'overtime', $3)`,
-            [userId, eventId, overtimeHours]
-          );
-        }
-
-        checkBadgesOnConfirmation(userId, eventId, pool);
-
-        let message = `Check-out realizat! Ai primit ${awardedHours} ore.`;
-        if (isOvertime) {
-          message += `\n\nS-a creat automat o cerere de Overtime pentru cele ${overtimeHours} ore suplimentare (ai depășit toleranța de 30 min).`;
-        }
-
-        console.log(`[QR SCAN SUCCESS] Check-out realizat pentru user ${userId}, event ${eventId}. Ore acordate: ${awardedHours}`);
-        return res.status(200).json({
-          message: message,
-          status: 'attended',
-          hours: awardedHours,
-          isOvertime: isOvertime
-        });
       }
 
-      // CAZ C: Deja a terminat
-      if (attendance.confirmation_status === 'attended') {
-        console.warn(`[QR SCAN REJECTED] Utilizatorul ${userId} are deja prezența confirmată și încheiată pentru event ${eventId}`);
-        return res.status(400).json({ error: 'Ai confirmat deja prezența și plecarea pentru acest eveniment.' });
-      }
+      // 6. Salvare în baza de date cu status checked_in (rămâne în desfășurare până la finalul evenimentului)
+      await pool.query(
+        `INSERT INTO event_attendance (user_id, event_id, confirmation_status, check_in_time, awarded_hours, confirmed_at)
+         VALUES ($1, $2, 'checked_in', $3, $4, $3)
+         ON CONFLICT (user_id, event_id) DO UPDATE SET
+           confirmation_status = 'checked_in',
+           check_in_time = COALESCE(event_attendance.check_in_time, $3),
+           awarded_hours = $4,
+           confirmed_at = COALESCE(event_attendance.confirmed_at, $3)`,
+        [userId, eventId, checkInTime, awardedHours]
+      );
 
-      // (După if-ul cu 'attended')
+      // 7. Verificare badge-uri automate
+      checkQuickRegisterBadge(userId, eventId, pool);
+      checkBadgesOnConfirmation(userId, eventId, pool);
 
-      // PLASA DE SIGURANȚĂ: Dacă statusul este null sau nerecunoscut, îl tratăm ca pe un check-in
-      if (!attendance.confirmation_status || attendance.confirmation_status === null) {
-        await pool.query(
-          `UPDATE event_attendance 
-           SET confirmation_status = 'checked_in', check_in_time = NOW() 
-           WHERE user_id = $1 AND event_id = $2`,
-          [userId, eventId]
-        );
-        return res.status(200).json({
-          message: 'Check-in realizat cu succes (Status corectat)! Spor la treabă.',
-          status: 'checked_in'
-        });
-      }
-
-      // Dacă totuși e un status complet ciudat, dăm eroare ca să nu blocăm telefonul:
-      return res.status(400).json({ error: `Status nerecunoscut: ${attendance.confirmation_status}` });
+      console.log(`[QR SCAN SUCCESS] Check-in efectuat pentru user ${userId}, event ${eventId}. Status: ${punctualityStatus}, Ore: ${awardedHours}`);
+      return res.status(200).json({
+        message: feedbackMessage,
+        status: 'checked_in',
+        hours: awardedHours,
+        punctualityStatus: punctualityStatus
+      });
 
     } catch (error) {
       console.error('Eroare la procesul de scanare:', error);
