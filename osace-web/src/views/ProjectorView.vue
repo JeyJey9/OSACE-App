@@ -105,7 +105,7 @@
                   <div 
                     class="timer-bar-progress" 
                     :class="getTimerBarClass"
-                    :style="{ width: `${(countdown / 30) * 100}%` }"
+                    :style="{ width: `${(countdown / 15) * 100}%` }"
                   ></div>
                 </div>
                 <div class="totp-meta">
@@ -357,7 +357,7 @@ const event = ref(null);
 const attendees = ref([]);
 const qrCodeUrl = ref('');
 const qrLoading = ref(true);
-const countdown = ref(30);
+const countdown = ref(15);
 const isFullscreen = ref(false);
 const currentTime = ref('');
 const showValidationModal = ref(false);
@@ -387,10 +387,10 @@ const updateClock = () => {
   currentTime.value = now.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 };
 
-// Timer bar class based on countdown remaining
+// Timer bar class based on countdown remaining (proportional pentru 15s)
 const getTimerBarClass = computed(() => {
-  if (countdown.value <= 5) return 'progress-critical';
-  if (countdown.value <= 10) return 'progress-warning';
+  if (countdown.value <= 3) return 'progress-critical';
+  if (countdown.value <= 6) return 'progress-warning';
   return 'progress-normal';
 });
 
@@ -544,11 +544,17 @@ onMounted(async () => {
   await fetchAttendanceReview();
   await fetchTotpCode();
 
-  // 30s countdown timer for TOTP
+  // 15s countdown timer for TOTP (sincronizat cu pasul TOTP de 15 secunde)
+  const syncCountdown = () => {
+    const epochSec = Math.floor(Date.now() / 1000);
+    countdown.value = 15 - (epochSec % 15);
+  };
+  syncCountdown();
+
   totpInterval = setInterval(() => {
     countdown.value -= 1;
     if (countdown.value <= 0) {
-      countdown.value = 30;
+      countdown.value = 15;
       fetchTotpCode();
     }
   }, 1000);

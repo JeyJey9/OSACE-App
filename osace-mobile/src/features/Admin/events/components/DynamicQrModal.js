@@ -28,7 +28,11 @@ export default function DynamicQrModal({ isVisible, onClose, eventId, title }) {
     
     try {
       const response = await api.get(`/api/events/${currentEventId}/current-code`);
-      setQrValue(response.data.code);
+      const code = response.data?.code;
+      if (code) {
+        const universalPayload = `https://osace.ro/scan?eventId=${currentEventId}&code=${code}`;
+        setQrValue(universalPayload);
+      }
     } catch (error) {
       console.error("Eroare QR:", error.response?.data);
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -54,7 +58,7 @@ export default function DynamicQrModal({ isVisible, onClose, eventId, title }) {
       
       intervalRef.current = setInterval(() => {
         fetchQrCode(eventId);
-      }, 20000); 
+      }, 15000); 
 
     } else {
       cleanup();

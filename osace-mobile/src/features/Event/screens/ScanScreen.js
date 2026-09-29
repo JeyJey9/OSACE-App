@@ -27,13 +27,27 @@ export default function ScanScreen() {
       let targetEventId = initialEventId;
       let targetCode = data ? data.toString().trim() : '';
 
+      console.log('[QR SCAN] Date brute scanate:', data);
+
       // Extragem eventId și code dacă codul QR este structurat (URL, OSACE prefix, sau JSON)
       if (typeof targetCode === 'string') {
-        if (targetCode.includes('/scan?') || targetCode.includes('eventId=')) {
-          const queryPart = targetCode.split('?')[1] || targetCode;
-          const searchParams = new URLSearchParams(queryPart);
-          if (searchParams.get('eventId')) targetEventId = searchParams.get('eventId');
-          if (searchParams.get('code')) targetCode = searchParams.get('code');
+        if (targetCode.includes('/scan?') || targetCode.includes('eventId=') || targetCode.includes('code=')) {
+          const eventIdMatch = targetCode.match(/[?&]eventId=([^&#]+)/);
+          const codeMatch = targetCode.match(/[?&]code=([^&#]+)/);
+          if (eventIdMatch) targetEventId = decodeURIComponent(eventIdMatch[1]);
+          if (codeMatch) targetCode = decodeURIComponent(codeMatch[1]);
+
+          // Fallback cu URLSearchParams dacă regex-ul nu a găsit complet
+          if (!targetEventId || targetCode.startsWith('http')) {
+            try {
+              const queryPart = targetCode.split('?')[1] || targetCode;
+              const searchParams = new URLSearchParams(queryPart);
+              if (!targetEventId && searchParams.get('eventId')) targetEventId = searchParams.get('eventId');
+              if (searchParams.get('code')) targetCode = searchParams.get('code');
+            } catch (e) {
+              console.warn('[QR SCAN] URLSearchParams fallback error:', e);
+            }
+          }
         } else if (targetCode.startsWith('OSACE:')) {
           const parts = targetCode.split(':');
           if (parts.length >= 3) {
@@ -49,7 +63,10 @@ export default function ScanScreen() {
         }
       }
 
+      console.log('[QR SCAN] Payload extras:', { targetEventId, targetCode });
+
       if (!targetEventId) {
+        console.warn('[QR SCAN] targetEventId lipsă pentru codul scanat:', data);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert(
           'Cod QR Neidentificat',
@@ -59,9 +76,12 @@ export default function ScanScreen() {
         return;
       }
 
+      console.log(`[QR SCAN] Trimitere request la /api/events/${targetEventId}/confirm-presence cu codul ${targetCode}`);
       const response = await api.post(`/api/events/${targetEventId}/confirm-presence`, {
         code: targetCode,
       });
+
+      console.log('[QR SCAN] Răspuns primit cu succes de la server:', response.data);
 
       const serverMessage = response.data.message;
       const status = response.data.status; // Luăm statusul de la backend
@@ -93,9 +113,22 @@ export default function ScanScreen() {
       });
 
     } catch (error) {
-      console.error("Eroare la confirmarea QR:", error.response?.data);
+      console.error("[QR SCAN ERROR]:", {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        data: error.response?.data
+      });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      const errorMessage = error.response?.data?.error || 'Cod QR invalid sau expirat.';
+
+      let errorMessage = error.response?.data?.error;
+      if (!errorMessage) {
+        if (error.message?.includes('Network') || error.code === 'ERR_NETWORK') {
+          errorMessage = 'Eroare de rețea. Nu s-a putut conecta la serverul OSACE. Verifică conexiunea.';
+        } else {
+          errorMessage = 'Cod QR invalid sau expirat.';
+        }
+      }
       
       // Păstrăm Alert aici pentru ca utilizatorul să deblocheze camera manual
       Alert.alert(

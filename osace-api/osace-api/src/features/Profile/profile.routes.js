@@ -17,19 +17,53 @@ module.exports = (pool, verifyToken) => {
 
   // Traseul: /me (Profilul TĂU)
   router.get('/me', verifyToken, async (req, res) => {
-  	try {
-  	  const userResult = await pool.query(
-   		 'SELECT id, display_name, first_name, last_name, email, role, created_at, avatar_url, student_verification_status FROM users WHERE id = $1',
-  		 [req.user.userId]
-  );
-  	  if (userResult.rows.length === 0) {
-  	  	return res.status(404).json({ error: 'Utilizator negăsit.' });
-  	  }
-  	  res.json(userResult.rows[0]);
-  	} catch (error) {
-  	  console.error('Eroare la preluarea profilului:', error);
-  	  res.status(500).json({ error: 'Eroare server la preluarea profilului.' });
-  	}
+    try {
+      const yearFilter = parseYearParam(req.query.year);
+      const isAllTime = !req.query.year || req.query.year === 'all';
+
+      let userQuery, params;
+      if (isAllTime) {
+        userQuery = `
+          SELECT 
+            u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.created_at, u.avatar_url, u.student_verification_status,
+            (
+              (SELECT COALESCE(SUM(ea.awarded_hours), 0) FROM event_attendance ea WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended') +
+              (SELECT COALESCE(SUM(sc.awarded_hours), 0) FROM special_contributions sc WHERE sc.user_id = u.id AND sc.status = 'approved')
+            ) AS total_hours
+          FROM users u 
+          WHERE u.id = $1
+        `;
+        params = [req.user.userId];
+      } else {
+        userQuery = `
+          SELECT 
+            u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.created_at, u.avatar_url, u.student_verification_status,
+            (
+              (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
+               FROM event_attendance ea 
+               JOIN events e ON ea.event_id = e.id
+               WHERE ea.user_id = u.id AND ea.confirmation_status = 'attended'
+                 AND e.start_time >= $2 AND e.start_time < $3) +
+              (SELECT COALESCE(SUM(sc.awarded_hours), 0) 
+               FROM special_contributions sc 
+               WHERE sc.user_id = u.id AND sc.status = 'approved'
+                 AND sc.created_at >= $2 AND sc.created_at < $3)
+            ) AS total_hours
+          FROM users u 
+          WHERE u.id = $1
+        `;
+        params = [req.user.userId, yearFilter.start, yearFilter.end];
+      }
+
+      const userResult = await pool.query(userQuery, params);
+      if (userResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Utilizator negăsit.' });
+      }
+      res.json(userResult.rows[0]);
+    } catch (error) {
+      console.error('Eroare la preluarea profilului:', error);
+      res.status(500).json({ error: 'Eroare server la preluarea profilului.' });
+    }
   });
 
   // Traseul: /my-events (Neschimbat)
@@ -62,7 +96,8 @@ module.exports = (pool, verifyToken) => {
                 ea.confirmation_status, ea.awarded_hours 
          FROM events e
          JOIN event_attendance ea ON e.id = ea.event_id
-         WHERE ea.user_id = $1 AND e.end_time <= NOW()
+         WHERE ea.user_id = $1 
+           AND (e.end_time <= NOW() OR ea.confirmation_status = 'attended')
            AND e.start_time >= $2 AND e.start_time < $3
          ORDER BY e.start_time DESC`;
         params = [userId, yearFilter.start, yearFilter.end];
@@ -71,7 +106,8 @@ module.exports = (pool, verifyToken) => {
                 ea.confirmation_status, ea.awarded_hours 
          FROM events e
          JOIN event_attendance ea ON e.id = ea.event_id
-         WHERE ea.user_id = $1 AND e.end_time <= NOW()
+         WHERE ea.user_id = $1 
+           AND (e.end_time <= NOW() OR ea.confirmation_status = 'attended')
          ORDER BY e.start_time DESC`;
         params = [userId];
       }
@@ -94,7 +130,7 @@ module.exports = (pool, verifyToken) => {
                 ea.confirmation_status, ea.awarded_hours 
          FROM events e
          LEFT JOIN event_attendance ea ON e.id = ea.event_id AND ea.user_id = $1
-         WHERE e.end_time <= NOW()
+         WHERE (e.end_time <= NOW() OR ea.confirmation_status = 'attended')
            AND e.start_time >= $2 AND e.start_time < $3
          ORDER BY e.start_time DESC`;
         params = [userId, yearFilter.start, yearFilter.end];
@@ -103,7 +139,7 @@ module.exports = (pool, verifyToken) => {
                 ea.confirmation_status, ea.awarded_hours 
          FROM events e
          LEFT JOIN event_attendance ea ON e.id = ea.event_id AND ea.user_id = $1
-         WHERE e.end_time <= NOW()
+         WHERE (e.end_time <= NOW() OR ea.confirmation_status = 'attended')
          ORDER BY e.start_time DESC`;
         params = [userId];
       }
@@ -532,6 +568,49 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
     } catch (error) {
       console.error('Eroare la preluarea contribuțiilor:', error);
       res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
+  // Traseu: GET /api/profile/:id/past-events (Activitățile PUBLICE ale altcuiva - doar unde a fost confirmat prezent)
+  router.get('/:id/past-events', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(id)) return res.status(400).json({ error: 'ID invalid' });
+
+    const yearFilter = parseYearParam(req.query.year);
+
+    try {
+      let query, params;
+      if (yearFilter) {
+        query = `
+          SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 
+                 ea.confirmation_status, ea.awarded_hours, ea.confirmed_at
+          FROM events e
+          JOIN event_attendance ea ON e.id = ea.event_id
+          WHERE ea.user_id = $1 
+            AND ea.confirmation_status = 'attended'
+            AND (e.end_time <= NOW() OR ea.confirmation_status = 'attended')
+            AND e.start_time >= $2 AND e.start_time < $3
+          ORDER BY e.start_time DESC
+        `;
+        params = [id, yearFilter.start, yearFilter.end];
+      } else {
+        query = `
+          SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 
+                 ea.confirmation_status, ea.awarded_hours, ea.confirmed_at
+          FROM events e
+          JOIN event_attendance ea ON e.id = ea.event_id
+          WHERE ea.user_id = $1 
+            AND ea.confirmation_status = 'attended'
+            AND (e.end_time <= NOW() OR ea.confirmation_status = 'attended')
+          ORDER BY e.start_time DESC
+        `;
+        params = [id];
+      }
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (error) {
+      console.error(`Eroare la preluarea activităților pentru user ${id}:`, error);
+      res.status(500).json({ error: 'Eroare server la preluarea activităților.' });
     }
   });
   

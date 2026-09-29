@@ -10,6 +10,7 @@ import ProfileHeader from '../components/ProfileHeader';
 import ProfileStats from '../components/ProfileStats';
 import BadgeList from '../components/BadgeList';
 import ContributionList from '../components/ContributionList';
+import ActivityHistoryList from '../components/ActivityHistoryList';
 import ProfileActions from '../components/ProfileActions';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import Toast from 'react-native-toast-message';
@@ -119,6 +120,10 @@ export default function ProfileScreen() {
     
     return eventHours + contribHours;
   }, [pastEvents, contributions]);
+
+  const attendedEvents = useMemo(() => {
+    return pastEvents.filter(e => e.confirmation_status === 'attended');
+  }, [pastEvents]);
 
   const displayRole = (role) => {
     switch (role) {
@@ -260,6 +265,8 @@ export default function ProfileScreen() {
         onNotifPrefs={() => navigation.navigate('NotificationPreferences')}
         onBlockedUsers={() => navigation.navigate('BlockedUsers')}
       />
+
+      <ActivityHistoryList events={attendedEvents} />
     </ScreenContainer>
   );
 }

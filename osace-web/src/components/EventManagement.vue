@@ -352,7 +352,7 @@ const loadingParticipants = ref(false);
 const submitting = ref(false);
 
 const qrCanvas = ref(null);
-const countdown = ref(30);
+const countdown = ref(15);
 const countdownPercent = ref(100);
 let qrInterval = null;
 let countdownInterval = null;
@@ -425,15 +425,15 @@ const fetchAndShowQR = async () => {
 const startCountdown = () => {
   clearQrTimers();
   const now = new Date();
-  const secondsLeft = 30 - (now.getSeconds() % 30);
+  const secondsLeft = 15 - (now.getSeconds() % 15);
   countdown.value = secondsLeft;
-  countdownPercent.value = (secondsLeft / 30) * 100;
+  countdownPercent.value = (secondsLeft / 15) * 100;
 
   countdownInterval = setInterval(() => {
     countdown.value--;
-    countdownPercent.value = (countdown.value / 30) * 100;
+    countdownPercent.value = (countdown.value / 15) * 100;
     if (countdown.value <= 0) {
-      countdown.value = 30;
+      countdown.value = 15;
       countdownPercent.value = 100;
       fetchAndShowQR();
     }

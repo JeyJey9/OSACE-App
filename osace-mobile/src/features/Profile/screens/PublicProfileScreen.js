@@ -12,6 +12,7 @@ import ProfileHeader from '../components/ProfileHeader';
 import ProfileStats from '../components/ProfileStats';
 import BadgeList from '../components/BadgeList'; 
 import ContributionList from '../components/ContributionList';
+import ActivityHistoryList from '../components/ActivityHistoryList';
 import ProfileSkeleton from '../components/ProfileSkeleton';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import DropdownPicker from '../../../components/DropdownPicker';
@@ -42,6 +43,7 @@ export default function PublicProfileScreen() {
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
   const [contributions, setContributions] = useState([]);
+  const [pastEvents, setPastEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [availableYears, setAvailableYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
@@ -51,15 +53,17 @@ export default function PublicProfileScreen() {
       setLoading(true);
       const yearQuery = yearParam === 'all' ? '?year=all' : (yearParam ? `?year=${yearParam}` : '');
       
-      const [profileResponse, badgesResponse, contributionsResponse] = await Promise.all([
+      const [profileResponse, badgesResponse, contributionsResponse, pastEventsResponse] = await Promise.all([
         api.get(`/api/profile/${userId}${yearQuery}`),
         api.get(`/api/profile/${userId}/badges`),
-        api.get(`/api/profile/${userId}/contributions${yearQuery}`)
+        api.get(`/api/profile/${userId}/contributions${yearQuery}`),
+        api.get(`/api/profile/${userId}/past-events${yearQuery}`)
       ]);
       
       setProfile(profileResponse.data);
       setBadges(badgesResponse.data);
       setContributions(contributionsResponse.data);
+      setPastEvents(pastEventsResponse.data || []);
     } catch (error) {
       console.error("Eroare la preluarea profilului public:", error);
       Alert.alert("Eroare", "Nu s-au putut încărca datele acestui voluntar.");
@@ -133,6 +137,8 @@ export default function PublicProfileScreen() {
       />
       
       <ContributionList contributions={contributions} />
+      
+      <ActivityHistoryList events={pastEvents} />
     </ScreenContainer>
   );
 }

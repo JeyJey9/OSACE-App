@@ -3,6 +3,8 @@ const router = express.Router();
 const axios = require('axios');
 const { eventActionLimiter } = require('../../middleware/rateLimiter');
 const { authenticator } = require('otplib');
+// Configurare TOTP: Pas de 15 secunde (pentru ecran proiector și cod QR dinamic)
+authenticator.options = { step: 15, window: 1 };
 const { logAction } = require('../../utils/auditLog');
 const {
   checkBadgesOnConfirmation,
@@ -371,6 +373,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       if (!secret) {
         return res.status(400).json({ error: 'Acest eveniment este vechi și nu are un cod dinamic.' });
       }
+      authenticator.options = { step: 15, window: 1 };
       const token = authenticator.generate(secret);
       res.json({ code: token });
     } catch (error) {
@@ -539,10 +542,15 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       if (eventResult.rows.length === 0) return res.status(404).json({ error: 'Eveniment negăsit.' });
       const event = eventResult.rows[0];
 
-      // 2. Verificăm codul QR (TOTP) cu toleranță de fereastră (±30s)
-      authenticator.options = { window: 1 };
+      console.log(`[QR SCAN ATTEMPT] eventId=${eventId}, userId=${userId}, code=${code}`);
+
+      // 2. Verificăm codul QR (TOTP) cu toleranță de fereastră (±15s, pas de 15s)
+      authenticator.options = { step: 15, window: 1 };
       const isValid = authenticator.check(code, event.totp_secret);
-      if (!isValid) return res.status(401).json({ error: 'Cod invalid sau expirat.' });
+      if (!isValid) {
+        console.warn(`[QR SCAN REJECTED] Cod invalid sau expirat. eventId=${eventId}, userId=${userId}, code=${code}`);
+        return res.status(401).json({ error: 'Cod invalid sau expirat.' });
+      }
 
       // 3. Preluăm statusul actual al voluntarului
       const attendanceResult = await pool.query(
@@ -561,6 +569,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
           [userId, eventId]
         );
         checkQuickRegisterBadge(userId, eventId, pool);
+        console.log(`[QR SCAN SUCCESS] Walk-in check-in realizat pentru user ${userId}, event ${eventId}`);
         return res.status(200).json({
           message: 'Prezență înregistrată! 📍 Spor la treabă.',
           status: 'checked_in'
@@ -583,6 +592,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
            WHERE user_id = $1 AND event_id = $2`,
           [userId, eventId]
         );
+        console.log(`[QR SCAN SUCCESS] Check-in realizat pentru user ${userId}, event ${eventId}`);
         return res.status(200).json({
           message: 'Check-in realizat cu succes! Spor la treabă.',
           status: 'checked_in'
@@ -596,6 +606,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
 
         // Anti-double-scan protection: must wait at least 5 seconds after check-in before check-out
         if (attendance.check_in_time && (checkOutTime - checkInTime) < 5000) {
+          console.warn(`[QR SCAN BLOCKED] Anti-double-scan (<5s) user ${userId}, event ${eventId}`);
           return res.status(400).json({
             error: 'Ai efectuat check-in-ul recent. Te rugăm să aștepți cel puțin 5 secunde înainte de a efectua check-out-ul.'
           });
@@ -684,6 +695,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
           message += `\n\nS-a creat automat o cerere de Overtime pentru cele ${overtimeHours} ore suplimentare (ai depășit toleranța de 30 min).`;
         }
 
+        console.log(`[QR SCAN SUCCESS] Check-out realizat pentru user ${userId}, event ${eventId}. Ore acordate: ${awardedHours}`);
         return res.status(200).json({
           message: message,
           status: 'attended',
@@ -694,6 +706,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
 
       // CAZ C: Deja a terminat
       if (attendance.confirmation_status === 'attended') {
+        console.warn(`[QR SCAN REJECTED] Utilizatorul ${userId} are deja prezența confirmată și încheiată pentru event ${eventId}`);
         return res.status(400).json({ error: 'Ai confirmat deja prezența și plecarea pentru acest eveniment.' });
       }
 
