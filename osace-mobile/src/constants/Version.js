@@ -7,12 +7,10 @@ export const PATCH_NOTES = [
   {
     version: '3.0.5',
     items: [
-      'Hartă Interactivă Facultate: Navigare și orientare completă pe toate nivelurile (Demisol, Parter, E1, E2, E3) cu reprezentare fidelă a sălilor de curs, amfiteatrelor, laboratoarelor și birourilor.',
-      'Identificare Rapidă a Toaletelor: Marcaje vizuale clare și distincte pe hartă pentru toalete fete și toalete băieți la fiecare etaj.',
-      'Detalii Arhitecturale: Indicatoare pentru ușile de acces și scările interioare de legătură între niveluri pentru o deplasare facilă.',
-      'Scanare QR & Prezențe: Înregistrare fluidă și sigură a prezenței la evenimente prin scanare unică și confirmare instantanee.',
-      'Istoric Activitate & Ore Voluntariat: Monitorizare mai clară a orelor acumulate și a implicării în cadrul evenimentelor, cu profil de voluntar optimizat.',
-      'Îmbunătățiri de performanță, fluiditate și stabilitate generală.',
+      'Harta interactiva: Sali, etaje, toalete fete/baieti, scari si usi pentru orientare rapida in facultate.',
+      'Scanare QR imbunatatita: Scan rapid cu validare instant a prezentei la evenimente.',
+      'Istoric de activitate si ore de voluntariat actualizate in profil.',
+      'Mici bug fix-uri si optimizari de performanta.',
     ],
   },
   {

@@ -28,7 +28,7 @@ export default function CustomDrawerContent(props) {
   const styles = createStyles(colors, isDark, STANDARD_BLUE);
 
   const [showDevNotes, setShowDevNotes] = React.useState(false);
-  const [expandedVersions, setExpandedVersions] = React.useState({ [PATCH_NOTES[0]?.version]: true });
+  const [expandedVersions, setExpandedVersions] = React.useState({});
   const [subsolStage, setSubsolStage] = React.useState(0); // 0 = ascuns, 1 = hint glisat la vedere, 2 = subsol deblocat
   const subsolStageRef = React.useRef(0);
   const lastDragTimeRef = React.useRef(0);
