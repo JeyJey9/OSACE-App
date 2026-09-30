@@ -1,5 +1,5 @@
 import React from 'react';
-import { G, Path, Rect, Circle, Line, Text as SvgText } from 'react-native-svg';
+import { G, Path, Rect, Circle, Line } from 'react-native-svg';
 
 /**
  * ArchitecturalFixtures renders architectural doors with swing arcs,
@@ -25,7 +25,6 @@ const ArchitecturalFixtures = ({ floorId, isDark }) => {
   const newelFill = isDark ? '#0f172a' : '#e2e8f0';
   const newelStroke = isDark ? '#64748b' : '#94a3b8';
   const walkLineColor = isDark ? '#38bdf8' : '#0284c7';
-  const labelColor = isDark ? '#94a3b8' : '#64748b';
 
   return (
     <G id="Architectural_Fixtures" pointerEvents="none">
@@ -271,13 +270,13 @@ const ArchitecturalFixtures = ({ floorId, isDark }) => {
       {/* ======================================================== */}
       {isDemisol && (
         <G id="Demisol_Stairs_Fixtures">
-          {/* --- SCARA 1 (15 Trepte spre Parter): X:921..985, Y:785..825 --- */}
+          {/* --- SCARA 1 (15 Trepte spre Parter): X:919..985, Y:880..920 --- */}
           <G id="Demisol_Stairs_15Tr">
             {/* Fundal casă scării */}
             <Rect
-              x={921}
-              y={785}
-              width={64}
+              x={919}
+              y={880}
+              width={66}
               height={40}
               fill={stairBg}
               stroke={stairBorder}
@@ -288,57 +287,54 @@ const ArchitecturalFixtures = ({ floorId, isDark }) => {
             {/* 15 trepte verticale */}
             <Path
               d="
-                M 925.3 785 V 825
-                M 929.5 785 V 825
-                M 933.8 785 V 825
-                M 938.0 785 V 825
-                M 942.3 785 V 825
-                M 946.5 785 V 825
-                M 950.8 785 V 825
-                M 955.0 785 V 825
-                M 959.3 785 V 825
-                M 963.5 785 V 825
-                M 967.8 785 V 825
-                M 972.0 785 V 825
-                M 976.3 785 V 825
-                M 980.5 785 V 825
-                M 984.8 785 V 825
+                M 923.4 880 V 920
+                M 927.8 880 V 920
+                M 932.2 880 V 920
+                M 936.6 880 V 920
+                M 941.0 880 V 920
+                M 945.4 880 V 920
+                M 949.8 880 V 920
+                M 954.2 880 V 920
+                M 958.6 880 V 920
+                M 963.0 880 V 920
+                M 967.4 880 V 920
+                M 971.8 880 V 920
+                M 976.2 880 V 920
+                M 980.6 880 V 920
+                M 985.0 880 V 920
               "
               stroke={treadColor}
               strokeWidth={1.1}
             />
 
             {/* Linia de secțiune arhitecturală (tăietură de plan diagonală dublă) */}
-            <Line x1={958} y1={827} x2={964} y2={783} stroke={newelStroke} strokeWidth={1.3} />
-            <Line x1={960} y1={827} x2={966} y2={783} stroke={newelStroke} strokeWidth={1.3} />
+            <Line x1={956} y1={922} x2={962} y2={878} stroke={newelStroke} strokeWidth={1.3} />
+            <Line x1={958} y1={922} x2={964} y2={878} stroke={newelStroke} strokeWidth={1.3} />
 
-            {/* Balustrada / delimitator de-a lungul laturii de sud (Y=825) */}
-            <Line x1={921} y1={825} x2={985} y2={825} stroke={walkLineColor} strokeWidth={2.0} />
-            <Line x1={921} y1={823.5} x2={985} y2={823.5} stroke={walkLineColor} strokeWidth={0.8} opacity={0.6} />
-            <Circle cx={921} cy={825} r={2.0} fill={walkLineColor} />
-            <Circle cx={942} cy={825} r={1.5} fill={walkLineColor} />
-            <Circle cx={963} cy={825} r={1.5} fill={walkLineColor} />
-            <Circle cx={985} cy={825} r={2.0} fill={walkLineColor} />
+            {/* Balustrada / delimitator de-a lungul laturii de sud (Y=920) */}
+            <Line x1={919} y1={920} x2={985} y2={920} stroke={walkLineColor} strokeWidth={2.0} />
+            <Line x1={919} y1={918.5} x2={985} y2={918.5} stroke={walkLineColor} strokeWidth={0.8} opacity={0.6} />
+            <Circle cx={919} cy={920} r={2.0} fill={walkLineColor} />
+            <Circle cx={941} cy={920} r={1.5} fill={walkLineColor} />
+            <Circle cx={963} cy={920} r={1.5} fill={walkLineColor} />
+            <Circle cx={985} cy={920} r={2.0} fill={walkLineColor} />
 
             {/* Linia de mers (sens de urcare spre Parter -> spre dreapta) */}
-            <Circle cx={923} cy={805} r={2.2} fill={walkLineColor} />
-            <Line x1={923} y1={805} x2={981} y2={805} stroke={walkLineColor} strokeWidth={1.6} strokeLinecap="round" />
-            <Path d="M 977 801.5 L 984 805 L 977 808.5 Z" fill={walkLineColor} />
-
-            {/* Etichetă */}
-            <SvgText x={938} y={799} fill={labelColor} fontSize="6" fontWeight="700">15 Tr.</SvgText>
+            <Circle cx={921} cy={900} r={2.2} fill={walkLineColor} />
+            <Line x1={921} y1={900} x2={981} y2={900} stroke={walkLineColor} strokeWidth={1.6} strokeLinecap="round" />
+            <Path d="M 977 896.5 L 984 900 L 977 903.5 Z" fill={walkLineColor} />
           </G>
 
-          {/* Stâlp / Pilon de colț între cele două scări: X:918..924, Y:825..835 */}
-          <Rect x={918} y={825} width={6} height={10} fill={newelFill} stroke={newelStroke} strokeWidth={1.4} rx={0.5} />
+          {/* Stâlp / Pilon de colț între cele două scări: X:916..922, Y:920..929 */}
+          <Rect x={916} y={920} width={6} height={9} fill={newelFill} stroke={newelStroke} strokeWidth={1.4} rx={0.5} />
 
-          {/* --- SCARA 2 (4 Trepte - schimbare nivel Demisol -3.33 la -2.63): X:921..937, Y:835..905 --- */}
+          {/* --- SCARA 2 (4 Trepte - schimbare nivel Demisol -3.33 la -2.63): X:917..931, Y:929..989 --- */}
           <G id="Demisol_Stairs_4Tr">
             <Rect
-              x={921}
-              y={835}
-              width={16}
-              height={70}
+              x={917}
+              y={929}
+              width={14}
+              height={60}
               fill={stairBg}
               stroke={stairBorder}
               strokeWidth={1.1}
@@ -348,22 +344,19 @@ const ArchitecturalFixtures = ({ floorId, isDark }) => {
             {/* 4 trepte verticale */}
             <Path
               d="
-                M 925 835 V 905
-                M 929 835 V 905
-                M 933 835 V 905
-                M 937 835 V 905
+                M 920.5 929 V 989
+                M 924.0 929 V 989
+                M 927.5 929 V 989
+                M 931.0 929 V 989
               "
               stroke={treadColor}
               strokeWidth={1.1}
             />
 
             {/* Linia de mers (urcare de la -3.33 la -2.63 -> spre stânga) */}
-            <Circle cx={935} cy={870} r={2.0} fill={walkLineColor} />
-            <Line x1={935} y1={870} x2={923} y2={870} stroke={walkLineColor} strokeWidth={1.5} strokeLinecap="round" />
-            <Path d="M 926 867.5 L 920 870 L 926 872.5 Z" fill={walkLineColor} />
-
-            {/* Etichetă */}
-            <SvgText x={929} y={855} fill={labelColor} fontSize="5.5" fontWeight="700" textAnchor="middle">4 Tr.</SvgText>
+            <Circle cx={930} cy={959} r={2.0} fill={walkLineColor} />
+            <Line x1={930} y1={959} x2={918} y2={959} stroke={walkLineColor} strokeWidth={1.5} strokeLinecap="round" />
+            <Path d="M 922 956.5 L 916 959 L 922 961.5 Z" fill={walkLineColor} />
           </G>
         </G>
       )}
@@ -375,9 +368,9 @@ const ArchitecturalFixtures = ({ floorId, isDark }) => {
         <G id="Parter_Stairs_To_Demisol">
           {/* Gol de scară conturat */}
           <Rect
-            x={921}
-            y={785}
-            width={64}
+            x={919}
+            y={880}
+            width={66}
             height={40}
             fill={stairBg}
             stroke={stairBorder}
@@ -388,46 +381,43 @@ const ArchitecturalFixtures = ({ floorId, isDark }) => {
           {/* 15 trepte verticale */}
           <Path
             d="
-              M 925.3 785 V 825
-              M 929.5 785 V 825
-              M 933.8 785 V 825
-              M 938.0 785 V 825
-              M 942.3 785 V 825
-              M 946.5 785 V 825
-              M 950.8 785 V 825
-              M 955.0 785 V 825
-              M 959.3 785 V 825
-              M 963.5 785 V 825
-              M 967.8 785 V 825
-              M 972.0 785 V 825
-              M 976.3 785 V 825
-              M 980.5 785 V 825
-              M 984.8 785 V 825
+              M 923.4 880 V 920
+              M 927.8 880 V 920
+              M 932.2 880 V 920
+              M 936.6 880 V 920
+              M 941.0 880 V 920
+              M 945.4 880 V 920
+              M 949.8 880 V 920
+              M 954.2 880 V 920
+              M 958.6 880 V 920
+              M 963.0 880 V 920
+              M 967.4 880 V 920
+              M 971.8 880 V 920
+              M 976.2 880 V 920
+              M 980.6 880 V 920
+              M 985.0 880 V 920
             "
             stroke={treadColor}
             strokeWidth={1.1}
           />
 
           {/* Balustradă delimitatoare de scară față de parter (latura de sud și capătul de vest) */}
-          <Line x1={921} y1={825} x2={985} y2={825} stroke={walkLineColor} strokeWidth={2.0} />
-          <Line x1={921} y1={823.5} x2={985} y2={823.5} stroke={walkLineColor} strokeWidth={0.8} opacity={0.6} />
-          <Line x1={921} y1={785} x2={921} y2={825} stroke={walkLineColor} strokeWidth={2.0} />
+          <Line x1={919} y1={920} x2={985} y2={920} stroke={walkLineColor} strokeWidth={2.0} />
+          <Line x1={919} y1={918.5} x2={985} y2={918.5} stroke={walkLineColor} strokeWidth={0.8} opacity={0.6} />
+          <Line x1={919} y1={880} x2={919} y2={920} stroke={walkLineColor} strokeWidth={2.0} />
 
           {/* Montanți balustradă */}
-          <Circle cx={921} cy={785} r={2.0} fill={walkLineColor} />
-          <Circle cx={921} cy={805} r={1.5} fill={walkLineColor} />
-          <Circle cx={921} cy={825} r={2.0} fill={walkLineColor} />
-          <Circle cx={942} cy={825} r={1.5} fill={walkLineColor} />
-          <Circle cx={963} cy={825} r={1.5} fill={walkLineColor} />
-          <Circle cx={985} cy={825} r={2.0} fill={walkLineColor} />
+          <Circle cx={919} cy={880} r={2.0} fill={walkLineColor} />
+          <Circle cx={919} cy={900} r={1.5} fill={walkLineColor} />
+          <Circle cx={919} cy={920} r={2.0} fill={walkLineColor} />
+          <Circle cx={941} cy={920} r={1.5} fill={walkLineColor} />
+          <Circle cx={963} cy={920} r={1.5} fill={walkLineColor} />
+          <Circle cx={985} cy={920} r={2.0} fill={walkLineColor} />
 
           {/* Linia de mers (sens de coborâre spre Demisol -> spre stânga) */}
-          <Circle cx={983} cy={805} r={2.2} fill={walkLineColor} />
-          <Line x1={983} y1={805} x2={925} y2={805} stroke={walkLineColor} strokeWidth={1.6} strokeLinecap="round" />
-          <Path d="M 929 801.5 L 922 805 L 929 808.5 Z" fill={walkLineColor} />
-
-          {/* Etichetă */}
-          <SvgText x={968} y={799} fill={labelColor} fontSize="6" fontWeight="700" textAnchor="end">15 Tr.</SvgText>
+          <Circle cx={983} cy={900} r={2.2} fill={walkLineColor} />
+          <Line x1={983} y1={900} x2={923} y2={900} stroke={walkLineColor} strokeWidth={1.6} strokeLinecap="round" />
+          <Path d="M 927 896.5 L 920 900 L 927 903.5 Z" fill={walkLineColor} />
         </G>
       )}
     </G>
