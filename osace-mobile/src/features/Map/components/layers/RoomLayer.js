@@ -1,5 +1,6 @@
 import React from 'react';
 import { G, Path, Text as SvgText, Circle, Rect } from 'react-native-svg';
+import ArchitecturalFixtures from './ArchitecturalFixtures';
 
 /**
  * RoomLayer renders corridors, regular rooms, room labels, and the main entrance badge.
@@ -161,6 +162,9 @@ const RoomLayer = ({
           </G>
         </G>
       )}
+
+      {/* 3.1. Uși și Scări Arhitecturale (Corp G Sud & Corp K Sud) */}
+      <ArchitecturalFixtures floorId={floorId} isDark={isDark} />
 
       {/* 4. Etichete Săli (randat deasupra pentru lizibilitate maximă) */}
       <G id="Room_Labels" pointerEvents="none">
