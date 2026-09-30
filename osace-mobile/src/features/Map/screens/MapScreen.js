@@ -34,6 +34,7 @@ const MapScreen = ({ navigation }) => {
   const [showWalls, setShowWalls] = useState(true);
   const [showUnderlay, setShowUnderlay] = useState(true);
   const [showDebugGraph, setShowDebugGraph] = useState(false);
+  const [showDebugNodes, setShowDebugNodes] = useState(true);
   const [debugTapCoords, setDebugTapCoords] = useState(null);
   const [selectedDebugNode, setSelectedDebugNode] = useState(null);
   const mapRef = useRef(null);
@@ -273,6 +274,7 @@ const MapScreen = ({ navigation }) => {
   const handleDebugTap = useCallback((coords) => {
     setDebugTapCoords(coords);
     setSelectedDebugNode(null);
+    setSelectedRoom(null);
   }, []);
 
   const handleDebugNodeSelect = useCallback((node) => {
@@ -303,6 +305,7 @@ const MapScreen = ({ navigation }) => {
             showWalls={showWalls}
             showUnderlay={showUnderlay}
             showDebugGraph={isAdmin && showDebugGraph}
+            showDebugNodes={showDebugNodes}
             onDebugTap={isAdmin ? handleDebugTap : undefined}
             onDebugNodeSelect={isAdmin ? handleDebugNodeSelect : undefined}
           />
@@ -364,6 +367,30 @@ const MapScreen = ({ navigation }) => {
                   color={showDebugGraph ? '#ffffff' : isDark ? '#94a3b8' : '#64748b'}
                 />
               </TouchableOpacity>
+
+              {/* Buton Toggle Vizibilitate Noduri (vizibil când Debug Graf e activ) */}
+              {showDebugGraph && (
+                <TouchableOpacity
+                  style={[
+                    styles.floatingControlBtn,
+                    showDebugNodes ? styles.floatingControlBtnActiveEmerald : styles.floatingControlBtnInactive,
+                  ]}
+                  onPress={() => {
+                    setShowDebugNodes((prev) => !prev);
+                    if (showDebugNodes) {
+                      setSelectedDebugNode(null);
+                    }
+                  }}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  accessibilityLabel={showDebugNodes ? 'Ascunde noduri graf' : 'Afișează noduri graf'}
+                >
+                  <Ionicons
+                    name={showDebugNodes ? 'eye' : 'eye-off'}
+                    size={20}
+                    color={showDebugNodes ? '#ffffff' : '#f59e0b'}
+                  />
+                </TouchableOpacity>
+              )}
 
               {/* Buton Pereți */}
               <TouchableOpacity
@@ -440,8 +467,40 @@ const MapScreen = ({ navigation }) => {
               <View style={styles.debugHeaderRow}>
                 <View style={styles.debugBadge}>
                   <Ionicons name="bug" size={12} color="#ffffff" style={{ marginRight: 4 }} />
-                  <Text style={styles.debugBadgeText}>DEBUG GRAF NAVIGAȚIE</Text>
+                  <Text style={styles.debugBadgeText}>DEBUG GRAF</Text>
                 </View>
+
+                {/* Buton Toggle Noduri vs Doar Coordonate */}
+                <TouchableOpacity
+                  style={[
+                    styles.debugNodesTogglePill,
+                    showDebugNodes ? styles.debugNodesTogglePillActive : styles.debugNodesTogglePillInactive,
+                  ]}
+                  onPress={() => {
+                    setShowDebugNodes((prev) => !prev);
+                    if (showDebugNodes) {
+                      setSelectedDebugNode(null);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Ionicons
+                    name={showDebugNodes ? 'eye' : 'eye-off'}
+                    size={13}
+                    color={showDebugNodes ? '#10b981' : '#f59e0b'}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text
+                    style={[
+                      styles.debugNodesToggleText,
+                      { color: showDebugNodes ? '#10b981' : '#f59e0b' },
+                    ]}
+                  >
+                    {showDebugNodes ? 'Noduri ON' : 'Noduri OFF'}
+                  </Text>
+                </TouchableOpacity>
+
                 <TouchableOpacity
                   onPress={() => {
                     setShowDebugGraph(false);
@@ -477,7 +536,9 @@ const MapScreen = ({ navigation }) => {
                 </View>
               ) : (
                 <Text style={styles.debugHint}>
-                  Atinge un nod sau orice punct de pe hartă pentru a afla coordonatele X, Y exacte.
+                  {showDebugNodes
+                    ? 'Atinge un nod sau orice punct de pe hartă pentru a afla coordonatele X, Y.'
+                    : 'Nodurile sunt ascunse. Atinge orice punct de pe hartă pentru a afla coordonatele X, Y.'}
                 </Text>
               )}
             </View>
@@ -575,6 +636,37 @@ const createStyles = (colors, isDark) =>
       shadowOpacity: 0.35,
       shadowRadius: 4,
       elevation: 3,
+    },
+    floatingControlBtnActiveEmerald: {
+      backgroundColor: '#059669',
+      shadowColor: '#059669',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.35,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    floatingControlBtnInactive: {
+      backgroundColor: isDark ? 'rgba(51, 65, 85, 0.6)' : 'rgba(241, 245, 249, 0.8)',
+    },
+    debugNodesTogglePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 12,
+      borderWidth: 1,
+    },
+    debugNodesTogglePillActive: {
+      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+      borderColor: '#10b981',
+    },
+    debugNodesTogglePillInactive: {
+      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)',
+      borderColor: '#f59e0b',
+    },
+    debugNodesToggleText: {
+      fontSize: 10,
+      fontWeight: '700',
     },
     debugCoordsBanner: {
       position: 'absolute',

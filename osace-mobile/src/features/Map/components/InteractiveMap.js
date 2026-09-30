@@ -47,6 +47,7 @@ const InteractiveMap = forwardRef(({
   showWalls = true,
   showUnderlay = true,
   showDebugGraph = false,
+  showDebugNodes = true,
   onDebugTap = null,
   onDebugNodeSelect = null,
   initialZoom = 1.15,
@@ -168,22 +169,26 @@ const InteractiveMap = forwardRef(({
 
     // 0. În modul Debug, verificăm prioritar atingerea unui nod sau raportăm coordonatele
     if (showDebugGraph) {
-      let closestNode = null;
-      let minNodeDist = 20;
-      for (const n of debugNodes) {
-        const d = Math.hypot(svgX - n.x, svgY - n.y);
-        if (d < minNodeDist) {
-          closestNode = n;
-          minNodeDist = d;
+      if (showDebugNodes) {
+        let closestNode = null;
+        let minNodeDist = 20;
+        for (const n of debugNodes) {
+          const d = Math.hypot(svgX - n.x, svgY - n.y);
+          if (d < minNodeDist) {
+            closestNode = n;
+            minNodeDist = d;
+          }
+        }
+        if (closestNode) {
+          lastSelectTime.current = now;
+          onDebugNodeSelect && onDebugNodeSelect(closestNode);
+          return;
         }
       }
-      if (closestNode) {
-        lastSelectTime.current = now;
-        onDebugNodeSelect && onDebugNodeSelect(closestNode);
-        return;
-      }
       if (onDebugTap) {
+        lastSelectTime.current = now;
         onDebugTap({ x: Math.round(svgX), y: Math.round(svgY) });
+        return;
       }
     }
 
@@ -390,7 +395,7 @@ const InteractiveMap = forwardRef(({
 
           {/* 6. Strat Debug Graf Navigație */}
           <DebugOverlay
-            showDebugGraph={showDebugGraph}
+            showDebugGraph={showDebugGraph && showDebugNodes}
             debugEdges={debugEdges}
             debugNodes={debugNodes}
             navNodes={NAV_NODES}
