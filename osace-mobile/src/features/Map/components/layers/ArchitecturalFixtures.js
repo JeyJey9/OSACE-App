@@ -16,6 +16,7 @@ const ArchitecturalFixtures = ({ floorId, isDark }) => {
   const doorLeafColor = isDark ? '#38bdf8' : '#0284c7';
   const doorArcColor = isDark ? '#64748b' : '#94a3b8';
   const stairBg = isDark ? '#161f30' : '#f8fafc';
+  const stairLandingBg = isDark ? '#1a2436' : '#f1f5f9';
   const stairBorder = isDark ? '#334155' : '#cbd5e1';
   const treadColor = isDark ? '#475569' : '#94a3b8';
   const newelFill = isDark ? '#0f172a' : '#e2e8f0';
@@ -94,18 +95,30 @@ const ArchitecturalFixtures = ({ floorId, isDark }) => {
               rx={2}
             />
 
-            {/* Rampa 1 (stânga): X: 270..295, Y: 732..784 */}
+            {/* Podest plat intermediar (spațiu de legătură la baza scării): X:270..347, Y:784..820 */}
+            <Rect
+              x={270}
+              y={784}
+              width={77}
+              height={36}
+              fill={stairLandingBg}
+              stroke={stairBorder}
+              strokeWidth={0.8}
+              rx={1}
+            />
+
+            {/* Rampa 1 (stânga): X: 270..297, Y: 732..784 */}
             <Path
-              d="M 270 736 H 295 M 270 740 H 295 M 270 744 H 295 M 270 748 H 295 M 270 752 H 295 M 270 756 H 295 M 270 760 H 295 M 270 764 H 295 M 270 768 H 295 M 270 772 H 295 M 270 776 H 295 M 270 780 H 295 M 270 784 H 295"
+              d="M 270 736 H 297 M 270 740 H 297 M 270 744 H 297 M 270 748 H 297 M 270 752 H 297 M 270 756 H 297 M 270 760 H 297 M 270 764 H 297 M 270 768 H 297 M 270 772 H 297 M 270 776 H 297 M 270 780 H 297 M 270 784 H 297"
               stroke={treadColor}
               strokeWidth={1.1}
             />
 
-            {/* Parapet central / ochiul scării */}
+            {/* Parapet central / ochiul scării: X: 297..321, Y: 732..784 */}
             <Rect
-              x={295}
+              x={297}
               y={732}
-              width={26}
+              width={24}
               height={52}
               fill={newelFill}
               stroke={newelStroke}
@@ -113,24 +126,17 @@ const ArchitecturalFixtures = ({ floorId, isDark }) => {
               rx={1}
             />
 
-            {/* Rampa 2 (dreapta): X: 321..347, Y: 732..784 */}
+            {/* Rampa 2 (dreapta): X: 321..347, Y: 732..784 (doar până la Y:784) */}
             <Path
               d="M 321 736 H 347 M 321 740 H 347 M 321 744 H 347 M 321 748 H 347 M 321 752 H 347 M 321 756 H 347 M 321 760 H 347 M 321 764 H 347 M 321 768 H 347 M 321 772 H 347 M 321 776 H 347 M 321 780 H 347 M 321 784 H 347"
               stroke={treadColor}
               strokeWidth={1.1}
             />
 
-            {/* Podest de întoarcere în semicerc / trepte radiale: X: 270..347, Y: 784..820 */}
+            {/* Linia de mers (sensul de urcare în cerc: coborâre pe rampa 1, viraj pe podestul plat, urcare pe rampa 2) */}
+            <Circle cx={283.5} cy={735} r={2.5} fill={walkLineColor} />
             <Path
-              d="M 270 790 H 295 M 270 798 L 295 794 M 270 808 L 302 798 M 276 818 L 308 795 M 293 820 L 308 784 M 311 820 L 314 784 M 327 818 L 314 795 M 347 808 L 320 798 M 347 798 L 321 794 M 347 790 H 321"
-              stroke={treadColor}
-              strokeWidth={1.1}
-            />
-
-            {/* Linia de mers (sensul de urcare în cerc) */}
-            <Circle cx={282.5} cy={735} r={2.5} fill={walkLineColor} />
-            <Path
-              d="M 282.5 735 L 282.5 792 A 25.5 25.5 0 0 0 334.0 792 L 334.0 745"
+              d="M 283.5 735 L 283.5 794 A 25.25 15 0 0 0 334.0 794 L 334.0 745"
               fill="none"
               stroke={walkLineColor}
               strokeWidth={1.8}
@@ -186,43 +192,48 @@ const ArchitecturalFixtures = ({ floorId, isDark }) => {
               rx={2}
             />
 
-            {/* Rampa 1 (vest): X: 972..1012, Y: 778..830 */}
+            {/* Podest plat intermediar (spațiu de legătură la baza scării): X:970..1068, Y:830..866 */}
+            <Rect
+              x={970}
+              y={830}
+              width={98}
+              height={36}
+              fill={stairLandingBg}
+              stroke={stairBorder}
+              strokeWidth={0.8}
+              rx={1}
+            />
+
+            {/* Rampa 1 (vest): X: 970..1012, Y: 776..830 */}
             <Path
-              d="M 972 782 H 1012 M 972 786 H 1012 M 972 790 H 1012 M 972 794 H 1012 M 972 798 H 1012 M 972 802 H 1012 M 972 806 H 1012 M 972 810 H 1012 M 972 814 H 1012 M 972 818 H 1012 M 972 822 H 1012 M 972 826 H 1012 M 972 830 H 1012"
+              d="M 970 780 H 1012 M 970 784 H 1012 M 970 788 H 1012 M 970 792 H 1012 M 970 796 H 1012 M 970 800 H 1012 M 970 804 H 1012 M 970 808 H 1012 M 970 812 H 1012 M 970 816 H 1012 M 970 820 H 1012 M 970 824 H 1012 M 970 828 H 1012 M 970 830 H 1012"
               stroke={treadColor}
               strokeWidth={1.1}
             />
 
-            {/* Parapet central / ochiul scării */}
+            {/* Parapet central / ochiul scării: X: 1012..1026, Y: 776..830 */}
             <Rect
               x={1012}
-              y={778}
+              y={776}
               width={14}
-              height={52}
+              height={54}
               fill={newelFill}
               stroke={newelStroke}
               strokeWidth={1.4}
               rx={1}
             />
 
-            {/* Rampa 2 (est): X: 1026..1066, Y: 778..830 */}
+            {/* Rampa 2 (est): X: 1026..1068, Y: 776..830 (doar până la Y:830) */}
             <Path
-              d="M 1026 782 H 1066 M 1026 786 H 1066 M 1026 790 H 1066 M 1026 794 H 1066 M 1026 798 H 1066 M 1026 802 H 1066 M 1026 806 H 1066 M 1026 810 H 1066 M 1026 814 H 1066 M 1026 818 H 1066 M 1026 822 H 1066 M 1026 826 H 1066 M 1026 830 H 1066"
-              stroke={treadColor}
-              strokeWidth={1.1}
-            />
-
-            {/* Podest de întoarcere în semicerc / trepte radiale: X: 972..1066, Y: 830..866 */}
-            <Path
-              d="M 972 836 H 1012 M 972 844 L 1012 840 M 972 854 L 1017 843 M 978 864 L 1020 842 M 996 866 L 1020 830 M 1018 866 L 1026 830 M 1038 864 L 1026 842 M 1066 854 L 1029 843 M 1066 844 L 1026 840 M 1066 836 H 1026"
+              d="M 1026 780 H 1068 M 1026 784 H 1068 M 1026 788 H 1068 M 1026 792 H 1068 M 1026 796 H 1068 M 1026 800 H 1068 M 1026 804 H 1068 M 1026 808 H 1068 M 1026 812 H 1068 M 1026 816 H 1068 M 1026 820 H 1068 M 1026 824 H 1068 M 1026 828 H 1068 M 1026 830 H 1068"
               stroke={treadColor}
               strokeWidth={1.1}
             />
 
             {/* Linia de mers (sensul de urcare în cerc) */}
-            <Circle cx={992} cy={782} r={2.5} fill={walkLineColor} />
+            <Circle cx={991.0} cy={780} r={2.5} fill={walkLineColor} />
             <Path
-              d="M 992 782 L 992 840 A 27 27 0 0 0 1046 840 L 1046 792"
+              d="M 991.0 780 L 991.0 842 A 28 15 0 0 0 1047.0 842 L 1047.0 792"
               fill="none"
               stroke={walkLineColor}
               strokeWidth={1.8}
@@ -230,7 +241,7 @@ const ArchitecturalFixtures = ({ floorId, isDark }) => {
             />
             {/* Săgeată de urcare sus */}
             <Path
-              d="M 1041.5 798 L 1046.0 788 L 1050.5 798 Z"
+              d="M 1042.5 795 L 1047.0 785 L 1051.5 795 Z"
               fill={walkLineColor}
             />
           </G>
