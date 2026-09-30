@@ -111,12 +111,40 @@ export const getRoomCategory = (room) => {
     (type === 'service' && !/birou/i.test(name))
   ) {
     category = 'toilet';
-    label = 'Grup Sanitar';
-    icon = 'water-outline';
-    badge = 'WC';
-    color = '#06b6d4';
     searchTags.push('grup sanitar', 'toaleta', 'toaletă', 'toalete', 'wc', 'baie', 'bai', 'băi');
-    primaryTag = { label: 'Grup Sanitar', icon: 'water-outline', isPrimary: true };
+
+    const isMale = room.restroomType === 'male' || /b[ăa]ie[țt]i|b[ăa]rba[țt]i/i.test(name);
+    const isFemale = room.restroomType === 'female' || /fete|femei|doamne/i.test(name);
+    const isAccessible = room.restroomType === 'accessible' || /handicap|dizabilit[ăa][țt]i|accesibil/i.test(name);
+
+    if (isMale) {
+      label = 'Grup Sanitar Băieți';
+      icon = 'water-outline';
+      badge = 'WC BĂIEȚI';
+      color = '#0284c7';
+      searchTags.push('baieti', 'băieți', 'barbati', 'bărbați');
+      primaryTag = { label: 'Băieți', icon: 'water-outline', isPrimary: true };
+    } else if (isFemale) {
+      label = 'Grup Sanitar Fete';
+      icon = 'water-outline';
+      badge = 'WC FETE';
+      color = '#ec4899';
+      searchTags.push('fete', 'femei', 'doamne');
+      primaryTag = { label: 'Fete', icon: 'water-outline', isPrimary: true };
+    } else if (isAccessible) {
+      label = 'Grup Sanitar Accesibil';
+      icon = 'accessibility-outline';
+      badge = 'WC ACCESIBIL';
+      color = '#06b6d4';
+      searchTags.push('handicap', 'dizabilitati', 'dizabilități', 'accesibil');
+      primaryTag = { label: 'Persoane cu dizabilități', icon: 'accessibility-outline', isPrimary: true };
+    } else {
+      label = 'Grup Sanitar';
+      icon = 'water-outline';
+      badge = 'WC';
+      color = '#06b6d4';
+      primaryTag = { label: 'Grup Sanitar', icon: 'water-outline', isPrimary: true };
+    }
   } else if (
     type === 'amphitheatre' ||
     /amfiteatru|aula|belea/i.test(name) ||

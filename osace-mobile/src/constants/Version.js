@@ -28,6 +28,10 @@ export const PATCH_NOTES = [
       'Îmbunătățiri de interfață și stabilitate generală.',
     ],
   },
+];
+
+// Versiuni anterioare — afișate în subsolul dark al modalului de Patch Notes (Minecraft Basement).
+export const LEGACY_PATCH_NOTES = [
   {
     version: '2.2.6',
     items: [
@@ -46,10 +50,6 @@ export const PATCH_NOTES = [
       'And some other things that I forgot about so I\'m typing this instead.',
     ],
   },
-];
-
-// Versiuni anterioare — afișate în subsolul dark al modalului de Patch Notes.
-export const LEGACY_PATCH_NOTES = [
   {
     version: '2.0',
     items: [

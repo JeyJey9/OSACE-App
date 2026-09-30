@@ -28,10 +28,21 @@ export default function CustomDrawerContent(props) {
   const styles = createStyles(colors, isDark, STANDARD_BLUE);
 
   const [showDevNotes, setShowDevNotes] = React.useState(false);
+  const [expandedVersions, setExpandedVersions] = React.useState({ [PATCH_NOTES[0]?.version]: true });
   const [subsolStage, setSubsolStage] = React.useState(0); // 0 = ascuns, 1 = hint glisat la vedere, 2 = subsol deblocat
   const subsolStageRef = React.useRef(0);
   const lastDragTimeRef = React.useRef(0);
   const scrollViewRef = React.useRef(null);
+
+  const toggleExpandVersion = (ver) => {
+    try {
+      Haptics.selectionAsync();
+    } catch { }
+    setExpandedVersions(prev => ({
+      ...prev,
+      [ver]: !prev[ver]
+    }));
+  };
 
   // Gesture tracking: detectează tragerea în sus fix în momentul stretch-ului nativ de Android
   const touchStartYRef = React.useRef(0);
@@ -522,24 +533,51 @@ export default function CustomDrawerContent(props) {
             >
               <View style={styles.notesSection}>
                 {PATCH_NOTES && PATCH_NOTES.length > 0 && (
-                  PATCH_NOTES.map((patch, pIdx) => (
-                    <View key={pIdx} style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: STANDARD_BLUE }}>Versiunea {patch.version}</Text>
-                        {pIdx === 0 && (
-                          <View style={{ backgroundColor: '#10B98120', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                            <Text style={{ color: '#10B981', fontSize: 9, fontWeight: '800' }}>CURENTĂ</Text>
+                  PATCH_NOTES.map((patch, pIdx) => {
+                    const isExpanded = !!expandedVersions[patch.version];
+                    return (
+                      <View
+                        key={pIdx}
+                        style={{
+                          backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                          borderRadius: 14,
+                          borderWidth: 1,
+                          borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <TouchableOpacity
+                          onPress={() => toggleExpandVersion(patch.version)}
+                          activeOpacity={0.7}
+                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12 }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={{ fontSize: 14, fontWeight: '700', color: STANDARD_BLUE }}>Versiunea {patch.version}</Text>
+                            {pIdx === 0 && (
+                              <View style={{ backgroundColor: '#10B98120', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                <Text style={{ color: '#10B981', fontSize: 9, fontWeight: '800' }}>CURENTĂ</Text>
+                              </View>
+                            )}
+                          </View>
+                          <Ionicons
+                            name={isExpanded ? "chevron-up" : "chevron-down"}
+                            size={18}
+                            color={colors.textSecondary}
+                          />
+                        </TouchableOpacity>
+
+                        {isExpanded && (
+                          <View style={{ paddingHorizontal: 12, paddingBottom: 12, paddingTop: 2 }}>
+                            {patch.items.map((item, iIdx) => (
+                              <Text key={iIdx} style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 18, marginBottom: 4 }}>
+                                • {item}
+                              </Text>
+                            ))}
                           </View>
                         )}
                       </View>
-
-                      {patch.items.map((item, iIdx) => (
-                        <Text key={iIdx} style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 18, marginBottom: 4 }}>
-                          • {item}
-                        </Text>
-                      ))}
-                    </View>
-                  ))
+                    );
+                  })
                 )}
               </View>
 
@@ -565,7 +603,6 @@ export default function CustomDrawerContent(props) {
                 />
                 <Text style={styles.creditsText}>
                   Dezvoltat pentru membrii și voluntarii O.S.A.C.E.{'\n'}
-                  <Text style={{ fontWeight: 'bold', color: colors.textPrimary }}>@george_1613</Text> • Build V{APP_VERSION}
                 </Text>
 
                 {/* STAGE 1 GLIDING HINT: Cursă de glisare mai lungă și ultra-fluidă de jos în sus */}
@@ -629,33 +666,47 @@ export default function CustomDrawerContent(props) {
                         <Text style={styles.minecraftTitle}>🧍 </Text>
                       </Text>
                       <Text style={styles.minecraftSubtitle} numberOfLines={1}>
-                        Patch notes mai vechi de V2.1
+                        Patch notes mai vechi de V2.3
                       </Text>
                     </View>
 
                     {/* Legacy list */}
                     <View style={{ gap: 10 }}>
-                      {LEGACY_PATCH_NOTES.map((patch, pIdx) => (
-                        <View key={pIdx} style={styles.minecraftCard}>
-                          <View style={styles.minecraftCardHeader}>
-                            <Text style={styles.minecraftVersionText}>
-                              Versiunea {patch.version}
-                            </Text>
-                          </View>
-
-                          <View style={{ gap: 4, marginTop: 6 }}>
-                            {patch.items.map((item, iIdx) => (
-                              <Text key={iIdx} style={styles.minecraftItemText}>
-                                • {item}
+                      {LEGACY_PATCH_NOTES.map((patch, pIdx) => {
+                        const isExpanded = !!expandedVersions[patch.version];
+                        return (
+                          <View key={pIdx} style={styles.minecraftCard}>
+                            <TouchableOpacity
+                              style={[styles.minecraftCardHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                              onPress={() => toggleExpandVersion(patch.version)}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.minecraftVersionText}>
+                                Versiunea {patch.version}
                               </Text>
-                            ))}
+                              <Ionicons
+                                name={isExpanded ? "chevron-up" : "chevron-down"}
+                                size={16}
+                                color="#E2E8F0"
+                              />
+                            </TouchableOpacity>
+
+                            {isExpanded && (
+                              <View style={{ gap: 4, marginTop: 6 }}>
+                                {patch.items.map((item, iIdx) => (
+                                  <Text key={iIdx} style={styles.minecraftItemText}>
+                                    • {item}
+                                  </Text>
+                                ))}
+                              </View>
+                            )}
                           </View>
-                        </View>
-                      ))}
+                        );
+                      })}
                     </View>
 
                     <View style={styles.minecraftFooter}>
-                      <Text style={styles.bedrockText}>Sloboz</Text>
+                      <Text style={styles.bedrockText}></Text>
                     </View>
                   </View>
                 </ImageBackground>
