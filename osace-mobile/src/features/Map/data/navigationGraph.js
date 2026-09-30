@@ -81,6 +81,9 @@ export function resolveToNodeId(roomOrCode) {
     if (node.roomCode && node.roomCode.toUpperCase() === upper) {
       return id;
     }
+    if (node.label && node.label.toUpperCase() === upper) {
+      return id;
+    }
   }
 
   // Fallback: search node ID ending with the code (case-insensitive)

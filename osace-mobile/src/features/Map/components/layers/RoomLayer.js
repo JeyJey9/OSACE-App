@@ -167,14 +167,92 @@ const RoomLayer = ({
         {regularRooms.map((room) => {
           if (!room.labelPos) return null;
           const isSelected = selectedRoomId === room.id || targetRoom?.id === room.id;
-          const textStr = String(room.code || '');
-          const isSanitary = room.id.includes('san') || room.code?.startsWith('GR-SAN') || room.code === 'GR. SAN.';
-          const badgeW = isSanitary ? 52 : Math.max(28, textStr.length * 7.5 + 10);
-          const badgeH = isSelected ? 18 : 14;
+
+          // Detectare toalete / grupuri sanitare
+          const isToilet =
+            Boolean(room.restroomType) ||
+            room.id.includes('san') ||
+            room.code?.startsWith('GR-SAN') ||
+            room.code === 'GR. SAN.' ||
+            /wc|toalet|sanitar/i.test(room.name || '') ||
+            /wc|toalet|sanitar/i.test(room.code || '') ||
+            (room.type === 'service' && !/birou|tehnic/i.test(room.name || ''));
+
+          let toiletType = room.restroomType;
+          if (isToilet && !toiletType) {
+            const lower = `${room.name || ''} ${room.code || ''}`.toLowerCase();
+            if (/b[ăa]ie[țt]i|b[ăa]rba[țt]i/i.test(lower)) toiletType = 'male';
+            else if (/fete|femei|doamne/i.test(lower)) toiletType = 'female';
+            else if (/handicap|dizabilit|accesibil/i.test(lower)) toiletType = 'accessible';
+          }
+
+          // Text etichetă vizuală afișată pe hartă
+          let displayLabel = String(room.code || '');
+          if (isToilet) {
+            if (toiletType === 'male') {
+              displayLabel = 'WC BĂIEȚI';
+            } else if (toiletType === 'female') {
+              displayLabel = 'WC FETE';
+            } else if (toiletType === 'accessible') {
+              displayLabel = 'WC ACCESIBIL';
+            } else {
+              displayLabel = 'WC';
+            }
+          }
+
+          // Dimensiuni badge
+          let badgeW;
+          const badgeH = isSelected ? 18 : 15;
+          let fontSize;
+
+          if (isToilet) {
+            if (toiletType === 'accessible') {
+              badgeW = isSelected ? 82 : 76;
+              fontSize = isSelected ? '9.5' : '8.5';
+            } else if (toiletType === 'male') {
+              badgeW = isSelected ? 72 : 66;
+              fontSize = isSelected ? '10.5' : '9.5';
+            } else if (toiletType === 'female') {
+              badgeW = isSelected ? 62 : 56;
+              fontSize = isSelected ? '10.5' : '9.5';
+            } else {
+              badgeW = isSelected ? 40 : 34;
+              fontSize = isSelected ? '11' : '10';
+            }
+          } else {
+            badgeW = Math.max(28, displayLabel.length * 7.5 + 10);
+            fontSize = isSelected ? '12.5' : '11';
+          }
+
+          // Culori badge și text
+          let badgeFill, badgeStroke, textFill;
+          if (isSelected) {
+            badgeFill = '#0284c7';
+            badgeStroke = '#ffffff';
+            textFill = '#ffffff';
+          } else if (isToilet) {
+            if (toiletType === 'male') {
+              badgeFill = isDark ? 'rgba(2, 132, 199, 0.25)' : '#f0f9ff';
+              badgeStroke = isDark ? '#38bdf8' : '#0284c7';
+              textFill = isDark ? '#7dd3fc' : '#0369a1';
+            } else if (toiletType === 'female') {
+              badgeFill = isDark ? 'rgba(236, 72, 153, 0.25)' : '#fdf2f8';
+              badgeStroke = isDark ? '#f472b6' : '#ec4899';
+              textFill = isDark ? '#f9a8d4' : '#be185d';
+            } else if (toiletType === 'accessible') {
+              badgeFill = isDark ? 'rgba(16, 185, 129, 0.25)' : '#ecfdf5';
+              badgeStroke = isDark ? '#34d399' : '#10b981';
+              textFill = isDark ? '#6ee7b7' : '#047857';
+            } else {
+              badgeFill = isDark ? 'rgba(100, 116, 139, 0.3)' : '#f8fafc';
+              badgeStroke = isDark ? '#94a3b8' : '#64748b';
+              textFill = isDark ? '#e2e8f0' : '#334155';
+            }
+          }
 
           return (
             <G key={`label-${room.id}`}>
-              {(isSanitary || isSelected) && (
+              {(isToilet || isSelected) && (
                 <Rect
                   x={room.labelPos.x - badgeW / 2}
                   y={room.labelPos.y - badgeH / 2}
@@ -182,24 +260,12 @@ const RoomLayer = ({
                   height={badgeH}
                   rx={4}
                   ry={4}
-                  fill={
-                    isSelected
-                      ? '#0284c7'
-                      : isDark
-                      ? 'rgba(15, 23, 42, 0.96)'
-                      : 'rgba(255, 255, 255, 0.96)'
-                  }
-                  stroke={
-                    isSelected
-                      ? '#ffffff'
-                      : isSanitary
-                      ? (isDark ? '#475569' : '#cbd5e1')
-                      : 'none'
-                  }
-                  strokeWidth={1}
+                  fill={badgeFill}
+                  stroke={badgeStroke}
+                  strokeWidth={isSelected ? 1.5 : 1}
                 />
               )}
-              {!isSanitary && !isSelected && (
+              {!isToilet && !isSelected && (
                 <SvgText
                   x={room.labelPos.x}
                   y={room.labelPos.y + 0.5}
@@ -211,25 +277,19 @@ const RoomLayer = ({
                   textAnchor="middle"
                   alignmentBaseline="middle"
                 >
-                  {room.code}
+                  {displayLabel}
                 </SvgText>
               )}
               <SvgText
                 x={room.labelPos.x}
                 y={room.labelPos.y + 0.5}
-                fill={
-                  isSelected
-                    ? '#ffffff'
-                    : isDark
-                    ? '#f1f5f9'
-                    : '#0f172a'
-                }
-                fontSize={isSelected ? '12.5' : isSanitary ? '9' : '11'}
+                fill={isSelected ? '#ffffff' : isToilet ? textFill : isDark ? '#f1f5f9' : '#0f172a'}
+                fontSize={fontSize}
                 fontWeight={isSelected ? '800' : '700'}
                 textAnchor="middle"
                 alignmentBaseline="middle"
               >
-                {room.code}
+                {displayLabel}
               </SvgText>
             </G>
           );

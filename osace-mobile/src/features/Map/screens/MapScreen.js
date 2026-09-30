@@ -130,7 +130,7 @@ const MapScreen = ({ navigation }) => {
     setSelectedRoom(null);
     // Dacă utilizatorul navighează deja, recalculăm traseul de la noul punct de plecare la destinația actuală
     if (isNavigating && activeRoute?.targetRoom) {
-      const result = findPath(room.code || room.id, activeRoute.targetRoom.code || activeRoute.targetRoom.id);
+      const result = findPath(room, activeRoute.targetRoom);
       if (result && result.nodes && result.nodes.length > 0) {
         setActiveRoute({
           nodes: result.nodes,
@@ -214,8 +214,8 @@ const MapScreen = ({ navigation }) => {
       name: 'Intrarea Principală',
       floor: 'B',
     };
-    const startId = startPoint ? (startPoint.code || startPoint.id) : 'GD04';
-    const result = findPath(startId, room.code || room.id);
+    const startId = startPoint || 'GD04';
+    const result = findPath(startId, room);
 
     if (result && result.nodes && result.nodes.length > 0) {
       const fullRoute = {
