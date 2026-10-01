@@ -847,9 +847,63 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
         page,
         totalPages: Math.ceil(parseInt(countResult.rows[0].count) / limit),
       });
-    } catch (error) {
-      console.error('Eroare la preluarea jurnalelor de audit:', error);
+  // --- 11. Gestionare Bannere Informative (Admin Only) ---
+  // GET /api/admin/announcements - listare toate bannerele
+  router.get('/announcements', verifyToken, verifyAdmin, async (req, res) => {
+    try {
+      const result = await pool.query(
+        `SELECT a.id, a.title, a.text, a.is_active, a.updated_at, a.updated_by, u.display_name as updated_by_name
+         FROM app_announcements a
+         LEFT JOIN users u ON a.updated_by = u.id
+         ORDER BY a.id ASC`
+      );
+      res.json(result.rows);
+    } catch (err) {
+      console.error('Eroare la listarea anunțurilor (admin):', err);
       res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
+  // PUT /api/admin/announcements/:id - actualizare text și stare banner
+  router.put('/announcements/:id', verifyToken, verifyAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { text, title, isActive } = req.body;
+
+    if (!['news_feed', 'login'].includes(id)) {
+      return res.status(400).json({ error: 'ID invalid. Poate fi doar "news_feed" sau "login".' });
+    }
+
+    try {
+      const currentRes = await pool.query('SELECT * FROM app_announcements WHERE id = $1', [id]);
+      if (currentRes.rows.length === 0) {
+        return res.status(404).json({ error: 'Bannerul nu a fost găsit.' });
+      }
+
+      const current = currentRes.rows[0];
+      const newText = text !== undefined ? text.trim() : current.text;
+      const newTitle = title !== undefined ? title.trim() : current.title;
+      const newActive = isActive !== undefined ? !!isActive : current.is_active;
+
+      const updateRes = await pool.query(
+        `UPDATE app_announcements
+         SET text = $1,
+             title = $2,
+             is_active = $3,
+             updated_at = NOW(),
+             updated_by = $4
+         WHERE id = $5
+         RETURNING id, title, text, is_active, updated_at`,
+        [newText, newTitle, newActive, req.user.userId, id]
+      );
+
+      console.log(`[ADMIN] User ${req.user.userId} a actualizat bannerul ${id}: active=${newActive}, text="${newText}"`);
+      res.json({
+        message: 'Banner actualizat cu succes.',
+        announcement: updateRes.rows[0],
+      });
+    } catch (err) {
+      console.error('Eroare la actualizarea bannerului:', err);
+      res.status(500).json({ error: 'Eroare server la actualizarea bannerului.' });
     }
   });
 

@@ -25,6 +25,7 @@ import AdminMenuScreen from '../features/Admin/screens/AdminMenuScreen';
 import StatisticsScreen from '../features/Admin/screens/StatisticsScreen';
 import SendNotificationScreen from '../features/Admin/screens/SendNotificationScreen';
 import AuditLogScreen from '../features/Admin/screens/AuditLogScreen';
+import ManageBannersScreen from '../features/Admin/screens/ManageBannersScreen';
 
 // Sub-domeniu: Events
 import ManageEventsScreen from '../features/Admin/events/screens/ManageEventsScreen';
@@ -100,6 +101,7 @@ export default function ManagementNavigator() {
 
         {/* --- ECRANE DOAR PENTRU ADMIN --- */}
         <Stack.Screen name="AdminUserList" component={UserListScreen} options={{ title: 'Utilizatori' }} />
+        <Stack.Screen name="ManageBanners" component={ManageBannersScreen} options={{ title: 'Gestionează Bannere' }} />
         <Stack.Screen name="SendNotification" component={SendNotificationScreen} options={{ title: 'Trimite Notificare' }} />
         <Stack.Screen name="AuditLog" component={AuditLogScreen} options={{ title: 'Jurnal de Audit' }} />
         <Stack.Screen name="ManageBadges" component={ManageBadgesScreen} options={{ title: 'Gestionează Badge-uri' }} />

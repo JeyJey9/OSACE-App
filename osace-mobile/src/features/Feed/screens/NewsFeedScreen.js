@@ -24,11 +24,26 @@ import FeedSkeleton from '../components/FeedSkeleton';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import EmptyState from '../../../components/EmptyState';
+import AnnouncementBanner from '../../../components/AnnouncementBanner';
 
 export default function NewsFeedScreen() {
   const navigation = useNavigation();
   const { user, reloadUser } = useAuth();
   const managementTabName = user?.role === 'admin' ? 'Admin' : 'Coordonare';
+
+  // ─── Banner informativ dinamic administrat de admin ───
+  const [announcement, setAnnouncement] = useState(null);
+
+  const fetchAnnouncement = async () => {
+    try {
+      const res = await api.get('/api/config/announcements');
+      if (res?.data?.news_feed) {
+        setAnnouncement(res.data.news_feed);
+      }
+    } catch (e) {
+      // Ignorăm erorile de rețea pentru banner (nu blocăm ecranul)
+    }
+  };
 
   // ─── Cache: poștele afișate instant la swipe, fără skeleton ───
   const CACHE_KEY = 'news_feed';
@@ -113,6 +128,7 @@ export default function NewsFeedScreen() {
     screenCache.invalidate(CACHE_KEY);
     await Promise.all([
       fetchPosts({ silent: true }),
+      fetchAnnouncement(),
       reloadUser()
     ]);
     setRefreshing(false);
@@ -124,6 +140,7 @@ export default function NewsFeedScreen() {
       // Dacă nu avem cache → arată FeedSkeleton și așteaptă
       const hasCached = screenCache.get(CACHE_KEY) !== null;
       fetchPosts({ silent: hasCached });
+      fetchAnnouncement();
 
       // Activează Drawer-ul nativ NUMAI pe tab-ul Noutăți (fluid tracking).
       const drawerNav = navigation.getParent('MainDrawer');
@@ -169,6 +186,16 @@ export default function NewsFeedScreen() {
   return (
     <View style={{ flex: 1 }} {...rightZonePanResponder.panHandlers}>
       <ScreenContainer scrollable={false}>
+        {/* Banner Informativ Dinamic Admin (fix sub header) */}
+        {announcement && announcement.isActive && announcement.text?.trim()?.length > 0 && (
+          <View style={styles.bannerWrapper}>
+            <AnnouncementBanner
+              announcement={announcement}
+              variant="news"
+            />
+          </View>
+        )}
+
         {loading ? (
           <FeedSkeleton />
         ) : (
@@ -249,6 +276,7 @@ export default function NewsFeedScreen() {
 }
 
 const createStyles = (colors) => StyleSheet.create({
+  bannerWrapper: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 2 },
   listContent: { paddingBottom: 130, paddingTop: 8 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 100 },
   emptyText: { fontSize: 16, color: colors.textSecondary },

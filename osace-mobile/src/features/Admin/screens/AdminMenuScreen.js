@@ -83,6 +83,7 @@ export default function AdminMenuScreen({ navigation }) {
             {renderMenuItem("Gestionează Contribuții", "list-outline", "ManageContributions")}
             {renderMenuItem("Verificări Studenți", "card-outline", "StudentVerificationRequests", counts.studentVerifications)}
             {renderMenuItem("Utilizatori", "people-circle-outline", "AdminUserList")}
+            {renderMenuItem("Anunțuri / Bannere", "megaphone-outline", "ManageBanners")}
             {renderMenuItem("Notificare", "notifications-outline", "SendNotification")}
             {renderMenuItem("Badge-uri", "ribbon-outline", "ManageBadges")}
             {renderMenuItem("Jurnale", "document-text-outline", "AuditLog")}

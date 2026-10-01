@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColor } from '../../../constants/useThemeColor';
 import { Linking } from 'react-native';
+import AnnouncementBanner from '../../../components/AnnouncementBanner';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -26,6 +27,27 @@ export default function LoginScreen() {
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
+
+  // Banner informativ dinamic pentru cei noi / vizitatori
+  const [announcement, setAnnouncement] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAnnouncement = async () => {
+      try {
+        const res = await api.get('/api/config/announcements');
+        if (isMounted && res?.data?.login) {
+          setAnnouncement(res.data.login);
+        }
+      } catch (e) {
+        // Silent error
+      }
+    };
+    fetchAnnouncement();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const navigation = useNavigation();
   const { login } = useAuth();
@@ -83,6 +105,16 @@ export default function LoginScreen() {
             <Text style={styles.appName}>OSACE</Text>
             <Text style={styles.appTagline}>Platforma Voluntarilor</Text>
           </View>
+
+          {/* Banner Informativ Admin (pentru cei noi / vizitatori) */}
+          {announcement && announcement.isActive && announcement.text?.trim()?.length > 0 && (
+            <View style={styles.loginBannerWrapper}>
+              <AnnouncementBanner
+                announcement={announcement}
+                variant="login"
+              />
+            </View>
+          )}
 
           {/* Glass Card */}
           <View style={styles.card}>
@@ -265,6 +297,10 @@ const createStyles = (colors, isDark, insets, STANDARD_BLUE) => StyleSheet.creat
     fontWeight: '600',
     letterSpacing: 1.5,
     marginTop: 4,
+  },
+  loginBannerWrapper: {
+    width: '100%',
+    marginBottom: 14,
   },
   card: {
     backgroundColor: colors.card,

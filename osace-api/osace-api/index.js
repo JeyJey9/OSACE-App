@@ -128,7 +128,7 @@ app.use('/api/posts', postRoutes(pool, verifyToken, verifyManager));
 app.use('/api/badges', badgeRoutes(pool, verifyToken));
 app.use('/api/leaderboard', leaderboardRoutes(pool, verifyToken));
 app.use('/api/verification', verificationRoutes(pool, verifyToken, verifyAdmin));
-app.use('/api/config', configRoutes());
+app.use('/api/config', configRoutes(pool));
 app.use('/api/archive', archiveRoutes(pool, verifyToken, verifyAdmin, verifyManager));
 
 // Ruta rădăcină
@@ -146,5 +146,28 @@ app.listen(port, async () => {
   } catch (e) {
     console.warn('[DB] Could not ensure last_seen_at column:', e.message);
   }
+
+  // Safe migration: create app_announcements table
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS app_announcements (
+        id VARCHAR(50) PRIMARY KEY,
+        title VARCHAR(100) DEFAULT '',
+        text TEXT NOT NULL DEFAULT '',
+        is_active BOOLEAN NOT NULL DEFAULT false,
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+      );
+      INSERT INTO app_announcements (id, title, text, is_active)
+      VALUES 
+        ('news_feed', 'Anunt', '', false),
+        ('login', 'Bine ai venit', '', false)
+      ON CONFLICT (id) DO NOTHING;
+    `);
+    console.log('[DB] Table app_announcements ensured.');
+  } catch (e) {
+    console.warn('[DB] Could not ensure app_announcements table:', e.message);
+  }
+
   console.log(`Serverul a pornit la http://localhost:${port}`);
 });

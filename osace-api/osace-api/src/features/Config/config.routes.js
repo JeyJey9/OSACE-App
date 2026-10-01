@@ -1,7 +1,32 @@
 const express = require('express');
 const router = express.Router();
 
-module.exports = () => {
+module.exports = (pool) => {
+  // GET /api/config/announcements
+  // Returnează bannerele/anunțurile active pentru ecranul de Noutăți și ecranul de Login (acces public)
+  router.get('/announcements', async (req, res) => {
+    try {
+      if (!pool) return res.json({});
+      const result = await pool.query(
+        'SELECT id, title, text, is_active, updated_at FROM app_announcements ORDER BY id ASC'
+      );
+      const announcements = {};
+      result.rows.forEach((row) => {
+        announcements[row.id] = {
+          id: row.id,
+          title: row.title || '',
+          text: row.text || '',
+          isActive: !!row.is_active,
+          updatedAt: row.updated_at,
+        };
+      });
+      return res.json(announcements);
+    } catch (error) {
+      console.error('Eroare la preluarea anunțurilor:', error);
+      return res.status(500).json({ error: 'Eroare la preluarea anunțurilor.' });
+    }
+  });
+
   // GET /api/config/version-check
   // Determină dacă versiunea curentă a aplicației mobile este învechită și necesită update obligatoriu sau recomandat
   router.get('/version-check', (req, res) => {

@@ -164,6 +164,17 @@ export default function ConfirmEmailScreen({ route, navigation }) {
             </Text>
             <Text style={styles.emailHighlight}>{email || 'adresa ta de email'}</Text>
 
+            {/* Casetă informativă Spam / Junk */}
+            <View style={styles.spamNoticeBox}>
+              <View style={styles.spamNoticeHeader}>
+                <Ionicons name="alert-circle" size={17} color="#f59e0b" style={{ marginRight: 6 }} />
+                <Text style={styles.spamNoticeTitle}>Nu găsești email-ul în Inbox?</Text>
+              </View>
+              <Text style={styles.spamNoticeText}>
+                Verifică neapărat și folderul de <Text style={styles.spamNoticeBold}>Spam / Junk</Text> sau <Text style={styles.spamNoticeBold}>Promotions</Text>. Unele servicii de email pot direcționa mesajul acolo din greșeală.
+              </Text>
+            </View>
+
             {/* Input Cod */}
             <View style={styles.codeContainer}>
               <Text style={styles.inputLabel}>COD DE VERIFICARE</Text>
@@ -324,7 +335,38 @@ function createStyles(colors, isDark, insets, STANDARD_BLUE) {
       color: STANDARD_BLUE,
       textAlign: 'center',
       marginTop: 4,
-      marginBottom: 26,
+      marginBottom: 16,
+    },
+    spamNoticeBox: {
+      width: '100%',
+      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(254, 243, 199, 0.75)',
+      borderColor: isDark ? 'rgba(245, 158, 11, 0.35)' : 'rgba(245, 158, 11, 0.45)',
+      borderWidth: 1,
+      borderLeftWidth: 4,
+      borderLeftColor: '#f59e0b',
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      marginBottom: 20,
+    },
+    spamNoticeHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    spamNoticeTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: isDark ? '#fbbf24' : '#b45309',
+    },
+    spamNoticeText: {
+      fontSize: 12,
+      lineHeight: 17,
+      color: isDark ? '#e2e8f0' : '#475569',
+    },
+    spamNoticeBold: {
+      fontWeight: '700',
+      color: isDark ? '#ffffff' : '#1e293b',
     },
     codeContainer: {
       width: '100%',
