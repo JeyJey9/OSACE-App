@@ -847,6 +847,12 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
         page,
         totalPages: Math.ceil(parseInt(countResult.rows[0].count) / limit),
       });
+    } catch (error) {
+      console.error('Eroare la preluarea jurnalelor de audit:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
   // --- 11. Gestionare Bannere Informative (Admin Only) ---
   // GET /api/admin/announcements - listare toate bannerele
   router.get('/announcements', verifyToken, verifyAdmin, async (req, res) => {

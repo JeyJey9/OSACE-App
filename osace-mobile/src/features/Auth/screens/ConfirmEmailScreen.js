@@ -171,7 +171,7 @@ export default function ConfirmEmailScreen({ route, navigation }) {
                 <Text style={styles.spamNoticeTitle}>Nu găsești email-ul în Inbox?</Text>
               </View>
               <Text style={styles.spamNoticeText}>
-                Verifică neapărat și folderul de <Text style={styles.spamNoticeBold}>Spam / Junk</Text> sau <Text style={styles.spamNoticeBold}>Promotions</Text>. Unele servicii de email pot direcționa mesajul acolo din greșeală.
+                Verifică neapărat și folderul de <Text style={styles.spamNoticeBold}>Spam / Junk</Text>.
               </Text>
             </View>
 
