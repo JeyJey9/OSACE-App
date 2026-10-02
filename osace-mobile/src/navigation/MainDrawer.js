@@ -44,7 +44,8 @@ function ProfileStackNavigator() {
           fontWeight: '800',
           color: colors.textPrimary,
         },
-        headerBackTitle: ' ', // Ensures clean back button arrow on iOS
+        headerBackTitleVisible: false,
+        headerBackTitle: '',
       }}
     >
       <ProfileStack.Screen 

@@ -35,7 +35,8 @@ export default function CoreAppNavigator() {
           fontWeight: '800',
           color: colors.textPrimary,
         },
-        headerBackTitle: ' ',
+        headerBackTitleVisible: false,
+        headerBackTitle: '',
       }}
     >
       {/* Ecranul principal este setul tău de Tab-uri */}

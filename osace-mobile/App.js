@@ -118,6 +118,7 @@ const toastConfig = {
 };
 
 function AppNavigator() {
+  const { colors, isDark } = useThemeColor();
   const { user, loading: authLoading } = useAuth();
   const [isFirstLaunch, setIsFirstLaunch] = useState(null);
 
@@ -135,16 +136,20 @@ function AppNavigator() {
     <Stack.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#fff', // Se va suprascrie în ThemeWrapper, dar e bine să avem un default curat
+          backgroundColor: colors.card,
           elevation: 0,
           shadowOpacity: 0,
-          borderBottomWidth: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
         },
         headerTitleStyle: {
           fontSize: 18,
           fontWeight: '800',
+          color: colors.textPrimary,
         },
-        headerBackTitle: ' ',
+        headerTintColor: colors.textPrimary,
+        headerBackTitleVisible: false,
+        headerBackTitle: '',
       }}
     >
       {user ? (
@@ -167,7 +172,21 @@ function AppNavigator() {
           <Stack.Screen
             name="ScanScreen"
             component={ScanScreen}
-            options={{ title: 'Scanează Prezența', headerShown: true }}
+            options={{
+              title: 'Scanează Prezența',
+              headerShown: true,
+              headerStyle: {
+                backgroundColor: '#000000',
+              },
+              headerTintColor: '#ffffff',
+              headerTitleStyle: {
+                fontSize: 18,
+                fontWeight: '800',
+                color: '#ffffff',
+              },
+              headerBackTitleVisible: false,
+              headerBackTitle: '',
+            }}
           />
         </>
       ) : (

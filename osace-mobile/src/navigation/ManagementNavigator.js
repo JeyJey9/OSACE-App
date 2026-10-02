@@ -79,7 +79,8 @@ export default function ManagementNavigator() {
             fontWeight: '800',
             color: colors.textPrimary,
           },
-          headerBackTitle: ' ',
+          headerBackTitleVisible: false,
+          headerBackTitle: '',
           headerShown: true,
         }}
       >

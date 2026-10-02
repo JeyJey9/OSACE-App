@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
+import { useNavigation } from '@react-navigation/native';
 import api from '../../../services/api';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../constants/useThemeColor';
@@ -26,10 +27,27 @@ const TARGETS = [
 ];
 
 export default function ManageBannersScreen() {
+  const navigation = useNavigation();
   const { colors, isDark } = useThemeColor();
   const [selectedTarget, setSelectedTarget] = useState('news_feed');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityLabel="Înapoi"
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.textPrimary]);
 
   // Stare locală pentru cele două bannere
   const [banners, setBanners] = useState({

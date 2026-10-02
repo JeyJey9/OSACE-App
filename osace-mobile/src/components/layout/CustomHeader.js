@@ -14,6 +14,7 @@ import {
 import { BlurView } from 'expo-blur';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import NetInfo from '@react-native-community/netinfo';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../features/Auth/AuthContext';
 import { useThemeColor } from '../../constants/useThemeColor';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
@@ -254,10 +255,31 @@ export default function CustomHeader({ title, showRole = true, isHidden = false,
           </View>
         ) : (
           <View style={styles.contentRow}>
-            {/* Left: greeting + name + role */}
+            {/* Left: greeting + name + role sau 3 linii (meniu) + titlu */}
             <View style={styles.headerLeft}>
               {title ? (
-                <Text style={[styles.headerTitleBig, { color: colors.textPrimary }]}>{title}</Text>
+                <View style={styles.titleWithMenuRow}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      try {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      } catch {}
+                      navigation.dispatch(DrawerActions.toggleDrawer());
+                    }}
+                    style={[styles.headerMenuBtn, {
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                      borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
+                    }]}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityLabel="Deschide meniul lateral"
+                  >
+                    <Ionicons name="menu-outline" size={22} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                  <Text style={[styles.headerTitleWithMenu, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {title}
+                  </Text>
+                </View>
               ) : (
                 <>
                   <View style={styles.greetingRow}>
@@ -375,6 +397,26 @@ const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
     paddingRight: 12,
+  },
+  titleWithMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  headerMenuBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  headerTitleWithMenu: {
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+    flexShrink: 1,
   },
   greetingRow: {
     flexDirection: 'row',
