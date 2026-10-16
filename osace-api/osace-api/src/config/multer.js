@@ -12,8 +12,8 @@ const UPLOAD_DIRECTORY = '/var/www/osace-uploads';
 // Ambele trebuie să fie în lista albă pentru a preveni upload-uri malițioase
 // (ex: un .php redenumit în .jpg cu MIME type falsificat).
 
-const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-const ALLOWED_IMAGE_MIMETYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'];
+const ALLOWED_IMAGE_MIMETYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
 
 /**
  * File filter strict pentru imagini.
@@ -21,7 +21,7 @@ const ALLOWED_IMAGE_MIMETYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/
  */
 const strictImageFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
-  const mime = file.mimetype;
+  const mime = (file.mimetype || '').toLowerCase();
 
   if (ALLOWED_IMAGE_EXTENSIONS.includes(ext) && ALLOWED_IMAGE_MIMETYPES.includes(mime)) {
     cb(null, true);

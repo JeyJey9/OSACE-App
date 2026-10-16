@@ -116,34 +116,41 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
 
       // Dacă este Admin -> Aprobă final (indiferent dacă e în pending_coordinator sau pending_admin) și adaugă orele în pontaj
       if (role === 'admin' && (request.status === 'pending_admin' || request.status === 'pending_coordinator')) {
-        await pool.query('BEGIN'); // Deschidem o tranzacție pentru siguranță
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN'); // Deschidem o tranzacție pe același client pentru siguranță
 
-        await pool.query(
-          `UPDATE hour_requests 
-           SET status = 'approved', approved_hours = $1, admin_id = $2, updated_at = NOW() 
-           WHERE id = $3`,
-          [approved_hours, userId, id]
-        );
+          await client.query(
+            `UPDATE hour_requests 
+             SET status = 'approved', approved_hours = $1, admin_id = $2, updated_at = NOW() 
+             WHERE id = $3`,
+            [approved_hours, userId, id]
+          );
 
-        await pool.query(
-          `INSERT INTO event_attendance (user_id, event_id, confirmation_status, awarded_hours, confirmed_at)
-           VALUES ($1, $2, 'attended', $3, NOW())
-           ON CONFLICT (user_id, event_id) 
-           DO UPDATE SET 
-             confirmation_status = 'attended', 
-             awarded_hours = event_attendance.awarded_hours + EXCLUDED.awarded_hours,
-             confirmed_at = NOW()`,
-          [request.user_id, request.event_id, approved_hours]
-        );
+          await client.query(
+            `INSERT INTO event_attendance (user_id, event_id, confirmation_status, awarded_hours, confirmed_at)
+             VALUES ($1, $2, 'attended', $3, NOW())
+             ON CONFLICT (user_id, event_id) 
+             DO UPDATE SET 
+               confirmation_status = 'attended', 
+               awarded_hours = event_attendance.awarded_hours + EXCLUDED.awarded_hours,
+               confirmed_at = NOW()`,
+            [request.user_id, request.event_id, approved_hours]
+          );
 
-        await pool.query('COMMIT'); // Salvăm tranzacția
+          await client.query('COMMIT'); // Salvăm tranzacția
+        } catch (txError) {
+          await client.query('ROLLBACK');
+          throw txError;
+        } finally {
+          client.release();
+        }
         await logAction(pool, userId, 'HOUR_REQUEST_ADMIN_APPROVE', 'hour_request', parseInt(id), { approved_hours, target_user_id: request.user_id, event_id: request.event_id });
         return res.json({ message: 'Aprobare finală realizată! Orele au fost adăugate voluntarului.' });
       }
 
       res.status(400).json({ error: 'Nu poți aproba această cerere din stadiul curent.' });
     } catch (error) {
-      await pool.query('ROLLBACK'); // Anulăm modificările dacă dă eroare
       console.error('Eroare la aprobare:', error);
       res.status(500).json({ error: 'Eroare server.' });
     }
@@ -229,31 +236,34 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
     const { id } = req.params;
     const { userId } = req.user;
 
+    const client = await pool.connect();
     try {
-      await pool.query('BEGIN');
+      await client.query('BEGIN');
       
-      const check = await pool.query('SELECT status FROM special_contributions WHERE id = $1', [id]);
+      const check = await client.query('SELECT status FROM special_contributions WHERE id = $1', [id]);
       if (check.rowCount === 0) throw new Error('Not found');
       if (check.rows[0].status !== 'pending') throw new Error('Not pending');
 
-      const contribData = await pool.query('SELECT user_id, title, awarded_hours FROM special_contributions WHERE id = $1', [id]);
-      await pool.query(
+      const contribData = await client.query('SELECT user_id, title, awarded_hours FROM special_contributions WHERE id = $1', [id]);
+      await client.query(
         `UPDATE special_contributions 
          SET status = 'approved', admin_id = $1, updated_at = NOW() 
          WHERE id = $2`,
         [userId, id]
       );
       
-      await pool.query('COMMIT');
+      await client.query('COMMIT');
       if (contribData.rowCount > 0) {
         const c = contribData.rows[0];
         await logAction(pool, userId, 'CONTRIBUTION_APPROVE', 'special_contribution', parseInt(id), { target_user_id: c.user_id, title: c.title, awarded_hours: c.awarded_hours });
       }
       res.json({ message: 'Contribuție aprobată cu succes!' });
     } catch (error) {
-      await pool.query('ROLLBACK');
+      await client.query('ROLLBACK');
       console.error('Eroare la aprobarea contribuției:', error);
       res.status(500).json({ error: 'Eroare server.' });
+    } finally {
+      client.release();
     }
   });
 

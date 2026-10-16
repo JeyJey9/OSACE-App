@@ -122,8 +122,8 @@ export default function HistoryScreen() {
     let total = 0, social = 0, proiect = 0, sedinta = 0;
 
     pastEvents.forEach(event => {
-      if (event.confirmation_status === 'attended') {
-        const hours = parseFloat(event.awarded_hours || event.duration_hours) || 0;
+      if (event.confirmation_status === 'attended' || event.confirmation_status === 'checked_in') {
+        const hours = parseFloat(event.awarded_hours ?? event.duration_hours) || 0;
         total += hours;
 
         if (event.category === 'social') social += hours;
@@ -140,13 +140,7 @@ export default function HistoryScreen() {
   const renderHistoryItem = ({ item }) => {
     const isAttended = item.confirmation_status === 'attended';
     const isCheckedIn = item.confirmation_status === 'checked_in';
-    const isAbsent = item.confirmation_status === 'absent'; // set by auto-checkout worker
-
-    const timeStr = item.end_time || item.start_time;
-    const endTime = new Date(timeStr ? timeStr.replace(' ', 'T') : new Date());
-    const now = new Date();
-    const hoursSinceEnd = (now - endTime) / (1000 * 60 * 60);
-    const canStillCheckout = isCheckedIn && (hoursSinceEnd <= 24); // 24h grace period
+    const isAbsent = item.confirmation_status === 'absent';
 
     const tag = CATEGORY_TAGS[item.category] || CATEGORY_TAGS.default;
 
@@ -155,25 +149,17 @@ export default function HistoryScreen() {
     let statusText = 'Absent';
     let statusBg = isDark ? 'rgba(231, 76, 60, 0.15)' : '#FDEDEC';
 
-    if (isAttended) {
+    if (isAttended || isCheckedIn) {
       iconName = 'checkmark-circle';
       iconColor = '#27ae60';
       statusText = 'Prezent';
       statusBg = isDark ? 'rgba(46, 204, 113, 0.15)' : '#E8F8F5';
-    } else if (isCheckedIn && canStillCheckout) {
-      // Still within the 24h grace period — waiting for checkout
-      iconName = 'time';
-      iconColor = '#f39c12';
-      statusText = 'Așteaptă Checkout';
-      statusBg = isDark ? 'rgba(243, 156, 18, 0.15)' : '#FEF9E7';
     } else if (isAbsent) {
-      // Explicitly marked absent by the auto-checkout worker after 24h
       iconName = 'close-circle';
       iconColor = '#e74c3c';
-      statusText = 'Absent (Auto)';
+      statusText = 'Absent';
       statusBg = isDark ? 'rgba(231, 76, 60, 0.15)' : '#FDEDEC';
     }
-    // isCheckedIn + grace expired → falls to default red 'Absent'
 
     return (
       <TouchableOpacity

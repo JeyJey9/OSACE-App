@@ -1,5 +1,6 @@
 import React, { useState, useImperativeHandle, forwardRef } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { FullWindowOverlay } from 'react-native-screens';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useThemeColor } from '../../constants/useThemeColor';
 
@@ -124,6 +125,36 @@ const GlassAlert = forwardRef((props, ref) => {
     iconName = "checkmark-circle";
   }
 
+  const alertCard = (
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        
+        <View style={[styles.modalIconBox, { backgroundColor: iconColor + '15', borderColor: iconColor + '30' }]}>
+          <Ionicons name={iconName} size={44} color={iconColor} />
+        </View>
+        
+        <Text style={styles.modalTitle}>{config.title}</Text>
+        {config.message ? (
+          <Text style={styles.modalDescription}>{config.message}</Text>
+        ) : null}
+        
+        {renderButtons()}
+      </View>
+    </View>
+  );
+
+  // Pe iOS, două componente <Modal> native nu pot fi afișate simultan în UIKit.
+  // Folosim FullWindowOverlay pentru a randa alerta peste orice Modal deschis fără blocaje.
+  if (Platform.OS === 'ios') {
+    if (!visible) return null;
+    const OverlayComponent = FullWindowOverlay || View;
+    return (
+      <OverlayComponent style={StyleSheet.absoluteFillObject}>
+        {alertCard}
+      </OverlayComponent>
+    );
+  }
+
   return (
     <Modal
       visible={visible}
@@ -131,32 +162,20 @@ const GlassAlert = forwardRef((props, ref) => {
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          
-          <View style={[styles.modalIconBox, { backgroundColor: iconColor + '15', borderColor: iconColor + '30' }]}>
-            <Ionicons name={iconName} size={44} color={iconColor} />
-          </View>
-          
-          <Text style={styles.modalTitle}>{config.title}</Text>
-          {config.message ? (
-            <Text style={styles.modalDescription}>{config.message}</Text>
-          ) : null}
-          
-          {renderButtons()}
-        </View>
-      </View>
+      {alertCard}
     </Modal>
   );
 });
 
 const createStyles = (colors, isDark, STANDARD_BLUE) => StyleSheet.create({
   modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
     flex: 1,
     backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    zIndex: 99999,
   },
   modalContent: {
     width: '90%',

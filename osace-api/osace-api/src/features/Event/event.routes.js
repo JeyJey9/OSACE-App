@@ -141,8 +141,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
   // POST / (Creare eveniment)
   router.post('/', verifyToken, async (req, res) => {
     const { userId, role } = req.user;
-    // NOU: Am adăugat allow_overtime și send_notification
-    const { title, description, start_time, end_time, location, duration_hours, category, allow_overtime, send_notification } = req.body;
+    const { title, description, start_time, end_time, location, duration_hours, category, send_notification } = req.body;
 
     const canCreate = role === 'admin' || role === 'coordonator' || await checkGlobalPermission(userId, role, 'CAN_CREATE_EVENTS');
     if (!canCreate) return res.status(403).json({ error: 'Nu ai permisiunea de a crea evenimente.' });
@@ -151,14 +150,13 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
     if (!category || !validCategories.includes(category)) return res.status(400).json({ error: 'Categorie invalidă.' });
     if (!title || !description || !start_time || !end_time || !location || !duration_hours) return res.status(400).json({ error: 'Câmpuri obligatorii lipsă.' });
 
-    const isOvertimeAllowed = allow_overtime !== false; // default true
     const secret = authenticator.generateSecret();
 
     try {
       const newEvent = await pool.query(
-        `INSERT INTO events (title, description, start_time, end_time, location, created_by, duration_hours, category, totp_secret, allow_overtime) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-        [title, description, start_time, end_time, location, userId, duration_hours, category, secret, isOvertimeAllowed]
+        `INSERT INTO events (title, description, start_time, end_time, location, created_by, duration_hours, category, totp_secret) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+        [title, description, start_time, end_time, location, userId, duration_hours, category, secret]
       );
       checkBadgesOnEventCreate(userId, pool);
       await logAction(pool, userId, 'EVENT_CREATE', 'event', newEvent.rows[0].id, { title, category });
@@ -178,10 +176,11 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
 
           // 2. Căutăm voluntarii și coordonatorii (excluzând adminii)
           const usersQuery = `
-            SELECT u.id, pt.token 
+            SELECT u.id, pt.token,
+                   COALESCE((u.notification_preferences->>'event_announcements')::boolean, true) AS allow_event_push
             FROM users u
             LEFT JOIN push_tokens pt ON u.id = pt.user_id 
-            WHERE u.role IN ('voluntar', 'coordonator')
+            WHERE u.role IN ('voluntar', 'coordonator', 'user')
           `;
           const usersResult = await pool.query(usersQuery);
 
@@ -193,25 +192,33 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
             const flatParams = userIds.flatMap(id => [id, newNotificationId]);
             await pool.query(`INSERT INTO user_notifications (user_id, notification_id) VALUES ${placeholders} ON CONFLICT DO NOTHING`, flatParams);
 
-            // 4. Trimitere via Expo Push API
-            const pushTokens = usersResult.rows.filter(user => user.token).map(user => user.token);
+            // 4. Trimitere via Expo Push API (doar utilizatorilor cu event_announcements activat, în loturi de max 100)
+            const pushTokens = [...new Set(
+              usersResult.rows
+                .filter(user => user.token && user.allow_event_push !== false)
+                .map(user => user.token)
+            )];
             if (pushTokens.length > 0) {
-              const expoMessage = {
-                to: pushTokens,
-                sound: 'default',
-                title: notificationTitle,
-                body: notificationBody,
-                data: { _displayInForeground: true, eventId: newEvent.rows[0].id }
-              };
+              const CHUNK_SIZE = 100;
+              for (let i = 0; i < pushTokens.length; i += CHUNK_SIZE) {
+                const tokenBatch = pushTokens.slice(i, i + CHUNK_SIZE);
+                const expoMessage = {
+                  to: tokenBatch,
+                  sound: 'default',
+                  title: notificationTitle,
+                  body: notificationBody,
+                  data: { _displayInForeground: true, eventId: newEvent.rows[0].id }
+                };
 
-              await axios.post('https://api.expo.dev/v2/push/send', expoMessage, {
-                headers: {
-                  'Accept': 'application/json',
-                  'Accept-encoding': 'gzip, deflate',
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.EXPO_ACCESS_TOKEN}`
-                }
-              });
+                await axios.post('https://api.expo.dev/v2/push/send', expoMessage, {
+                  headers: {
+                    'Accept': 'application/json',
+                    'Accept-encoding': 'gzip, deflate',
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.EXPO_ACCESS_TOKEN}`
+                  }
+                });
+              }
               console.log(`[Push Notify] Notificare event nou trimisă către ${pushTokens.length} tokenuri.`);
             }
           }
@@ -549,7 +556,7 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       const isValid = authenticator.check(code, event.totp_secret);
       if (!isValid) {
         console.warn(`[QR SCAN REJECTED] Cod invalid sau expirat. eventId=${eventId}, userId=${userId}, code=${code}`);
-        return res.status(401).json({ error: 'Cod invalid sau expirat.' });
+        return res.status(400).json({ error: 'Cod invalid sau expirat.' });
       }
 
       // 3. Preluăm statusul actual al voluntarului
@@ -678,17 +685,15 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
   router.put('/:id', verifyToken, async (req, res) => {
     const { id } = req.params;
     const { userId, role } = req.user;
-    const { title, description, start_time, end_time, location, duration_hours, category, allow_overtime } = req.body;
+    const { title, description, start_time, end_time, location, duration_hours, category } = req.body;
 
     try {
       const hasAccess = await checkEventAccess(id, userId, role, 'CAN_EDIT_EVENTS');
       if (!hasAccess) return res.status(403).json({ error: 'Nu ai permisiunea de a edita acest eveniment.' });
 
-      const isOvertimeAllowed = allow_overtime !== false;
-
       const updatedEvent = await pool.query(
-        `UPDATE events SET title = $1, description = $2, start_time = $3, end_time = $4, location = $5, duration_hours = $6, category = $7, allow_overtime = $8 WHERE id = $9 RETURNING *`,
-        [title, description, start_time, end_time, location, duration_hours, category, isOvertimeAllowed, id]
+        `UPDATE events SET title = $1, description = $2, start_time = $3, end_time = $4, location = $5, duration_hours = $6, category = $7 WHERE id = $8 RETURNING *`,
+        [title, description, start_time, end_time, location, duration_hours, category, id]
       );
       await logAction(pool, userId, 'EVENT_UPDATE', 'event', parseInt(id), { title, category });
       res.json(updatedEvent.rows[0]);

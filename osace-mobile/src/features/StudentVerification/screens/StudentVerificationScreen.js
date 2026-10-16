@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
-  ScrollView, ActivityIndicator, Alert, Platform,
+  ScrollView, ActivityIndicator, Alert, Platform, Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -46,13 +46,14 @@ export default function StudentVerificationScreen({ navigation }) {
     if (source === 'camera') {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (perm.status !== 'granted') {
-        Alert.alert('Permisiune necesară', 'Acordă accesul la cameră din Setări.');
-        return;
-      }
-    } else if (Platform.OS === 'ios') {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (perm.status !== 'granted') {
-        Alert.alert('Permisiune necesară', 'Acordă accesul la galerie din Setări.');
+        Alert.alert(
+          'Permisiune necesară',
+          'Acordă accesul la cameră din Setări.',
+          [
+            { text: 'Anulează', style: 'cancel' },
+            { text: 'Deschide Setări', onPress: () => Linking.openSettings().catch(() => {}) },
+          ]
+        );
         return;
       }
     }
@@ -73,13 +74,16 @@ export default function StudentVerificationScreen({ navigation }) {
     setLoading(true);
     try {
       const uri = selectedImage.uri;
-      const filename = uri.split('/').pop();
+      const filename = selectedImage.fileName || uri.split('/').pop() || 'student-id.jpg';
       const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      const rawExt = match ? match[1].toLowerCase() : 'jpg';
+      const normalizedExt = rawExt === 'jpg' ? 'jpeg' : rawExt;
+      const type = selectedImage.mimeType || `image/${normalizedExt}`;
       const formData = new FormData();
       formData.append('student_id_image', {
-        uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
-        name: filename, type,
+        uri,
+        name: filename.includes('.') ? filename : `${filename}.${rawExt}`,
+        type,
       });
       await api.post('/api/verification/submit', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },

@@ -66,7 +66,6 @@ const EVENT_DETAILS_QUERY = `
     e.created_at,
     e.duration_hours,
     e.category,
-    e.allow_overtime,
     u.display_name as coordinator_name,
     u.avatar_url as coordinator_avatar,
     (SELECT COUNT(*) FROM event_attendance WHERE event_id = e.id) as participant_count,

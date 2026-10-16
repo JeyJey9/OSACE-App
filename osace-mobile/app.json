@@ -2,7 +2,8 @@
   "expo": {
     "name": "OSACE",
     "slug": "osace-mobile",
-    "version": "3.0.5",
+    "version": "3.0.6",
+    "scheme": "osace",
     "orientation": "portrait",
     "icon": "./src/assets/osace.png",
     "userInterfaceStyle": "automatic",
@@ -52,7 +53,7 @@
       }
     },
     "android": {
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/osace.png",
         "backgroundColor": "#ffffff"
@@ -75,7 +76,8 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-image-picker",
-      "expo-camera"
+      "expo-camera",
+      "expo-notifications"
     ]
   }
 }

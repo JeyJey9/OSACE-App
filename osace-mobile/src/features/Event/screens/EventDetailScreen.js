@@ -209,34 +209,22 @@ export default function EventDetailScreen() {
   let bannerText = "Înscris (aștepți scanarea la sosire)";
 
   if (confirmation_status === 'checked_in') {
-    const hoursSinceEnd = (new Date() - new Date(safeEndTime)) / (1000 * 60 * 60);
-    const graceExpired = isEventOver && hoursSinceEnd > 24; // 24h grace period
-
-    if (graceExpired) {
-      // Grace period over — user forgot to check out, show as Absent
-      bannerStyle = styles.statusMissed;
-      bannerIcon = "close-circle";
-      bannerColor = "#e74c3c";
-      bannerText = "ABSENT: Nu ai scanat la plecare. Orele initiale au fost trimise spre aprobare.";
-    } else if (isEventOver) {
-      // Event ended, still within 24h checkout window
+    if (isEventOver) {
       bannerStyle = styles.statusCheckedIn;
-      bannerIcon = "time-outline";
-      bannerColor = "#f39c12";
-      bannerText = "ACTIVITATE ÎNCHEIATĂ: Scanează pentru a confirma plecarea și a-ți salva orele.";
+      bannerIcon = "checkmark-circle-outline";
+      bannerColor = "#27ae60";
+      bannerText = "ACTIVITATE ÎNCHEIATĂ: Prezența ta este înregistrată, orele sunt în curs de finalizare.";
     } else {
-      // Event still ongoing
       bannerStyle = styles.statusCheckedIn;
       bannerIcon = "walk";
       bannerColor = "#3498db";
-      bannerText = "EȘTI PREZENT: Pontajul tău a început. Scanează la plecare pentru a confirma orele.";
+      bannerText = "EȘTI PREZENT: Prezența ta a fost înregistrată cu succes.";
     }
   } else if (confirmation_status === 'absent') {
-    // Set by the auto-checkout worker after the 24h grace period
     bannerStyle = styles.statusMissed;
     bannerIcon = "close-circle";
     bannerColor = "#e74c3c";
-    bannerText = "ABSENT: Nu ai confirmat plecarea. O cerere de ore a fost trimisă coordonatorului.";
+    bannerText = "ABSENT: Nu ai confirmat prezența la această activitate.";
   } else if (confirmation_status === 'attended') {
     bannerStyle = styles.statusAttended;
     bannerIcon = "checkmark-done-circle";
@@ -414,19 +402,10 @@ export default function EventDetailScreen() {
 
         {is_attending && (
           <View style={[styles.floatingCard, bannerStyle]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: confirmation_status === 'checked_in' ? 6 : 0 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name={bannerIcon} size={20} color={bannerColor} />
               <Text style={[styles.statusBannerText, { color: bannerColor }]}>{bannerText}</Text>
             </View>
-            
-            {confirmation_status === 'checked_in' && (
-              <View style={styles.checkoutWarningRow}>
-                <Ionicons name="alert-circle" size={14} color="#e74c3c" />
-                <Text style={styles.checkoutWarningText}>
-                  Dacă nu scanezi la plecare, sistemul aprobă doar orele inițiale.
-                </Text>
-              </View>
-            )}
           </View>
         )}
 

@@ -30,7 +30,7 @@ export default function DynamicQrModal({ isVisible, onClose, eventId, title }) {
       const response = await api.get(`/api/events/${currentEventId}/current-code`);
       const code = response.data?.code;
       if (code) {
-        const universalPayload = `https://osace.ro/scan?eventId=${currentEventId}&code=${code}`;
+        const universalPayload = `https://api.osace.ro/scan?eventId=${currentEventId}&code=${code}`;
         setQrValue(universalPayload);
       }
     } catch (error) {

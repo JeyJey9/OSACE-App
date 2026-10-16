@@ -219,7 +219,7 @@ export default function PostCard({ item, onPostUpdate, onPostDelete, currentUser
     }
   };
 
-  const displayName = (igMatch || !item.creator_name || item.creator_name.toLowerCase().includes('david')) ? 'O.S.A.C.E.' : item.creator_name;
+  const displayName = (igMatch || !item.creator_name) ? 'O.S.A.C.E.' : item.creator_name;
 
   return (
     <View style={styles.card}>

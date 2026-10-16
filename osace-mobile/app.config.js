@@ -1,6 +1,7 @@
 export default ({ config }) => {
   return {
     ...config,
+    scheme: config.scheme || "osace",
     ios: {
       ...config.ios,
       bundleIdentifier: "ro.osace.app",

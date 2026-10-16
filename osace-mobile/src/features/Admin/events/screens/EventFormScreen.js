@@ -32,7 +32,6 @@ export default function EventFormScreen() {
   const [location, setLocation] = useState('');
   const [duration, setDuration] = useState('1'); 
   const [category, setCategory] = useState('social'); 
-  const [allowOvertime, setAllowOvertime] = useState(true);
   const [sendNotification, setSendNotification] = useState(false);
   
   const [startTime, setStartTime] = useState(new Date());
@@ -71,14 +70,12 @@ export default function EventFormScreen() {
       setEndTime(new Date(eventToEdit.end_time));
       setDuration(String(eventToEdit.duration_hours || '1'));
       setCategory(eventToEdit.category || 'social');
-      setAllowOvertime(eventToEdit.allow_overtime !== false);
     } else if (isDuplicateMode) {
       setTitle(eventToDuplicate.title || '');
       setDescription(eventToDuplicate.description || '');
       setLocation(eventToDuplicate.location || '');
       setDuration(String(eventToDuplicate.duration_hours || '1'));
       setCategory(eventToDuplicate.category || 'social');
-      setAllowOvertime(eventToDuplicate.allow_overtime !== false);
 
       // Duplicare cu offset automat de +24 ore (+1 zi) de la original
       const origStart = new Date(eventToDuplicate.start_time);
@@ -131,7 +128,6 @@ export default function EventFormScreen() {
       end_time: endTime.toISOString(),
       duration_hours: parseFloat(duration),
       category,
-      allow_overtime: allowOvertime,
       send_notification: sendNotification,
     };
 
@@ -304,30 +300,15 @@ export default function EventFormScreen() {
         />
       </View>
 
-      {/* SETĂRI & PERMISIUNI */}
-      <View style={styles.card}>
-        <View style={styles.cardHeaderRow}>
-          <Ionicons name="options-outline" size={18} color={colors.primary} />
-          <Text style={styles.cardHeaderTitle}>Reguli & Notificări</Text>
-        </View>
-
-        <View style={styles.switchRow}>
-          <View style={styles.switchTextContainer}>
-            <Text style={styles.switchTitle}>Permite Overtime</Text>
-            <Text style={styles.switchDescription}>
-              Calculează ore suplimentare și permite check-in devreme. Dacă e dezactivat, voluntarii primesc strict orele fixe.
-            </Text>
+      {/* SETĂRI & NOTIFICĂRI */}
+      {!isEditMode && (
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <Ionicons name="notifications-outline" size={18} color={colors.primary} />
+            <Text style={styles.cardHeaderTitle}>Notificări</Text>
           </View>
-          <Switch
-            trackColor={{ false: isDark ? "#444" : "#ddd", true: colors.primary + '80' }}
-            thumbColor={allowOvertime ? colors.primary : "#f4f3f4"}
-            onValueChange={setAllowOvertime}
-            value={allowOvertime}
-          />
-        </View>
-        
-        {!isEditMode && (
-          <View style={[styles.switchRow, { marginTop: 15, paddingTop: 15, borderTopWidth: 1, borderTopColor: colors.border }]}>
+
+          <View style={styles.switchRow}>
             <View style={styles.switchTextContainer}>
               <Text style={styles.switchTitle}>Notifică Voluntarii</Text>
               <Text style={styles.switchDescription}>
@@ -341,8 +322,8 @@ export default function EventFormScreen() {
               value={sendNotification}
             />
           </View>
-        )}
-      </View>
+        </View>
+      )}
 
       <View style={styles.buttonWrapper}>
         <FormButton

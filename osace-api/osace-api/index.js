@@ -97,7 +97,7 @@ function verifyToken(req, res, next) {
   jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] }, (err, userPayload) => {
     if (err) {
       console.error('Eroare verificare JWT:', err.message);
-      return res.status(403).json({ error: 'Token invalid sau expirat.' });
+      return res.status(401).json({ error: 'Token invalid sau expirat.' });
     }
     req.user = userPayload;
     next();
@@ -135,6 +135,54 @@ app.use('/api/archive', archiveRoutes(pool, verifyToken, verifyAdmin, verifyMana
 app.get('/', (req, res) => {
   res.send('Serverul O.S.A.C.E. rulează! (Refactorizat)');
 });
+
+// Redirecționare inteligentă către App Store / Google Play pentru scanarea codului QR cu camera nativă a telefonului
+const handleQrScanRedirect = (req, res) => {
+  const ua = req.headers['user-agent'] || '';
+  const iosStoreUrl = process.env.IOS_UPDATE_URL || 'https://apps.apple.com/us/app/osace-voluntariat/id6774091102';
+  const androidStoreUrl = process.env.ANDROID_UPDATE_URL || 'https://play.google.com/store/apps/details?id=ro.osace.app';
+
+  const isIOS = /\b(iPhone|iPad|iPod)\b/i.test(ua) || (/Macintosh/i.test(ua) && /Mobile/i.test(ua));
+  const isAndroid = /Android/i.test(ua);
+
+  if (isIOS) {
+    return res.redirect(302, iosStoreUrl);
+  }
+
+  if (isAndroid) {
+    return res.redirect(302, androidStoreUrl);
+  }
+
+  // Fallback pentru desktop sau alte dispozitive
+  return res.status(200).send(`<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-itunes-app" content="app-id=6774091102" />
+  <title>Descarcă Aplicația OSACE</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #ffffff; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+    .card { max-width: 400px; width: 100%; background: #161b22; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 32px 24px; text-align: center; }
+    h1 { font-size: 22px; margin: 0 0 12px; }
+    p { font-size: 14px; color: #94a3b8; line-height: 1.5; margin: 0 0 24px; }
+    a.btn { display: block; padding: 14px 20px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; margin-bottom: 12px; background: #0284c7; color: #ffffff; }
+    a.btn.secondary { background: #21262d; border: 1px solid rgba(255,255,255,0.15); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>OSACE Voluntariat</h1>
+    <p>Pentru a confirma prezența la eveniment, descarcă aplicația oficială OSACE și scanează codul QR din aplicație.</p>
+    <a class="btn" href="${iosStoreUrl}">Descarcă din App Store (iOS)</a>
+    <a class="btn secondary" href="${androidStoreUrl}">Descarcă din Google Play (Android)</a>
+  </div>
+</body>
+</html>`);
+};
+
+app.get('/scan', handleQrScanRedirect);
+app.get('/api/scan', handleQrScanRedirect);
 
 // --- 6. Pornirea Serverului ---
 app.listen(port, async () => {

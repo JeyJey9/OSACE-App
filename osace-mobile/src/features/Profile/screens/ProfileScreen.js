@@ -171,15 +171,6 @@ export default function ProfileScreen() {
   const handlePickAvatar = async () => {
     setAvatarLoading(true);
     try {
-      if (Platform.OS === 'ios') {
-        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (permissionResult.granted === false) {
-          Alert.alert("Permisiune necesară", "Avem nevoie de permisiunea ta pentru a accesa galeria foto.");
-          setAvatarLoading(false);
-          return;
-        }
-      }
-
       const pickerResult = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
@@ -187,21 +178,24 @@ export default function ProfileScreen() {
         quality: 0.7,
       });
 
-      if (pickerResult.canceled === true) {
+      if (pickerResult.canceled === true || !pickerResult.assets?.length) {
         setAvatarLoading(false);
         return;
       }
 
-      const localUri = pickerResult.assets[0].uri;
+      const asset = pickerResult.assets[0];
+      const localUri = asset.uri;
       const formData = new FormData();
       const uriParts = localUri.split('.');
-      const fileType = uriParts[uriParts.length - 1];
-      const fileName = `avatar-${user.id}.${fileType}`;
+      const rawExt = (uriParts[uriParts.length - 1] || 'jpg').toLowerCase();
+      const normalizedExt = rawExt === 'jpg' ? 'jpeg' : rawExt;
+      const mimeType = asset.mimeType || `image/${normalizedExt}`;
+      const fileName = `avatar-${user.id}.${rawExt}`;
 
       formData.append('avatar', {
         uri: localUri,
         name: fileName,
-        type: `image/${fileType}`,
+        type: mimeType,
       });
 
       const response = await api.post('/api/profile/avatar', formData, {

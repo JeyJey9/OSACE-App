@@ -319,68 +319,12 @@ module.exports = (pool, mailTransporter) => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 4. POST /api/auth/register (Păstrat temporar pentru compatibilitate Store-uri)
+  // 4. POST /api/auth/register (Dezactivat în favoarea fluxului cu verificare email)
   // ─────────────────────────────────────────────────────────────────────────────
   router.post('/register', authLimiter, async (req, res) => {
-    // Extragem câmpurile
-    const { display_name, first_name, last_name, email, password } = req.body;
-    if (!display_name || !first_name || !last_name || !email || !password) {
-      return res.status(400).json({ error: 'Toate câmpurile sunt obligatorii.' });
-    }
-    // Sanitizare input: trim + lungime maximă
-    const trimmedName = display_name.trim().substring(0, 50);
-    const trimmedFirst = first_name.trim().substring(0, 50);
-    const trimmedLast = last_name.trim().substring(0, 50);
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!trimmedName || !trimmedFirst || !trimmedLast) {
-      return res.status(400).json({ error: 'Numele nu poate fi gol.' });
-    }
-    if (password.length < 8) {
-      return res.status(400).json({ error: 'Parola trebuie să aibă cel puțin 8 caractere.' });
-    }
-
-    // Blocare domenii disposable chiar și pe ruta veche
-    const emailValidation = validateRegistrationEmail(normalizedEmail);
-    if (!emailValidation.valid) {
-      return res.status(400).json({ error: emailValidation.error });
-    }
-
-    try {
-      const emailCheck = await pool.query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
-      if (emailCheck.rows.length > 0) {
-        return res.status(409).json({ error: 'Acest email este deja înregistrat.' });
-      }
-      const passwordHash = await argon2.hash(password);
-      
-      const newUser = await pool.query(
-        `INSERT INTO users (
-          display_name, first_name, last_name, email, password_hash, role, student_verification_status
-        ) VALUES ($1, $2, $3, $4, $5, 'user', 'unverified') 
-        RETURNING id, display_name, first_name, last_name, email, role, created_at, avatar_url`,
-        [trimmedName, trimmedFirst, trimmedLast, normalizedEmail, passwordHash]
-      );
-      const user = newUser.rows[0];
-      
-      const token = jwt.sign(
-        { userId: user.id, role: user.role, displayName: user.display_name },
-        process.env.JWT_SECRET,
-        { expiresIn: '30d' }
-      );
-      try {
-        await mailTransporter.sendMail({
-          from: `"O.S.A.C.E." <contact@osace.ro>`, 
-          to: user.email,
-          subject: 'Bun venit în O.S.A.C.E.!',
-          html: `<h1>Salut ${user.first_name},</h1><p>Îți mulțumim că ți-ai creat cont în aplicația O.S.A.C.E.!</p>`
-        });
-      } catch (emailError) {
-        console.error(`Eroare la trimiterea email-ului:`, emailError);
-      }
-      res.status(201).json({ user, token });
-    } catch (err) {
-      console.error('Eroare la înregistrare:', err);
-      res.status(500).json({ error: 'Eroare server la înregistrare.' });
-    }
+    return res.status(410).json({
+      error: 'Înregistrarea directă fără confirmarea adresei de email a fost dezactivată. Te rugăm să actualizezi aplicația.'
+    });
   });
 
   // --- Ruta de Autentificare (neschimbată) ---

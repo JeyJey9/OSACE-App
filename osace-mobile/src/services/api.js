@@ -56,15 +56,21 @@ export const setupAxiosInterceptors = (logoutCallback) => {
 
       const failedUrl = error.config?.url || '';
       const isAuthUrl = failedUrl.startsWith('/api/auth/') || failedUrl.includes('/auth/');
+      const isQrScanUrl = failedUrl.includes('/confirm-presence');
+      const serverErrorMsg = error.response?.data?.error || '';
 
-      // Verificăm dacă este o eroare 401/403
-      if ((status === 401 || status === 403) && !isAlertShown) {
+      // Delogăm automat doar dacă token-ul JWT este invalid/expirat (401 sau mesajul explicit de token expirat),
+      // nu și pe erori 403 de permisiuni / cont neverificat (student_not_verified) sau cod QR expirat.
+      const isSessionExpired =
+        status === 401 ||
+        (status === 403 && serverErrorMsg === 'Token invalid sau expirat.');
 
-        if (isAuthUrl) {
-          // Dacă e orice traseu de autentificare (login, register, verify, reset), NU facem nimic global.
-          // Lăsăm componenta apelantă să gestioneze răspunsul.
+      if (isSessionExpired && !isAlertShown) {
+
+        if (isAuthUrl || isQrScanUrl) {
+          // Dacă e traseu de autentificare sau scanare QR, lăsăm componenta apelantă să gestioneze răspunsul.
         } else {
-          // Este o eroare pe un URL protejat, deci sesiunea CHIAR a expirat
+          // Este o eroare de token pe un URL protejat, deci sesiunea CHIAR a expirat
           isAlertShown = true;
 
           Alert.alert(

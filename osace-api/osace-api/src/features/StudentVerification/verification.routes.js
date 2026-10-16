@@ -170,10 +170,15 @@ module.exports = (pool, verifyToken, verifyAdmin) => {
 
       await logAction(pool, adminId, 'STUDENT_ID_APPROVE', 'student_id_verification', parseInt(id), { target_user_id: request.user_id });
 
-      // Send push notification to the user
+      // Send push notification to the user (if verification_updates preference is enabled)
       try {
         const tokenResult = await pool.query(
-          'SELECT token FROM push_tokens WHERE user_id = $1 LIMIT 10',
+          `SELECT pt.token
+           FROM push_tokens pt
+           JOIN users u ON u.id = pt.user_id
+           WHERE pt.user_id = $1
+             AND COALESCE((u.notification_preferences->>'verification_updates')::boolean, true) = true
+           LIMIT 10`,
           [request.user_id]
         );
         const tokens = tokenResult.rows.map(r => r.token).filter(Boolean);
@@ -262,7 +267,7 @@ module.exports = (pool, verifyToken, verifyAdmin) => {
 
       await logAction(pool, adminId, 'STUDENT_ID_REJECT', 'student_id_verification', parseInt(id), { target_user_id: request.user_id, reason: reason.trim() });
 
-      // Send push notification
+      // Send push notification (if verification_updates preference is enabled)
       try {
         const adminRes = await pool.query(
           'SELECT display_name FROM users WHERE id = $1',
@@ -272,7 +277,12 @@ module.exports = (pool, verifyToken, verifyAdmin) => {
         const adminName = adminRow?.display_name ? `@${adminRow.display_name}` : null;
 
         const tokenResult = await pool.query(
-          'SELECT token FROM push_tokens WHERE user_id = $1 LIMIT 10',
+          `SELECT pt.token
+           FROM push_tokens pt
+           JOIN users u ON u.id = pt.user_id
+           WHERE pt.user_id = $1
+             AND COALESCE((u.notification_preferences->>'verification_updates')::boolean, true) = true
+           LIMIT 10`,
           [request.user_id]
         );
         const tokens = tokenResult.rows.map(r => r.token).filter(Boolean);

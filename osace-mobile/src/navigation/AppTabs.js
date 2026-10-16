@@ -63,9 +63,10 @@ async function registerForPushNotificationsAsync() {
 
 // ─── FloatingTabBar ─────────────────────────────────────────────────────────
 // React.memo previne re-render-uri inutile când pager-ul se actualizează
-const FloatingTabBar = React.memo(function FloatingTabBar({ state, descriptors, navigation, colors, isDark }) {
+const FloatingTabBar = React.memo(function FloatingTabBar({ state, descriptors, navigation, colors, isDark, bottomInset }) {
   return (
     <View style={[styles.tabBarContainer, {
+      bottom: Math.max(bottomInset || 0, 15),
       backgroundColor: isDark ? 'rgba(25, 30, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
       borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)',
       shadowColor: '#000',
@@ -205,8 +206,8 @@ export default function AppTabs() {
 
   // tabBar callback stabil — nu recrea FloatingTabBar la fiecare render al AppTabs
   const renderTabBar = useCallback(
-    (props) => <FloatingTabBar {...props} colors={colors} isDark={isDark} />,
-    [colors, isDark]
+    (props) => <FloatingTabBar {...props} colors={colors} isDark={isDark} bottomInset={insets?.bottom} />,
+    [colors, isDark, insets?.bottom]
   );
 
   useEffect(() => {
