@@ -1,9 +1,17 @@
 // src/constants/Version.js
 // Centrul de stocare al versiunii aplicației mobile OSACE și istoricul de Patch Notes.
 
-export const APP_VERSION = '3.0.6';
+export const APP_VERSION = '3.0.7';
 
 export const PATCH_NOTES = [
+  {
+    version: '3.0.7',
+    items: [
+      'Harta interactiva extinsa: Scari arhitecturale complete (Corp G Nord, Hol Corp G, Corp K Nord, Parter si Aula Constantin Belea) cu sensuri de urcare/coborare pe fiecare etaj.',
+      'Repere vizuale noi: Usi si trepte de acces pentru Amfiteatrul AK1 si Aula Constantin Belea.',
+      'Afisare imbunatatita pentru salile G116–G119 de pe Etajul 1 si rutare precisa catre fiecare sala.',
+    ],
+  },
   {
     version: '3.0.6',
     items: [
@@ -22,6 +30,10 @@ export const PATCH_NOTES = [
       'Mici bug fix-uri si optimizari de performanta.',
     ],
   },
+];
+
+// Versiuni anterioare — afișate în subsolul dark al modalului de Patch Notes (Minecraft Basement).
+export const LEGACY_PATCH_NOTES = [
   {
     version: '2.4.0',
     items: [
@@ -30,10 +42,6 @@ export const PATCH_NOTES = [
       'Interfata curatata si optimizari de performanta pe ecranele de evenimente.',
     ],
   },
-];
-
-// Versiuni anterioare — afișate în subsolul dark al modalului de Patch Notes (Minecraft Basement).
-export const LEGACY_PATCH_NOTES = [
   {
     version: '2.3.0',
     items: [

@@ -155,7 +155,7 @@ const MapScreen = ({ navigation }) => {
   const handleResetStartPoint = useCallback(() => {
     setStartPoint(null);
     if (isNavigating && activeRoute?.targetRoom) {
-      const result = findPath(null, activeRoute.targetRoom.code || activeRoute.targetRoom.id);
+      const result = findPath(null, activeRoute.targetRoom);
       if (result && result.nodes && result.nodes.length > 0) {
         setActiveRoute({
           nodes: result.nodes,
@@ -178,7 +178,7 @@ const MapScreen = ({ navigation }) => {
     const oldStart = activeRoute.startPoint;
     const oldDest = activeRoute.targetRoom;
 
-    const result = findPath(oldDest.code || oldDest.id, oldStart.code || oldStart.id);
+    const result = findPath(oldDest, oldStart);
     if (result && result.nodes && result.nodes.length > 0) {
       setStartPoint(oldDest);
       setActiveRoute({

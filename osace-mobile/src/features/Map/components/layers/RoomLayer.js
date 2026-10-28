@@ -191,7 +191,7 @@ const RoomLayer = ({
           }
 
           // Text etichetă vizuală afișată pe hartă
-          let displayLabel = String(room.code || '');
+          let displayLabel = String(room.code || '').replace(/w$/i, '');
           if (isToilet) {
             if (toiletType === 'male') {
               displayLabel = 'WC BĂIEȚI';
