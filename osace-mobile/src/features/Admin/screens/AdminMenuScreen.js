@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../Auth/AuthContext';
+import { usePermissions } from '../../Auth/PermissionContext';
 import api from '../../../services/api';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
 import { useThemeColor } from '../../../constants/useThemeColor';
 
 export default function AdminMenuScreen({ navigation }) { 
   const { user } = useAuth();
+  const { hasManagementAccess } = usePermissions();
   const { colors, isDark } = useThemeColor();
 
   const [counts, setCounts] = useState({
@@ -57,7 +59,11 @@ export default function AdminMenuScreen({ navigation }) {
   );
 
   // Permitem accesul atât pentru admin, cât și pentru coordonator
-  if (!user || (user.role !== 'admin' && user.role !== 'coordonator')) {
+  const isAdmin = user?.role === 'admin';
+  const isCoordinator = user?.role === 'coordonator';
+
+  // Permitem accesul pentru admin, coordonator sau utilizatori cu permisiuni/echipe
+  if (!user || (!isAdmin && !isCoordinator && !hasManagementAccess)) {
     return (
       <ScreenContainer>
         <Text style={styles.loadingTitle}>Se încarcă / Acces interzis...</Text>
@@ -65,16 +71,22 @@ export default function AdminMenuScreen({ navigation }) {
     );
   }
 
-  const isAdmin = user.role === 'admin';
+
 
   return (
     <ScreenContainer scrollable={true}>
       <View style={styles.menuList}>
         {/* --- VIZIBIL PENTRU TOȚI (Admin + Coordonator) --- */}
-        {renderMenuItem("Activități", "calendar-outline", "AdminManageEvents")}
-        {renderMenuItem("Aprobări Ore", "time-outline", "HourRequests", counts.hourRequests)}
-        {renderMenuItem("Cerere Contribuție", "star-outline", "AssignContribution")}
-        {renderMenuItem("Rapoarte", "flag-outline", "ReportedComments", counts.reportedComments)}
+        {(isAdmin || isCoordinator || hasManagementAccess) && (
+          renderMenuItem("Activități", "calendar-outline", "AdminManageEvents")
+        )}
+        {(isAdmin || isCoordinator) && (
+          <>
+            {renderMenuItem("Aprobări Ore", "time-outline", "HourRequests", counts.hourRequests)}
+            {renderMenuItem("Cerere Contribuție", "star-outline", "AssignContribution")}
+            {renderMenuItem("Rapoarte", "flag-outline", "ReportedComments", counts.reportedComments)}
+          </>
+        )}
         
         {/* --- VIZIBIL DOAR PENTRU ADMIN --- */}
         {isAdmin && (

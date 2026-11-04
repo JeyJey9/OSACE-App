@@ -5,6 +5,7 @@ import { useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../features/Auth/AuthContext';
+import { usePermissions } from '../features/Auth/PermissionContext';
 import * as Notifications from 'expo-notifications';
 import api from '../services/api';
 
@@ -194,6 +195,7 @@ function buildScreenOptions({ route }) {
 // ─── AppTabs ─────────────────────────────────────────────────────────────────
 export default function AppTabs() {
   const { user } = useAuth();
+  const { hasManagementAccess } = usePermissions();
   const { colors, theme } = useThemeColor();
   const isDark = theme === 'dark';
   const hideHeader = useIsInsideAdminSubScreen();
@@ -253,12 +255,12 @@ export default function AppTabs() {
           <Tab.Screen name="Activitățile Mele" component={MyEventsTab} />
           <Tab.Screen name="Istoric" component={HistoryTab} />
 
-          {user && user.role === 'coordonator' && (
-            <Tab.Screen name="Coordonare" component={ManagementNavigator} />
-          )}
-
           {user && user.role === 'admin' && (
             <Tab.Screen name="Admin" component={ManagementNavigator} />
+          )}
+
+          {user && user.role !== 'admin' && hasManagementAccess && (
+            <Tab.Screen name="Coordonare" component={ManagementNavigator} />
           )}
         </Tab.Navigator>
       </View>

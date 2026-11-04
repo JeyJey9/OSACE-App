@@ -18,9 +18,9 @@ const AVAILABLE_PERMISSIONS = [
   { key: 'CAN_CREATE_EVENTS', label: 'Creare Evenimente', description: 'Permite crearea de evenimente noi în sistem.' },
   { key: 'CAN_EDIT_EVENTS', label: 'Editare Evenimente', description: 'Poate modifica detaliile oricărui eveniment.' },
   { key: 'CAN_DELETE_EVENTS', label: 'Ștergere Evenimente', description: 'PERICOL: Poate șterge definitiv orice eveniment.' },
-  { key: 'CAN_SCAN_QR_ANYWHERE', label: 'Scanare QR Globală', description: 'Acces la QR la toate evenimentele.' },
+  { key: 'CAN_SCAN_QR_ANYWHERE', label: 'Generare QR & Validare Prezențe', description: 'Permite afișarea codului QR de check-in și validarea prezențelor la toate evenimentele.' },
   { key: 'CAN_MANAGE_PARTICIPANTS', label: 'Gestiune Participanți', description: 'Poate adăuga/elimina manual oameni din liste.' },
-  { key: 'CAN_MANAGE_EVENT_TEAMS', label: 'Gestiune Echipe', description: 'Poate desemna alți coordonatori.' },
+  { key: 'CAN_MANAGE_EVENT_TEAMS', label: 'Gestiune Echipe Evenimente', description: 'Poate adăuga sau elimina membri din echipa oricărui eveniment.' },
 ];
 
 export default function UserPermissionsModal({ isVisible, onClose, userId, userName }) {

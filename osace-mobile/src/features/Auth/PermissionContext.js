@@ -63,8 +63,23 @@ export const PermissionProvider = ({ children }) => {
     return hasGlobal;
   };
 
+  const hasManagementAccess = Boolean(
+    user && (
+      user.role === 'admin' ||
+      user.role === 'coordonator' ||
+      (globalPermissions && globalPermissions.length > 0) ||
+      (teamEvents && teamEvents.length > 0)
+    )
+  );
+
   return (
-    <PermissionContext.Provider value={{ can, refreshPermissions: fetchAccess }}>
+    <PermissionContext.Provider value={{ 
+      can, 
+      refreshPermissions: fetchAccess,
+      globalPermissions,
+      teamEvents,
+      hasManagementAccess
+    }}>
       {children}
     </PermissionContext.Provider>
   );

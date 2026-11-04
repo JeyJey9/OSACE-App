@@ -525,8 +525,33 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
     }
   });
 
+  // Middleware verificare acces evenimente (Admin, Coordonator sau utilizator cu permisiuni/echipe)
+  const verifyEventManagerOrElevated = async (req, res, next) => {
+    if (req.user.role === 'admin' || req.user.role === 'coordonator') {
+      return next();
+    }
+    try {
+      const permCheck = await pool.query(
+        'SELECT 1 FROM user_permissions WHERE user_id = $1 LIMIT 1',
+        [req.user.userId]
+      );
+      if (permCheck.rowCount > 0) return next();
+
+      const teamCheck = await pool.query(
+        'SELECT 1 FROM event_teams WHERE user_id = $1 LIMIT 1',
+        [req.user.userId]
+      );
+      if (teamCheck.rowCount > 0) return next();
+
+      return res.status(403).json({ error: 'Acces interzis. Nu ai permisiuni de coordonare sau acces la evenimente.' });
+    } catch (err) {
+      console.error('Eroare la verificare acces evenimente:', err);
+      return res.status(500).json({ error: 'Eroare server la verificarea permisiunilor.' });
+    }
+  };
+
   // Traseul: /api/admin/events/all
-  router.get('/events/all', [verifyToken, verifyManager], async (req, res) => {
+  router.get('/events/all', [verifyToken, verifyEventManagerOrElevated], async (req, res) => {
     const { search, category } = req.query;
 
     let queryString = 'SELECT * FROM events';

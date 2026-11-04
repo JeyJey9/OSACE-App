@@ -86,7 +86,10 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
   router.get('/available-coordinators', verifyToken, async (req, res) => {
     try {
       const result = await pool.query(
-        "SELECT id, display_name, first_name, last_name, email FROM users WHERE role IN ('admin', 'coordonator') ORDER BY last_name ASC"
+        `SELECT id, display_name, first_name, last_name, email, role, avatar_url,
+                CONCAT(first_name, ' ', last_name) AS full_name
+         FROM users 
+         ORDER BY last_name ASC, first_name ASC`
       );
       res.json(result.rows);
     } catch (error) {
@@ -407,7 +410,8 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
       // Opțional: Aici am putea adăuga o verificare `checkEventAccess` dacă vrei ca doar membrii echipei să vadă echipa, 
       // momentan lăsăm deschis pentru toți managerii prin rutele din frontend.
       const result = await pool.query(
-        `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, et.access_level 
+        `SELECT u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.avatar_url,
+                CONCAT(u.first_name, ' ', u.last_name) AS full_name, et.access_level 
       FROM event_teams et 
       JOIN users u ON et.user_id = u.id 
        WHERE et.event_id = $1`,
