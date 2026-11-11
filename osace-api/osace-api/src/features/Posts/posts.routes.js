@@ -7,6 +7,11 @@ const API_DOMAIN = 'https://api.osace.ro'; // URL-ul API-ului
 const { checkBadgesOnLike, checkBadgesOnComment } = require('../../features/Badge/badge.service'); // S-ar putea să trebuiască să ajustezi calea '../'
 
 const googleDriveService = require('../../services/googleDriveService');
+const {
+  getInstagramAccessToken,
+  getInstagramTokenStatus,
+  refreshInstagramToken
+} = require('../../services/instagramTokenService');
 
 // --- Exportăm Rutele ---
 module.exports = (pool, verifyToken, verifyManager) => {
@@ -161,7 +166,8 @@ module.exports = (pool, verifyToken, verifyManager) => {
 
   router.post('/sync-instagram', [verifyToken, verifyManager], async (req, res) => {
     const creatorId = req.user.userId;
-    const token = ((req.body && req.body.accessToken) || process.env.INSTAGRAM_ACCESS_TOKEN || '').trim();
+    const dbToken = await getInstagramAccessToken(pool);
+    const token = ((req.body && req.body.accessToken) || dbToken || '').trim();
     const axios = require('axios');
 
     if (!token) {
@@ -394,6 +400,33 @@ module.exports = (pool, verifyToken, verifyManager) => {
     } catch (dbErr) {
       console.error('Eroare DB la import Instagram:', dbErr);
       res.status(500).json({ error: 'Eroare la salvarea postărilor în baza de date.' });
+    }
+  });
+
+  // ======================================================
+  // ## GET /instagram-token-status (Verifică starea token-ului și timpul rămas până la expirare/reînnoire)
+  // ======================================================
+  router.get('/instagram-token-status', [verifyToken, verifyManager], async (req, res) => {
+    try {
+      const status = await getInstagramTokenStatus(pool);
+      res.json(status);
+    } catch (err) {
+      console.error('[IG Token Status] Eroare:', err.message);
+      res.status(500).json({ error: 'Eroare la verificarea stării token-ului Instagram.' });
+    }
+  });
+
+  // ======================================================
+  // ## POST /refresh-instagram-token (Reînnoire manuală forțată la cererea adminului/managerului)
+  // ======================================================
+  router.post('/refresh-instagram-token', [verifyToken, verifyManager], async (req, res) => {
+    try {
+      const force = req.body && req.body.force === true;
+      const result = await refreshInstagramToken(pool, { force });
+      res.json(result);
+    } catch (err) {
+      console.error('[IG Token Manual Refresh] Eroare:', err.message);
+      res.status(500).json({ error: 'Eroare la reînnoirea token-ului Instagram.' });
     }
   });
 

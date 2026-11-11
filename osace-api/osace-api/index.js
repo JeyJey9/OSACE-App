@@ -23,6 +23,7 @@ const verificationRoutes = require('./src/features/StudentVerification/verificat
 const configRoutes = require('./src/features/Config/config.routes');
 const archiveRoutes = require('./src/features/Archive/archive.routes');
 const { startCheckoutWorker } = require('./src/scripts/checkoutWorker');
+const { startInstagramTokenWorker } = require('./src/services/instagramTokenService');
 
 const app = express();
 const port = 3000;
@@ -187,6 +188,7 @@ app.get('/api/scan', handleQrScanRedirect);
 // --- 6. Pornirea Serverului ---
 app.listen(port, async () => {
   startCheckoutWorker(pool);
+  startInstagramTokenWorker(pool);
   // Safe migration: add last_seen_at if it doesn't exist yet
   try {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`);
