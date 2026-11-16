@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,21 +8,92 @@ import {
   Linking,
   AppState,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera'; 
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import api from '../../../services/api';
 import Toast from 'react-native-toast-message';
 import * as Haptics from 'expo-haptics';
+import { PinchGestureHandler, State } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const IS_IOS = Platform.OS === 'ios';
+const IS_MAC_HOSTED_IOS = IS_IOS && Platform.constants?.interfaceIdiom === 'mac';
+
+// Pe iOS zoom-ul nativ e exponențial (pow(maxZoomFactor, zoom)), pe Android e liniar cu maxZoomRatio
+const ZOOM_PRESETS = IS_IOS
+  ? { 1: 0, 2: 0.09, 3: 0.20 }
+  : { 1: 0, 2: 0.12, 3: 0.26 };
+
+const MAX_ZOOM = IS_IOS ? 0.35 : 0.45;
+const PINCH_UPDATE_THRESHOLD = 0.005;
+const ZOOM_ACTIVE_THRESHOLDS = IS_IOS
+  ? { twoX: 0.045, threeX: 0.145 }
+  : { twoX: 0.06, threeX: 0.19 };
+
+function isZoomPresetActive(level, currentZoom) {
+  if (level === 1) return currentZoom < ZOOM_ACTIVE_THRESHOLDS.twoX;
+  if (level === 2) {
+    return currentZoom >= ZOOM_ACTIVE_THRESHOLDS.twoX && currentZoom < ZOOM_ACTIVE_THRESHOLDS.threeX;
+  }
+  return currentZoom >= ZOOM_ACTIVE_THRESHOLDS.threeX;
+}
 
 export default function ScanScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const initialEventId = route.params?.eventId || null; 
+  const isFocused = useIsFocused();
+  const insets = useSafeAreaInsets();
+  const initialEventId = route.params?.eventId || null;
 
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const scannedRef = useRef(false);
+
+  // Cameră și selecție față/spate (fallback automat pe față pe Mac sau dispozitive fără cameră spate)
+  const [facing, setFacing] = useState(() => (IS_MAC_HOSTED_IOS ? 'front' : 'back'));
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState(false);
+  const triedFrontFallbackRef = useRef(IS_MAC_HOSTED_IOS);
+
+  // Control lanternă și zoom
+  const [torch, setTorch] = useState(false);
+  const [zoom, setZoom] = useState(0);
+  const zoomRef = useRef(0);
+  const startZoomRef = useRef(0);
+  const cameraRef = useRef(null);
+  const didExitRef = useRef(false);
+  const goBackTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    scannedRef.current = scanned;
+  }, [scanned]);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  useEffect(() => {
+    return () => {
+      if (goBackTimeoutRef.current) {
+        clearTimeout(goBackTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const safeGoBack = useCallback(() => {
+    if (didExitRef.current) return;
+    didExitRef.current = true;
+    if (goBackTimeoutRef.current) {
+      clearTimeout(goBackTimeoutRef.current);
+      goBackTimeoutRef.current = null;
+    }
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
+  }, [navigation]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -44,7 +115,7 @@ export default function ScanScreen() {
       headerBackTitle: '',
       headerLeft: () => (
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={safeGoBack}
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           style={styles.backBtn}
@@ -54,21 +125,21 @@ export default function ScanScreen() {
         </TouchableOpacity>
       ),
     });
-  }, [navigation]);
+  }, [navigation, safeGoBack]);
 
-  // Verificare la montare
+  // Verificare permisiuni la montare
   useEffect(() => {
     if (!permission) {
       requestPermission();
     }
-  }, [permission]);
+  }, [permission, requestPermission]);
 
-  // Re-verifică automat permisiunea când utilizatorul revine din iOS Settings în aplicație
+  // Re-verifică silențios permisiunea când utilizatorul revine din Settings
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
-      if (nextAppState === 'active') {
+      if (nextAppState === 'active' && !permission?.granted) {
         try {
-          await requestPermission();
+          await getPermission();
         } catch {}
       }
     });
@@ -76,7 +147,43 @@ export default function ScanScreen() {
     return () => {
       subscription.remove();
     };
+  }, [permission?.granted, getPermission]);
+
+  // Oprește lanterna dacă ecranul pierde focusul
+  useEffect(() => {
+    if (!isFocused && torch) {
+      setTorch(false);
+    }
+  }, [isFocused, torch]);
+
+  const switchToFrontFallback = useCallback(() => {
+    if (triedFrontFallbackRef.current) return;
+    triedFrontFallbackRef.current = true;
+    setTorch(false);
+    zoomRef.current = 0;
+    setZoom(0);
+    setCameraReady(false);
+    setFacing('front');
   }, []);
+
+  // Pe iOS/Mac, expo-camera nu emite onMountError când lipsește camera spate; verificăm lentilele disponibile
+  useEffect(() => {
+    if (!IS_IOS || !permission?.granted || !isFocused || facing !== 'back' || cameraReady) {
+      return;
+    }
+    if (triedFrontFallbackRef.current) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const lenses = await cameraRef.current?.getAvailableLensesAsync?.();
+        if (Array.isArray(lenses) && lenses.length === 0) {
+          switchToFrontFallback();
+        }
+      } catch {}
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [permission?.granted, isFocused, facing, cameraReady, switchToFrontFallback]);
 
   const handleRequestPermission = async () => {
     try {
@@ -85,8 +192,6 @@ export default function ScanScreen() {
 
     try {
       const res = await requestPermission();
-      // Pe iOS, dacă permisiunea a fost deja refuzată anterior, res.granted este false
-      // și sistemul refuză să mai afișeze dialogul nativ. Singura modalitate este deschiderea setărilor.
       if (!res.granted) {
         Alert.alert(
           'Permisiune Cameră Necesară',
@@ -107,8 +212,96 @@ export default function ScanScreen() {
     }
   };
 
+  // Gestiune gest Pinch-to-zoom (Android & iOS) cu throttling pentru a evita blocările la 60 FPS
+  const onPinchGestureEvent = useCallback((event) => {
+    const scale = event.nativeEvent.scale;
+    const delta = (scale - 1) * (IS_IOS ? 0.16 : 0.22);
+    const nextZoom = Math.min(Math.max(startZoomRef.current + delta, 0), MAX_ZOOM);
+
+    const deltaFromCurrent = Math.abs(nextZoom - zoomRef.current);
+    const hitBoundary = (nextZoom === 0 || nextZoom === MAX_ZOOM) && nextZoom !== zoomRef.current;
+
+    if (deltaFromCurrent >= PINCH_UPDATE_THRESHOLD || hitBoundary) {
+      zoomRef.current = nextZoom;
+      setZoom(nextZoom);
+    }
+  }, []);
+
+  const onPinchHandlerStateChange = useCallback((event) => {
+    if (event.nativeEvent.state === State.BEGAN) {
+      startZoomRef.current = zoomRef.current;
+    }
+  }, []);
+
+  // Preset-uri rapide de zoom: 1x, 2x, 3x
+  const handleZoomPreset = (level) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    const nextZoom = ZOOM_PRESETS[level] ?? 0;
+    zoomRef.current = nextZoom;
+    setZoom(nextZoom);
+  };
+
+  // Toggle lanternă (activă doar pe camera spate)
+  const handleToggleTorch = () => {
+    if (facing === 'front') return;
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    setTorch((prev) => !prev);
+  };
+
+  // Toggle cameră (față / spate) cu resetare lanternă și zoom
+  const handleToggleFacing = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    setTorch(false);
+    zoomRef.current = 0;
+    setZoom(0);
+    setCameraReady(false);
+    setCameraError(false);
+    setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
+  };
+
+  // Fallback automat pe Android/iOS dacă montarea camerei spate eșuează
+  const handleMountError = useCallback((event) => {
+    console.warn('[ScanScreen] Eroare montare cameră:', event);
+    if (facing === 'back' && !triedFrontFallbackRef.current) {
+      console.log('[ScanScreen] Comutare automată pe camera frontală...');
+      switchToFrontFallback();
+      return;
+    }
+    setCameraError(true);
+  }, [facing, switchToFrontFallback]);
+
+  const showScanRetryAlert = useCallback((title, message) => {
+    Alert.alert(
+      title,
+      message,
+      [
+        {
+          text: 'Anulează',
+          style: 'cancel',
+          onPress: safeGoBack,
+        },
+        {
+          text: 'Încearcă din nou',
+          onPress: () => {
+            setScanned(false);
+            scannedRef.current = false;
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  }, [safeGoBack]);
+
   const handleBarCodeScanned = async ({ type, data }) => {
-    setScanned(true); 
+    if (scannedRef.current) return;
+    setScanned(true);
+    scannedRef.current = true;
 
     try {
       let targetEventId = initialEventId;
@@ -116,7 +309,7 @@ export default function ScanScreen() {
 
       console.log('[QR SCAN] Date brute scanate:', data);
 
-      // Extragem eventId și code dacă codul QR este structurat (URL, OSACE prefix, sau JSON)
+      // Extragem eventId și code dacă codul QR este structurat
       if (typeof targetCode === 'string') {
         if (targetCode.includes('/scan?') || targetCode.includes('eventId=') || targetCode.includes('code=')) {
           const eventIdMatch = targetCode.match(/[?&]eventId=([^&#]+)/);
@@ -124,7 +317,6 @@ export default function ScanScreen() {
           if (eventIdMatch) targetEventId = decodeURIComponent(eventIdMatch[1]);
           if (codeMatch) targetCode = decodeURIComponent(codeMatch[1]);
 
-          // Fallback cu URLSearchParams dacă regex-ul nu a găsit complet
           if (!targetEventId || targetCode.startsWith('http')) {
             try {
               const queryPart = targetCode.split('?')[1] || targetCode;
@@ -155,11 +347,7 @@ export default function ScanScreen() {
       if (!targetEventId) {
         console.warn('[QR SCAN] targetEventId lipsă pentru codul scanat:', data);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert(
-          'Cod QR Neidentificat',
-          'Codul scanat nu conține un eveniment valid OSACE.',
-          [{ text: 'Încearcă din nou', onPress: () => setScanned(false) }]
-        );
+        showScanRetryAlert('Cod QR Neidentificat', 'Codul scanat nu conține un eveniment valid OSACE.');
         return;
       }
 
@@ -192,9 +380,13 @@ export default function ScanScreen() {
         type: 'success',
         text1: title,
         text2: finalMessage,
-        visibilityTime: 3000,
-        onHide: () => navigation.goBack()
+        visibilityTime: 2500,
       });
+
+      // O singură navigare automată înapoi (cu curățare la unmount)
+      goBackTimeoutRef.current = setTimeout(() => {
+        safeGoBack();
+      }, 700);
 
     } catch (error) {
       console.error("[QR SCAN ERROR]:", {
@@ -213,13 +405,8 @@ export default function ScanScreen() {
           errorMessage = 'Cod QR invalid sau expirat.';
         }
       }
-      
-      // Păstrăm Alert aici pentru ca utilizatorul să deblocheze camera manual
-      Alert.alert(
-        'Eroare', 
-        errorMessage,
-        [{ text: 'Încearcă din nou', onPress: () => setScanned(false) }] 
-      );
+
+      showScanRetryAlert('Eroare', errorMessage);
     }
   };
 
@@ -291,20 +478,138 @@ export default function ScanScreen() {
     );
   }
 
+  if (cameraError) {
+    return (
+      <View style={[styles.container, styles.permissionContainer]}>
+        <View style={styles.permissionCard}>
+          <View style={styles.permissionIconCircle}>
+            <Ionicons name="videocam-off-outline" size={40} color="#38bdf8" />
+          </View>
+
+          <Text style={styles.permissionTitle}>Cameră indisponibilă</Text>
+          <Text style={styles.permissionSubtitle}>
+            Nu am putut inițializa camera pe acest dispozitiv. Poți încerca din nou sau comuta camera.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.primaryPermissionBtn}
+            onPress={() => {
+              triedFrontFallbackRef.current = false;
+              setCameraError(false);
+              setCameraReady(false);
+              setFacing('back');
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="refresh-outline" size={19} color="#ffffff" style={{ marginRight: 8 }} />
+            <Text style={styles.primaryPermissionBtnText}>Reîncearcă</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  const isFrontCamera = facing === 'front';
+
   return (
     <View style={styles.container}>
-      <CameraView
-        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-        barcodeScannerSettings={{
-          barcodeTypes: ["qr"], 
-        }}
-        style={StyleSheet.absoluteFillObject}
-      />
-      
-      <View style={styles.overlay}>
-        <View style={styles.scanBox}>
+      {/* Container principal cu suport Pinch-to-zoom pe tot ecranul */}
+      <PinchGestureHandler
+        onGestureEvent={onPinchGestureEvent}
+        onHandlerStateChange={onPinchHandlerStateChange}
+      >
+        <View style={StyleSheet.absoluteFillObject}>
+          <CameraView
+            ref={cameraRef}
+            facing={facing}
+            active={isFocused}
+            enableTorch={!isFrontCamera && torch}
+            zoom={zoom}
+            autofocus="off"
+            {...(IS_IOS ? { pictureSize: 'High' } : {})}
+            onCameraReady={() => {
+              setCameraReady(true);
+              setCameraError(false);
+            }}
+            onMountError={handleMountError}
+            onBarcodeScanned={scanned || !isFocused ? undefined : handleBarCodeScanned}
+            barcodeScannerSettings={{
+              barcodeTypes: ['qr'],
+            }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </View>
+      </PinchGestureHandler>
+
+      {/* Bara superioară de control: Lanternă & Comutare cameră față/spate */}
+      <View style={styles.topControlsRow} pointerEvents="box-none">
+        <TouchableOpacity
+          style={[
+            styles.topControlBtn,
+            torch && !isFrontCamera && styles.topControlBtnActive,
+            isFrontCamera && styles.topControlBtnDisabled,
+          ]}
+          onPress={handleToggleTorch}
+          disabled={isFrontCamera}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={torch && !isFrontCamera ? 'flash' : 'flash-outline'}
+            size={18}
+            color={torch && !isFrontCamera ? '#fbbf24' : '#ffffff'}
+          />
+          <Text style={[styles.topControlText, torch && !isFrontCamera && { color: '#fbbf24' }]}>
+            {torch && !isFrontCamera ? 'Lanternă activă' : 'Lanternă'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.topControlBtn}
+          onPress={handleToggleFacing}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="camera-reverse-outline" size={19} color="#ffffff" />
+          <Text style={styles.topControlText}>
+            {isFrontCamera ? 'Față' : 'Spate'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Chenarul de scanare centrat, cu pointerEvents="none" ca să nu blocheze pinch-to-zoom */}
+      <View style={styles.overlay} pointerEvents="none">
+        <View style={styles.scanBox} pointerEvents="none">
           <Text style={styles.scanText}>Țintește codul QR al evenimentului</Text>
         </View>
+      </View>
+
+      {/* Controale rapide de Zoom ancorate jos, cu Safe Area pentru iOS & Android edge-to-edge */}
+      <View
+        style={[
+          styles.zoomContainer,
+          { bottom: Math.max(insets.bottom, 16) + 20 },
+        ]}
+        pointerEvents="box-none"
+      >
+        <View style={styles.zoomPillsRow}>
+          {[1, 2, 3].map((level) => {
+            const active = isZoomPresetActive(level, zoom);
+            return (
+              <TouchableOpacity
+                key={level}
+                style={[styles.zoomPill, active && styles.zoomPillActive]}
+                onPress={() => handleZoomPreset(level)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.zoomPillText, active && styles.zoomPillTextActive]}>
+                  {level}x
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={styles.zoomHintText} pointerEvents="none">
+          Apropie sau depărtează 2 degete pentru zoom
+        </Text>
       </View>
     </View>
   );
@@ -324,6 +629,39 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  topControlsRow: {
+    position: 'absolute',
+    top: 16,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  topControlBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(20, 24, 33, 0.75)',
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  topControlBtnActive: {
+    backgroundColor: 'rgba(251, 191, 36, 0.18)',
+    borderColor: '#fbbf24',
+  },
+  topControlBtnDisabled: {
+    opacity: 0.38,
+  },
+  topControlText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+    marginLeft: 6,
   },
   permissionContainer: {
     justifyContent: 'center',
@@ -414,7 +752,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
@@ -440,4 +778,44 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.65)',
     width: '100%',
   },
-});
+  zoomContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  zoomPillsRow: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(20, 24, 33, 0.75)',
+    borderRadius: 24,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    gap: 6,
+  },
+  zoomPill: {
+    width: 44,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zoomPillActive: {
+    backgroundColor: '#0284c7',
+  },
+  zoomPillText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  zoomPillTextActive: {
+    color: '#ffffff',
+  },
+  zoomHintText: {
+    color: 'rgba(255, 255, 255, 0.55)',
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 8,
+  },
+});

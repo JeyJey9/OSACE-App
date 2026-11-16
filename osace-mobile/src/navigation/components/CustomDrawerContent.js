@@ -10,10 +10,12 @@ import api from '../../services/api';
 import { useThemeColor } from '../../constants/useThemeColor';
 import ThemeToggleSwitch from '../../components/ThemeToggleSwitch';
 import { APP_VERSION, PATCH_NOTES, LEGACY_PATCH_NOTES } from '../../constants/Version';
+import { useTutorial } from '../../features/Tutorial/TutorialContext';
 
 export default function CustomDrawerContent(props) {
   const { user, logout } = useAuth();
   const { colors, isDark, toggleTheme } = useThemeColor();
+  const { restart: restartTutorial } = useTutorial() || {};
 
   const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
 
@@ -370,7 +372,23 @@ export default function CustomDrawerContent(props) {
         )}
         {/* Feedback & Asistență */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>FEEDBACK</Text>
+          <Text style={styles.sectionTitle}>ASISTENȚĂ & FEEDBACK</Text>
+          <TouchableOpacity
+            style={styles.drawerItem}
+            onPress={() => {
+              props.navigation.closeDrawer();
+              props.navigation.navigate('HomeTabs', { screen: 'AppTabs', params: { screen: 'Noutăți' } });
+              setTimeout(() => {
+                restartTutorial?.();
+              }, 300);
+            }}
+          >
+            <View style={[styles.iconContainer, { backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.1)' }]}>
+              <Ionicons name="school-outline" size={20} color={colors.primary} />
+            </View>
+            <Text style={styles.drawerItemLabel}>Tutorial aplicație</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.drawerItem}
             onPress={() => setShowFeedbackMenu(true)}

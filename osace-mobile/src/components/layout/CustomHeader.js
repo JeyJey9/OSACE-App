@@ -20,6 +20,7 @@ import { useThemeColor } from '../../constants/useThemeColor';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../../services/api';
+import { useTutorial } from '../../features/Tutorial/TutorialContext';
 
 // Returns a time-appropriate Romanian greeting, cached so it doesn't flicker on tab changes
 let cachedGreeting = null;
@@ -76,13 +77,30 @@ const getTimeIcon = () => {
   return 'moon-outline';
 };
 
-export default function CustomHeader({ title, showRole = true, isHidden = false, isGuestMode = false }) {
+export default function CustomHeader({
+  title,
+  showRole = true,
+  isHidden = false,
+  isGuestMode = false,
+  isMainFeedHeader = false,
+}) {
   const { user } = useAuth();
   const isGuest = isGuestMode || !user;
   const { colors, isDark } = useThemeColor();
   const STANDARD_BLUE = colors.primary;
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { registerTarget } = useTutorial() || {};
+  const qrRef = useRef(null);
+  const avatarRef = useRef(null);
+
+  useEffect(() => {
+    // Înregistrăm țintele tutorialului DOAR din antetul ecranului principal (nu din Headerele sertarului/Profile)
+    if (isMainFeedHeader && registerTarget) {
+      if (qrRef.current) registerTarget('qr', qrRef);
+      if (avatarRef.current) registerTarget('avatar', avatarRef);
+    }
+  }, [isMainFeedHeader, registerTarget]);
 
   const handleSendFeedback = async () => {
     const email = 'developers@osace.ro';
@@ -307,6 +325,13 @@ export default function CustomHeader({ title, showRole = true, isHidden = false,
             {/* Right: QR scan + notifications + avatar */}
             <View style={styles.headerRight}>
               <TouchableOpacity
+                ref={qrRef}
+                collapsable={false}
+                onLayout={() => {
+                  if (isMainFeedHeader && qrRef.current && registerTarget) {
+                    registerTarget('qr', qrRef);
+                  }
+                }}
                 onPress={() => navigation.navigate('ScanScreen', {})}
                 style={[styles.iconButton, {
                   backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
@@ -330,6 +355,13 @@ export default function CustomHeader({ title, showRole = true, isHidden = false,
               </TouchableOpacity>
 
               <TouchableOpacity
+                ref={avatarRef}
+                collapsable={false}
+                onLayout={() => {
+                  if (isMainFeedHeader && avatarRef.current && registerTarget) {
+                    registerTarget('avatar', avatarRef);
+                  }
+                }}
                 onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
                 style={styles.avatarButton}
                 activeOpacity={0.8}

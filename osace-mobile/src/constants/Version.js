@@ -1,9 +1,17 @@
 // src/constants/Version.js
 // Centrul de stocare al versiunii aplicației mobile OSACE și istoricul de Patch Notes.
 
-export const APP_VERSION = '3.0.7';
+export const APP_VERSION = '3.0.8';
 
 export const PATCH_NOTES = [
+  {
+    version: '3.0.8',
+    items: [
+      'Tutorial interactiv nou la prima deschidere și reluare oricând din meniul lateral.',
+      'Scanner QR îmbunătățit: zoom (1x / 2x / 3x + pinch-to-zoom), autofocus continuu, lanternă și comutare cameră.',
+      'Corecții de stabilitate și compatibilitate pe iOS și Android.',
+    ],
+  },
   {
     version: '3.0.7',
     items: [
@@ -21,6 +29,10 @@ export const PATCH_NOTES = [
       'Respectarea preferintelor de notificari push si rezolvarea delogarilor false la erori de permisiuni.',
     ],
   },
+];
+
+// Versiuni anterioare — afișate în subsolul dark al modalului de Patch Notes (Minecraft Basement).
+export const LEGACY_PATCH_NOTES = [
   {
     version: '3.0.5',
     items: [
@@ -30,10 +42,6 @@ export const PATCH_NOTES = [
       'Mici bug fix-uri si optimizari de performanta.',
     ],
   },
-];
-
-// Versiuni anterioare — afișate în subsolul dark al modalului de Patch Notes (Minecraft Basement).
-export const LEGACY_PATCH_NOTES = [
   {
     version: '2.4.0',
     items: [

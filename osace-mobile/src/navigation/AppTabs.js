@@ -1,13 +1,15 @@
-import React, { useEffect, useCallback, useMemo, useState, useContext, createContext } from 'react';
+import React, { useEffect, useCallback, useMemo, useState, useContext, createContext, useRef } from 'react';
 import { Platform, TouchableOpacity, View, StyleSheet, Text } from 'react-native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { useNavigationState } from '@react-navigation/native';
+import { useNavigationState, useNavigation, DrawerActions } from '@react-navigation/native';
+import { useDrawerStatus } from '@react-navigation/drawer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../features/Auth/AuthContext';
 import { usePermissions } from '../features/Auth/PermissionContext';
 import * as Notifications from 'expo-notifications';
 import api from '../services/api';
+import { useTutorial } from '../features/Tutorial/TutorialContext';
 
 import HomeScreen from '../features/Home/screens/HomeScreen';
 import MyEventsScreen from '../features/Event/screens/MyEventsScreen';
@@ -65,14 +67,56 @@ async function registerForPushNotificationsAsync() {
 // ─── FloatingTabBar ─────────────────────────────────────────────────────────
 // React.memo previne re-render-uri inutile când pager-ul se actualizează
 const FloatingTabBar = React.memo(function FloatingTabBar({ state, descriptors, navigation, colors, isDark, bottomInset }) {
+  const { registerTarget, onTabChange, registerNavigation } = useTutorial() || {};
+  const tabBarRef = useRef(null);
+  const activeTabNameRef = useRef(state.routes[state.index]?.name);
+
+  useEffect(() => {
+    if (registerNavigation && navigation) {
+      registerNavigation({
+        navigateToTab: (name) => {
+          try {
+            navigation.navigate({ name, merge: true });
+          } catch (e) {
+            console.warn('[Tutorial] Navigare tab:', e);
+          }
+        },
+      });
+    }
+  }, [registerNavigation, navigation]);
+
+  useEffect(() => {
+    if (registerTarget && tabBarRef.current) {
+      registerTarget('tabBar', tabBarRef);
+    }
+  }, [registerTarget]);
+
+  useEffect(() => {
+    const currentTabName = state.routes[state.index]?.name;
+    if (activeTabNameRef.current !== currentTabName) {
+      activeTabNameRef.current = currentTabName;
+      if (onTabChange && currentTabName) {
+        onTabChange(currentTabName);
+      }
+    }
+  }, [state.index, onTabChange, state.routes]);
+
   return (
-    <View style={[styles.tabBarContainer, {
-      bottom: Math.max(bottomInset || 0, 15),
-      backgroundColor: isDark ? 'rgba(25, 30, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-      borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)',
-      shadowColor: '#000',
-      shadowOpacity: isDark ? 0.4 : 0.15,
-    }]}>
+    <View
+      ref={tabBarRef}
+      onLayout={() => {
+        if (tabBarRef.current && registerTarget) {
+          registerTarget('tabBar', tabBarRef);
+        }
+      }}
+      style={[styles.tabBarContainer, {
+        bottom: Math.max(bottomInset || 0, 15),
+        backgroundColor: isDark ? 'rgba(25, 30, 36, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+        borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)',
+        shadowColor: '#000',
+        shadowOpacity: isDark ? 0.4 : 0.15,
+      }]}
+    >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const isFocused = state.index === index;
@@ -199,6 +243,43 @@ export default function AppTabs() {
   const { colors, theme } = useThemeColor();
   const isDark = theme === 'dark';
   const hideHeader = useIsInsideAdminSubScreen();
+  const navigation = useNavigation();
+
+  const {
+    hasSeenTutorial,
+    start: startTutorial,
+    registerNavigation,
+    onDrawerStatusChange,
+    isActive: isTutorialActive,
+  } = useTutorial() || {};
+
+  // Detectare stare sertar lateral
+  const drawerStatus = useDrawerStatus();
+  useEffect(() => {
+    if (onDrawerStatusChange) {
+      onDrawerStatusChange(drawerStatus);
+    }
+  }, [drawerStatus, onDrawerStatusChange]);
+
+  // Înregistrare acțiuni navigare sertar către tutorial
+  useEffect(() => {
+    if (registerNavigation) {
+      registerNavigation({
+        openDrawer: () => navigation.dispatch(DrawerActions.openDrawer()),
+        closeDrawer: () => navigation.dispatch(DrawerActions.closeDrawer()),
+      });
+    }
+  }, [navigation, registerNavigation]);
+
+  // Pornire automată tutorial dacă utilizatorul este logat și nu l-a văzut
+  useEffect(() => {
+    if (user && hasSeenTutorial === false && !isTutorialActive) {
+      const timer = setTimeout(() => {
+        startTutorial?.();
+      }, 1400);
+      return () => clearTimeout(timer);
+    }
+  }, [user, hasSeenTutorial, isTutorialActive, startTutorial]);
 
   const insets = useSafeAreaInsets();
   const initialHeaderPaddingTop = Platform.OS === 'android'
@@ -242,7 +323,7 @@ export default function AppTabs() {
             if (height > 0) setHeaderHeight(height);
           }}
         >
-          <CustomHeader isHidden={hideHeader} />
+          <CustomHeader isHidden={hideHeader} isMainFeedHeader={true} />
         </View>
 
         <Tab.Navigator

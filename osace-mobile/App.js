@@ -5,6 +5,7 @@ if (typeof global.atob === 'undefined') {
 }
 
 import React, { useState, useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -21,7 +22,7 @@ import ScanScreen from './src/features/Event/screens/ScanScreen';
 import ForgotPasswordScreen from './src/features/Auth/screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/features/Auth/screens/ResetPasswordScreen';
 import ConfirmEmailScreen from './src/features/Auth/screens/ConfirmEmailScreen';
-import OnboardingScreen from './src/features/Auth/screens/OnboardingScreen';
+import { TutorialProvider } from './src/features/Tutorial/TutorialContext';
 import MapScreen from './src/features/Map/screens/MapScreen';
 import CustomHeader from './src/components/layout/CustomHeader';
 import { PermissionProvider } from './src/features/Auth/PermissionContext';
@@ -120,15 +121,8 @@ const toastConfig = {
 function AppNavigator() {
   const { colors, isDark } = useThemeColor();
   const { user, loading: authLoading } = useAuth();
-  const [isFirstLaunch, setIsFirstLaunch] = useState(null);
 
-  useEffect(() => {
-    AsyncStorage.getItem('@onboarding_completed').then(value => {
-      setIsFirstLaunch(value === null);
-    });
-  }, []);
-
-  if (authLoading || isFirstLaunch === null) {
+  if (authLoading) {
     return <LoadingScreen />;
   }
 
@@ -154,14 +148,6 @@ function AppNavigator() {
     >
       {user ? (
         <>
-          {isFirstLaunch ? (
-            <Stack.Screen
-              name="Onboarding"
-              component={OnboardingScreen}
-              options={{ headerShown: false }}
-            />
-          ) : null}
-
           <Stack.Screen name="Main" component={MainDrawer} options={{ headerShown: false }} />
 
           <Stack.Screen
@@ -291,16 +277,20 @@ function ThemeWrapper() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <PermissionProvider>
-            <ThemeWrapper />
-            <NetworkBanner />
-          </PermissionProvider>
-        </AuthProvider>
-      </ThemeProvider>
-      <Toast config={toastConfig} />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <PermissionProvider>
+              <TutorialProvider>
+                <ThemeWrapper />
+                <NetworkBanner />
+              </TutorialProvider>
+            </PermissionProvider>
+          </AuthProvider>
+        </ThemeProvider>
+        <Toast config={toastConfig} />
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

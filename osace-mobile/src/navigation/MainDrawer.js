@@ -2,7 +2,7 @@ import React from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Dimensions } from 'react-native';
+import { Dimensions, View } from 'react-native';
 
 // Hook-ul pentru temă
 import { useThemeColor } from '../constants/useThemeColor';
@@ -21,6 +21,7 @@ import BlockedUsersScreen from '../features/Profile/screens/BlockedUsersScreen';
 import BadgeCatalogScreen from '../features/BadgeCatalog/screens/BadgeCatalogScreen';
 import MapScreen from '../features/Map/screens/MapScreen';
 import CustomHeader from '../components/layout/CustomHeader';
+import TutorialOverlay from '../features/Tutorial/components/TutorialOverlay';
 
 const Drawer = createDrawerNavigator();
 const ProfileStack = createNativeStackNavigator();
@@ -85,7 +86,8 @@ export default function MainDrawer() {
   const { colors } = useThemeColor();
 
   return (
-    <Drawer.Navigator
+    <View style={{ flex: 1 }}>
+      <Drawer.Navigator
       // ID folosit de NewsFeedScreen pentru a activa swipe-ul dinamic via setOptions
       id="MainDrawer"
       drawerContent={(props) => <CustomDrawerContent {...props} />}
@@ -202,5 +204,7 @@ export default function MainDrawer() {
         }} 
       />
     </Drawer.Navigator>
+    <TutorialOverlay />
+  </View>
   );
 }
