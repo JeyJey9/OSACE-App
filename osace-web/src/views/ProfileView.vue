@@ -156,7 +156,7 @@
         </div>
       </div>
 
-      <!-- 3. STATS & YEAR FILTER -->
+      <!-- 3. STATS & PERIOD FILTER -->
       <div class="section-card glass-panel">
         <div class="section-title-row">
           <div class="title-with-icon">
@@ -164,12 +164,23 @@
             <h3>Statistici Voluntariat</h3>
           </div>
           
-          <!-- Year Selector -->
-          <div class="year-filter-wrapper">
+          <!-- Year + Month Selectors -->
+          <div class="period-filters">
             <select v-model="selectedYear" @change="onYearChange" class="year-select">
-              <option value="all">Toate orele (Istoric total)</option>
-              <option v-for="y in availableYears" :key="y.startYear" :value="y.startYear">
+              <option v-for="y in yearOptions" :key="y.startYear" :value="y.startYear">
                 Anul {{ y.label }}
+              </option>
+              <option value="all">Din Toate Timpurile</option>
+            </select>
+
+            <select
+              v-if="selectedYear !== 'all'"
+              v-model="selectedMonth"
+              @change="onPeriodChange"
+              class="year-select"
+            >
+              <option v-for="m in ACADEMIC_MONTH_OPTIONS" :key="m.value" :value="m.value">
+                {{ m.label }}
               </option>
             </select>
           </div>
@@ -177,16 +188,41 @@
 
         <div class="stats-grid">
           <div class="stat-card glass-panel">
-            <span class="stat-value">{{ calculatedHours.toFixed(1) }}</span>
+            <span class="stat-value">{{ displayTotalHours.toFixed(1) }}</span>
             <span class="stat-label">Ore de Voluntariat</span>
           </div>
           <div class="stat-card glass-panel">
-            <span class="stat-value">{{ pastEvents.length }}</span>
+            <span class="stat-value">{{ profileSummary?.rank ? `#${profileSummary.rank}` : '—' }}</span>
+            <span class="stat-label">Loc Clasament</span>
+          </div>
+          <div class="stat-card glass-panel">
+            <span class="stat-value">{{ profileSummary?.events_count ?? pastEvents.length }}</span>
             <span class="stat-label">Activități Participat</span>
           </div>
           <div class="stat-card glass-panel">
-            <span class="stat-value">{{ myBadges.length }} / {{ allBadges.length }}</span>
+            <span class="stat-value">{{ myBadges.length }} / {{ totalVisibleBadges }}</span>
             <span class="stat-label">Insigne Deblocate</span>
+          </div>
+        </div>
+
+        <!-- Category Distribution Bar -->
+        <div v-if="categorySegments.length > 0" class="breakdown-box">
+          <div class="bar-track">
+            <div
+              v-for="seg in categorySegments"
+              :key="seg.key"
+              class="bar-segment"
+              :style="{ flex: seg.hours, backgroundColor: seg.color }"
+              :title="`${seg.label}: ${seg.hours.toFixed(1)}h`"
+            />
+          </div>
+          <div class="legend-row">
+            <div v-for="seg in categorySegments" :key="seg.key" class="legend-item">
+              <span class="legend-dot" :style="{ backgroundColor: seg.color }"></span>
+              <span class="legend-text">
+                {{ seg.label }}: <strong>{{ seg.hours.toFixed(1) }}h</strong>
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -204,13 +240,19 @@
               :class="['filter-btn', { active: badgeFilter === 'all' }]"
               @click="badgeFilter = 'all'"
             >
-              Toate ({{ filteredBadges.length }})
+              Toate ({{ totalVisibleBadges }})
             </button>
             <button 
               :class="['filter-btn', { active: badgeFilter === 'earned' }]"
               @click="badgeFilter = 'earned'"
             >
-              Deblocate ({{ myBadges.length }})
+              Deblocate ({{ earnedVisibleCount }})
+            </button>
+            <button 
+              :class="['filter-btn', { active: badgeFilter === 'in_progress' }]"
+              @click="badgeFilter = 'in_progress'"
+            >
+              În progres ({{ inProgressCount }})
             </button>
           </div>
         </div>
@@ -228,12 +270,26 @@
             @click="openBadgeDetail(b)"
           >
             <div class="badge-icon-box">
-              <component :is="getBadgeIcon(b.icon)" :size="28" />
+              <component :is="getBadgeIcon(b.icon_name || b.icon)" :size="28" />
               <LockIcon v-if="!b.isEarned" :size="14" class="badge-lock-tag" />
             </div>
             <h4 class="badge-name">{{ b.name }}</h4>
             <p class="badge-desc">{{ b.description }}</p>
-            <span v-if="b.isEarned" class="badge-earned-tag">Deblocat ✅</span>
+
+            <template v-if="b.isEarned">
+              <span class="badge-earned-tag">Deblocat ✅</span>
+              <span v-if="b.period_label" class="badge-period-pill">{{ b.period_label }}</span>
+            </template>
+
+            <div v-else-if="(b.progress_target || 0) > 0" class="badge-progress-wrap">
+              <div class="badge-progress-track">
+                <div class="badge-progress-fill" :style="{ width: `${b.progress_pct || 0}%` }"></div>
+              </div>
+              <span class="badge-progress-label">
+                {{ b.progress_current }}/{{ b.progress_target }} ({{ b.progress_pct || 0 }}%)
+              </span>
+            </div>
+
             <span v-else class="badge-locked-tag">Blocat 🔒</span>
           </div>
         </div>
@@ -296,19 +352,36 @@
       <div class="modal-card glass-panel-elevated" @click.stop>
         <div class="modal-badge-header">
           <div class="modal-badge-icon" :class="{ 'earned': selectedBadgeModal.isEarned }">
-            <component :is="getBadgeIcon(selectedBadgeModal.icon)" :size="48" />
+            <component :is="getBadgeIcon(selectedBadgeModal.icon_name || selectedBadgeModal.icon)" :size="48" />
           </div>
           <h3>{{ selectedBadgeModal.name }}</h3>
           <span :class="['badge-pill', selectedBadgeModal.isEarned ? 'badge-green' : 'badge-yellow']">
-            {{ selectedBadgeModal.isEarned ? 'Insignă Obținută' : 'În curs de deblocare' }}
+            {{ selectedBadgeModal.isEarned ? 'Insignă Obținută' : 'Încă nedeblocat' }}
           </span>
         </div>
 
         <div class="modal-badge-body">
           <p class="desc">{{ selectedBadgeModal.description }}</p>
+
+          <div v-if="selectedBadgeModal.isEarned && selectedBadgeModal.period_label" class="period-modal-pill">
+            Perioada câștigată: <strong>{{ selectedBadgeModal.period_label }}</strong>
+          </div>
+
+          <div v-if="!selectedBadgeModal.isEarned && (selectedBadgeModal.progress_target || 0) > 0" class="modal-progress-box">
+            <div class="modal-progress-header">
+              <span>Progres realizare</span>
+              <strong>
+                {{ selectedBadgeModal.progress_current }} / {{ selectedBadgeModal.progress_target }} ({{ selectedBadgeModal.progress_pct || 0 }}%)
+              </strong>
+            </div>
+            <div class="modal-progress-track">
+              <div class="badge-progress-fill" :style="{ width: `${selectedBadgeModal.progress_pct || 0}%` }"></div>
+            </div>
+          </div>
+
           <div class="criteria-box" v-if="selectedBadgeModal.rule_type">
             <span class="criteria-title">Condiție de deblocare:</span>
-            <span class="criteria-val">{{ formatRuleType(selectedBadgeModal.rule_type, selectedBadgeModal.threshold) }}</span>
+            <span class="criteria-val">{{ formatRuleType(selectedBadgeModal.rule_type, selectedBadgeModal.rule_value || selectedBadgeModal.threshold) }}</span>
           </div>
         </div>
 
@@ -342,21 +415,45 @@ import {
   MedalIcon
 } from 'lucide-vue-next';
 import api from '../services/api';
+import {
+  ACADEMIC_MONTH_OPTIONS,
+  CATEGORY_SEGMENTS,
+  getDefaultAcademicYear,
+  buildPeriodQuery,
+  resolveMediaUrl as resolveMediaUrlShared,
+} from '../utils/periodFilters';
 
 const loading = ref(true);
 const userProfile = ref(null);
+const profileSummary = ref(null);
 const verificationInfo = ref({ status: 'verified' });
 const allBadges = ref([]);
 const myBadges = ref([]);
 const pastEvents = ref([]);
 const contributions = ref([]);
 const availableYears = ref([]);
-const selectedYear = ref('all');
+const selectedYear = ref(getDefaultAcademicYear());
+const selectedMonth = ref('all');
 const badgeFilter = ref('all');
 
 const studentIdFile = ref(null);
 const submittingVerif = ref(false);
 const selectedBadgeModal = ref(null);
+
+const isSecretBadge = (badge) =>
+  badge.rule_type === 'easter_egg' ||
+  badge.key === 'FOUND_EASTER_EGG' ||
+  badge.key?.startsWith('SECRET_') ||
+  badge.key?.startsWith('EASTER_EGG_');
+
+const yearOptions = computed(() => {
+  const cur = getDefaultAcademicYear();
+  const list = [...availableYears.value];
+  if (!list.find((y) => y.startYear === cur)) {
+    list.unshift({ startYear: cur, label: `${cur}-${cur + 1}` });
+  }
+  return list;
+});
 
 // ── Fetch Profile & Core Data ────────────────────────
 const fetchProfileData = async () => {
@@ -366,22 +463,23 @@ const fetchProfileData = async () => {
     if (!userStr) return;
     const { id } = JSON.parse(userStr);
 
-    const [meRes, verifRes, yearsRes, allBadgesRes, myBadgesRes] = await Promise.all([
+    const [meRes, verifRes, yearsRes] = await Promise.all([
       api.get(`/profile/${id}`),
       api.get('/verification/my-status'),
-      api.get('/leaderboard/available-years'),
-      api.get('/badges'),
-      api.get(`/profile/${id}/badges`)
+      api.get('/profile/my-available-years'),
     ]);
 
     userProfile.value = meRes.data;
     verificationInfo.value = verifRes.data;
-    availableYears.value = yearsRes.data;
-    allBadges.value = allBadgesRes.data;
-    myBadges.value = myBadgesRes.data;
+    availableYears.value = yearsRes.data || [];
 
-    // Load year-filtered data (events & contributions)
-    await fetchHistoryAndContributions();
+    // Apel secvențial: /badges auto-deblochează badge-urile ajunse la 100%, apoi /my-badges le citește
+    const allBadgesRes = await api.get('/badges');
+    const myBadgesRes = await api.get('/profile/my-badges');
+    allBadges.value = allBadgesRes.data || [];
+    myBadges.value = myBadgesRes.data || [];
+
+    await fetchPeriodData();
   } catch (error) {
     console.error("Eroare la preluarea profilului:", error);
   } finally {
@@ -389,30 +487,39 @@ const fetchProfileData = async () => {
   }
 };
 
-const fetchHistoryAndContributions = async () => {
+const fetchPeriodData = async () => {
   if (!userProfile.value) return;
-  const yearQuery = selectedYear.value === 'all' ? '?year=all' : (selectedYear.value ? `?year=${selectedYear.value}` : '');
+  const query = buildPeriodQuery(selectedYear.value, selectedMonth.value);
   try {
-    const [eventsRes, contribRes] = await Promise.all([
-      api.get(`/profile/my-past-events${yearQuery}`),
-      api.get(`/profile/${userProfile.value.id}/contributions${yearQuery}`)
+    const [summaryRes, eventsRes, contribRes] = await Promise.all([
+      api.get(`/profile/me${query}`),
+      api.get(`/profile/my-past-events${query}`),
+      api.get(`/profile/${userProfile.value.id}/contributions${query}`)
     ]);
-    pastEvents.value = eventsRes.data;
-    contributions.value = contribRes.data;
+    profileSummary.value = summaryRes.data;
+    pastEvents.value = eventsRes.data || [];
+    contributions.value = contribRes.data || [];
   } catch (err) {
     console.error("Eroare incarcare istoric/contributii:", err);
   }
 };
 
-const onYearChange = () => {
-  fetchHistoryAndContributions();
+const onPeriodChange = () => {
+  fetchPeriodData();
 };
 
-// ── Calculated Hours ─────────────────────────────────
+const onYearChange = () => {
+  if (selectedYear.value === 'all') {
+    selectedMonth.value = 'all';
+  }
+  fetchPeriodData();
+};
+
+// ── Calculated Hours & Category Breakdown ────────────
 const calculatedHours = computed(() => {
   const evH = pastEvents.value.reduce((sum, e) => {
     if (e.confirmation_status === 'attended' || !e.confirmation_status) {
-      return sum + (parseFloat(e.awarded_hours || e.duration_hours) || 0);
+      return sum + (parseFloat(e.awarded_hours ?? e.duration_hours) || 0);
     }
     return sum;
   }, 0);
@@ -424,26 +531,55 @@ const calculatedHours = computed(() => {
   return evH + ctH;
 });
 
-// ── Badges List with Earned State ────────────────────
+const displayTotalHours = computed(() =>
+  profileSummary.value?.total_hours != null
+    ? parseFloat(profileSummary.value.total_hours) || 0
+    : calculatedHours.value
+);
+
+const categorySegments = computed(() => {
+  const map = profileSummary.value?.hours_by_category;
+  if (!map) return [];
+  return CATEGORY_SEGMENTS
+    .map((seg) => ({ ...seg, hours: parseFloat(map[seg.key]) || 0 }))
+    .filter((seg) => seg.hours > 0);
+});
+
+// ── Badges List with Earned State, Progress & Sorting ──
 const processedBadges = computed(() => {
-  const earnedSet = new Set(myBadges.value.map(b => b.id || b.badge_id));
+  const earnedMap = new Map(myBadges.value.map((b) => [b.id || b.badge_id, b]));
   return allBadges.value
-    .map(b => ({
-      ...b,
-      isEarned: earnedSet.has(b.id)
-    }))
-    .filter(b => {
-      // Hide secret / easter egg badges if not earned
-      if ((b.rule_type === 'easter_egg' || b.key?.startsWith('SECRET_')) && !b.isEarned) {
-        return false;
+    .map((b) => {
+      const earned = earnedMap.get(b.id);
+      return {
+        ...b,
+        isEarned: Boolean(earned),
+        period_label: earned?.period_label || null,
+      };
+    })
+    .filter((b) => !(isSecretBadge(b) && !b.isEarned))
+    .sort((a, b) => {
+      if (a.isEarned !== b.isEarned) return a.isEarned ? -1 : 1;
+      if (!a.isEarned && !b.isEarned) {
+        const pctDiff = (b.progress_pct || 0) - (a.progress_pct || 0);
+        if (pctDiff !== 0) return pctDiff;
       }
-      return true;
+      return (a.name || '').localeCompare(b.name || '', 'ro');
     });
 });
 
+const totalVisibleBadges = computed(() => processedBadges.value.length);
+const earnedVisibleCount = computed(() => processedBadges.value.filter((b) => b.isEarned).length);
+const inProgressCount = computed(
+  () => processedBadges.value.filter((b) => !b.isEarned && (b.progress_target || 0) > 0).length
+);
+
 const filteredBadges = computed(() => {
   if (badgeFilter.value === 'earned') {
-    return processedBadges.value.filter(b => b.isEarned);
+    return processedBadges.value.filter((b) => b.isEarned);
+  }
+  if (badgeFilter.value === 'in_progress') {
+    return processedBadges.value.filter((b) => !b.isEarned && (b.progress_target || 0) > 0);
   }
   return processedBadges.value;
 });
@@ -523,12 +659,7 @@ const exportMyData = async () => {
 };
 
 // ── Helpers ──────────────────────────────────────────
-const resolveMediaUrl = (url) => {
-  if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const base = import.meta.env.PROD ? 'https://api.osace.ro' : 'http://localhost:3000';
-  return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
-};
+const resolveMediaUrl = (url) => resolveMediaUrlShared(url);
 
 const displayRole = (role) => {
   const map = { admin: 'Administrator', coordonator: 'Coordonator', user: 'Voluntar', voluntar: 'Voluntar' };
@@ -565,10 +696,15 @@ const formatAttendanceStatus = (status) => {
   return 'Înregistrat';
 };
 
-const formatRuleType = (rule, threshold) => {
-  if (rule === 'hours') return `Acumulează cel puțin ${threshold} ore de voluntariat.`;
-  if (rule === 'events_attended') return `Participă la cel puțin ${threshold} activități.`;
-  if (rule === 'social_hours') return `Acumulează ${threshold} ore în categoria Social.`;
+const formatRuleType = (rule, ruleVal) => {
+  if ((rule === 'total_hours' || rule === 'hours') && ruleVal) return `Acumulează cel puțin ${ruleVal} ore de voluntariat.`;
+  if ((rule === 'total_events' || rule === 'events_attended') && ruleVal) return `Participă la cel puțin ${ruleVal} activități.`;
+  if (rule === 'monthly_events' && ruleVal) return `Participă la ${ruleVal} activități într-o singură lună.`;
+  if (rule === 'weekly_hours' && ruleVal) return `Acumulează ${ruleVal} ore într-o săptămână.`;
+  if (rule === 'perfect_streak' && ruleVal) return `Participă la ${ruleVal} activități consecutive.`;
+  if (rule === 'evening_events' && ruleVal) return `Participă la ${ruleVal} activități de seară.`;
+  if (rule === 'diversified') return 'Participă la toate cele 3 categorii de activități.';
+  if (rule === 'social_hours' && ruleVal) return `Acumulează ${ruleVal} ore în categoria Social.`;
   if (rule === 'first_event') return 'Participă la prima ta activitate OSACE.';
   return 'Condiție specială de participare.';
 };
@@ -864,6 +1000,12 @@ onMounted(() => {
   color: var(--color-text-secondary);
 }
 
+.period-filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .year-select {
   padding: 0.45rem 1rem;
   border-radius: 10px;
@@ -873,6 +1015,51 @@ onMounted(() => {
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
+}
+
+.breakdown-box {
+  margin-top: 1.15rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.bar-track {
+  display: flex;
+  height: 10px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  gap: 2px;
+}
+
+.bar-segment {
+  height: 100%;
+  min-width: 6px;
+}
+
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.25rem;
+  margin-top: 0.75rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.legend-text strong {
+  color: var(--color-text-primary);
 }
 
 /* Badges Grid */
@@ -980,10 +1167,85 @@ onMounted(() => {
   color: var(--color-success);
 }
 
+.badge-period-pill {
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.badge-progress-wrap {
+  width: 100%;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.badge-progress-track,
+.modal-progress-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.modal-progress-track {
+  height: 8px;
+}
+
+.badge-progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 4px;
+}
+
+.badge-progress-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
 .badge-locked-tag {
   font-size: 0.7rem;
   font-weight: 700;
   color: var(--color-text-muted);
+}
+
+.period-modal-pill {
+  display: inline-block;
+  padding: 0.45rem 0.9rem;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.modal-progress-box {
+  background: rgba(15, 23, 42, 0.5);
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.modal-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.45rem;
+}
+
+.modal-progress-header strong {
+  color: #60a5fa;
 }
 
 /* Contributions List */

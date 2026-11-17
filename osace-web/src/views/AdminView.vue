@@ -65,6 +65,15 @@
             <Folder :size="15" />
             <span>Toate Contribuțiile</span>
           </button>
+
+          <button 
+            type="button"
+            :class="['nav-chip', { active: activeTab === 'statistics' }]" 
+            @click="selectTab('statistics')"
+          >
+            <BarChart3 :size="15" />
+            <span>Statistici</span>
+          </button>
         </div>
       </div>
 
@@ -459,8 +468,8 @@
           </div>
           <p class="badge-admin-desc">{{ b.description }}</p>
           <div class="badge-admin-meta">
-            <span>Regulă: <strong>{{ b.rule_type }}</strong></span>
-            <span>Prag: <strong>{{ b.threshold || 0 }}</strong></span>
+            <span>Regulă: <strong>{{ b.rule_type || 'manual' }}</strong></span>
+            <span>Valoare: <strong>{{ b.rule_value || '—' }}</strong></span>
           </div>
           <div class="badge-admin-actions">
             <button @click="openEditBadge(b)" class="btn-secondary btn-sm">Editează</button>
@@ -553,6 +562,189 @@
     </div>
 
     <!-- ========================================================= -->
+    <!-- TAB 12: STATISTICI ORGANIZAȚIE                             -->
+    <!-- ========================================================= -->
+    <div v-if="activeTab === 'statistics'" class="tab-content">
+      <div class="content-header">
+        <div>
+          <h3>Statistici Voluntariat</h3>
+          <p class="desc">Bazat pe activitățile finalizate în perioada selectată.</p>
+        </div>
+        <div class="stats-period-controls">
+          <select v-model="statsYear" @change="onStatsYearChange" class="year-select">
+            <option v-for="y in statsYearOptions" :key="y.startYear" :value="y.startYear">
+              Anul {{ y.label }}
+            </option>
+            <option value="all">Din Toate Timpurile</option>
+          </select>
+
+          <select
+            v-if="statsYear !== 'all'"
+            v-model="statsMonth"
+            @change="fetchStatistics"
+            class="year-select"
+          >
+            <option v-for="m in ACADEMIC_MONTH_OPTIONS" :key="m.value" :value="m.value">
+              {{ m.label }}
+            </option>
+          </select>
+
+          <button @click="fetchStatistics" class="btn-secondary btn-sm">Reîmprospătează</button>
+        </div>
+      </div>
+
+      <div v-if="loadingStats" class="loading-state">Se încarcă statisticile...</div>
+      <div v-else-if="statsData" class="stats-dashboard">
+        <!-- KPI Cards (6) -->
+        <div class="kpi-grid">
+          <div class="kpi-card glass-panel">
+            <span class="kpi-label">Ore Totale</span>
+            <strong class="kpi-value">{{ (parseFloat(statsData.total_hours_volunteered) || 0).toFixed(1) }}</strong>
+          </div>
+          <div class="kpi-card glass-panel">
+            <span class="kpi-label">Evenimente</span>
+            <strong class="kpi-value">{{ statsData.total_events_completed || 0 }}</strong>
+          </div>
+          <div class="kpi-card glass-panel">
+            <span class="kpi-label">Voluntari Activi</span>
+            <strong class="kpi-value">{{ statsData.total_unique_volunteers || 0 }}</strong>
+          </div>
+          <div class="kpi-card glass-panel">
+            <span class="kpi-label">Medie / Activitate</span>
+            <strong class="kpi-value">{{ statsData.avg_attendees_per_event || 0 }} pers</strong>
+          </div>
+          <div class="kpi-card glass-panel">
+            <span class="kpi-label">Voluntari Noi</span>
+            <strong class="kpi-value" style="color: #34d399;">{{ statsData.new_volunteers_count || 0 }}</strong>
+          </div>
+          <div class="kpi-card glass-panel">
+            <span class="kpi-label">Act. / Contrib.</span>
+            <strong class="kpi-value" style="color: #c084fc;">
+              {{ (parseFloat(statsData.activity_hours) || 0).toFixed(0) }}h / {{ (parseFloat(statsData.contribution_hours) || 0).toFixed(0) }}h
+            </strong>
+          </div>
+        </div>
+
+        <div class="stats-two-col">
+          <!-- Category Breakdown -->
+          <div class="glass-panel stats-card-box">
+            <div class="stats-box-title">
+              <PieChartIcon :size="18" class="text-primary" />
+              <h4>Ore pe Categorie</h4>
+            </div>
+            <div v-if="!statsData.hours_by_category || statsData.hours_by_category.length === 0" class="empty-sub">
+              Nu există date pentru perioada selectată.
+            </div>
+            <div v-else class="cat-bars-list">
+              <div v-for="item in statsData.hours_by_category" :key="item.category" class="cat-bar-item">
+                <div class="cat-bar-head">
+                  <span>{{ getStatsCategoryMeta(item.category).label }}</span>
+                  <strong :style="{ color: getStatsCategoryMeta(item.category).color }">
+                    {{ parseFloat(item.hours || 0).toFixed(1) }}h
+                  </strong>
+                </div>
+                <div class="cat-bar-track">
+                  <div
+                    class="cat-bar-fill"
+                    :style="{
+                      width: `${statsTotalCatHours > 0 ? ((item.hours / statsTotalCatHours) * 100) : 0}%`,
+                      backgroundColor: getStatsCategoryMeta(item.category).color,
+                    }"
+                  ></div>
+                </div>
+                <span class="cat-bar-pct">
+                  {{ statsTotalCatHours > 0 ? ((item.hours / statsTotalCatHours) * 100).toFixed(0) : 0 }}% din total
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Monthly Trend -->
+          <div class="glass-panel stats-card-box">
+            <div class="stats-box-title">
+              <TrendingUpIcon :size="18" class="text-primary" />
+              <h4>Activitate Lunară</h4>
+            </div>
+            <div v-if="!statsData.monthly_trend || statsData.monthly_trend.length === 0" class="empty-sub">
+              Nu există date recente.
+            </div>
+            <div v-else class="trend-bars-row">
+              <div v-for="(m, idx) in statsData.monthly_trend" :key="idx" class="trend-col">
+                <span class="trend-val">{{ m.hours ? parseFloat(m.hours).toFixed(0) + 'h' : '0h' }}</span>
+                <div class="trend-bar-track">
+                  <div
+                    class="trend-bar-fill"
+                    :style="{ height: `${Math.max(((m.hours || 0) / statsMaxTrendHours) * 100, 6)}%` }"
+                  ></div>
+                </div>
+                <span class="trend-month">{{ m.month }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-two-col">
+          <!-- Top Volunteers -->
+          <div class="glass-panel stats-card-box">
+            <div class="stats-box-title">
+              <TrophyIcon :size="18" style="color: #fbbf24;" />
+              <h4>Top Voluntari</h4>
+            </div>
+            <div v-if="!statsData.top_volunteers || statsData.top_volunteers.length === 0" class="empty-sub">
+              Niciun voluntar activ în această perioadă.
+            </div>
+            <div v-else class="top-vols-list">
+              <div
+                v-for="(v, idx) in statsData.top_volunteers"
+                :key="v.id"
+                class="top-vol-row"
+                @click="openPublicProfile(v.id)"
+              >
+                <span class="top-vol-rank">{{ ['🥇', '🥈', '🥉'][idx] || `#${idx + 1}` }}</span>
+                <img v-if="v.avatar_url" :src="resolveUploadUrl(v.avatar_url)" class="top-vol-avatar" alt="Avatar" />
+                <div v-else class="top-vol-placeholder">{{ (v.name || 'V').charAt(0).toUpperCase() }}</div>
+                <div class="top-vol-info">
+                  <strong>{{ v.name }}</strong>
+                  <span>{{ v.events_attended }} activități</span>
+                </div>
+                <span class="hours-tag">{{ parseFloat(v.total_hours || 0).toFixed(1) }}h</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Most Popular Event -->
+          <div class="glass-panel stats-card-box">
+            <div class="stats-box-title">
+              <FlameIcon :size="18" style="color: #f97316;" />
+              <h4>Activitate Populară</h4>
+            </div>
+            <div v-if="!statsData.most_popular_event" class="empty-sub">
+              Nicio activitate finalizată în perioada selectată.
+            </div>
+            <div v-else class="popular-event-card">
+              <h4>{{ statsData.most_popular_event.title }}</h4>
+              <div class="popular-meta">
+                <span
+                  class="badge-pill"
+                  :style="{
+                    backgroundColor: getStatsCategoryMeta(statsData.most_popular_event.category).color + '22',
+                    color: getStatsCategoryMeta(statsData.most_popular_event.category).color,
+                  }"
+                >
+                  {{ getStatsCategoryMeta(statsData.most_popular_event.category).label }}
+                </span>
+                <span class="popular-count">
+                  <Users :size="14" />
+                  {{ statsData.most_popular_event.attendee_count }} participanți
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================= -->
     <!-- MODALS                                                    -->
     <!-- ========================================================= -->
 
@@ -592,27 +784,33 @@
           </div>
           <div class="form-group">
             <label>Cheie Unică (Key)</label>
-            <input v-model="badgeModal.form.key" type="text" class="input-field" placeholder="Ex: HOURS_50" required />
+            <input v-model="badgeModal.form.key" type="text" class="input-field" placeholder="Ex: 50_HOURS" :disabled="badgeModal.isEdit" required />
           </div>
           <div class="form-row">
             <div class="form-group flex-1">
               <label>Tip Regulă</label>
               <select v-model="badgeModal.form.rule_type" class="input-field">
-                <option value="hours">Ore acumulate</option>
-                <option value="events_attended">Activități participat</option>
-                <option value="social_hours">Ore Social</option>
-                <option value="first_event">Prima activitate</option>
                 <option value="manual">Manual / Special</option>
+                <option value="total_hours">Ore totale</option>
+                <option value="total_events">Activități participat</option>
+                <option value="monthly_events">Activități pe lună</option>
+                <option value="weekly_hours">Ore pe săptămână</option>
+                <option value="perfect_streak">Serie consecutivă</option>
+                <option value="evening_events">Activități de seară</option>
+                <option value="diversified">Om Complet (toate categoriile)</option>
+                <option value="category_count">Nr. activități categorie (ex: social:5)</option>
+                <option value="category_hours">Ore categorie (ex: proiect:25)</option>
+                <option value="easter_egg">Secret / Easter Egg</option>
               </select>
             </div>
             <div class="form-group flex-1">
-              <label>Prag (Threshold)</label>
-              <input v-model="badgeModal.form.threshold" type="number" step="1" class="input-field" />
+              <label>Valoare Regulă (Rule Value)</label>
+              <input v-model="badgeModal.form.rule_value" type="text" class="input-field" placeholder="Ex: 50 sau social:5" />
             </div>
           </div>
           <div class="form-group">
-            <label>Icon</label>
-            <input v-model="badgeModal.form.icon" type="text" class="input-field" placeholder="Ex: trophy, flame, star, award" />
+            <label>Icon Name (Ionicons)</label>
+            <input v-model="badgeModal.form.icon_name" type="text" class="input-field" placeholder="Ex: trophy, flame, star, ribbon" required />
           </div>
           <div class="modal-actions" style="display:flex;gap:1rem;margin-top:1rem;">
             <button type="button" @click="badgeModal.visible = false" class="btn-secondary" style="flex:1;">Anulează</button>
@@ -652,7 +850,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { 
   Calendar, 
   Clock, 
@@ -668,13 +866,25 @@ import {
   CheckCircle2,
   MapPin,
   ShieldCheck,
-  ZoomIn
+  ZoomIn,
+  BarChart3,
+  PieChartIcon,
+  TrendingUpIcon,
+  TrophyIcon,
+  FlameIcon
 } from 'lucide-vue-next';
 import api from '../services/api';
 import EventManagement from '../components/EventManagement.vue';
 import UserManagement from '../components/UserManagement.vue';
+import {
+  ACADEMIC_MONTH_OPTIONS,
+  getDefaultAcademicYear,
+  buildPeriodQuery,
+  resolveMediaUrl,
+} from '../utils/periodFilters';
 
 const route = useRoute();
+const router = useRouter();
 const activeTab = ref(sessionStorage.getItem('adminActiveTab') || 'events');
 
 const selectTab = (tab) => {
@@ -687,6 +897,7 @@ const selectTab = (tab) => {
   else if (tab === 'reports') fetchReports();
   else if (tab === 'badges') fetchBadges();
   else if (tab === 'logs') fetchAuditLogs();
+  else if (tab === 'statistics') fetchStatisticsData();
 };
 
 const currentUser = computed(() => {
@@ -968,7 +1179,7 @@ const loadingBadges = ref(false);
 const badgeModal = ref({
   visible: false,
   isEdit: false,
-  form: { id: null, name: '', description: '', key: '', rule_type: 'hours', threshold: 10, icon: 'award' }
+  form: { id: null, name: '', description: '', key: '', rule_type: 'total_hours', rule_value: '10', icon_name: 'award' }
 });
 
 const fetchBadges = async () => {
@@ -987,7 +1198,7 @@ const openCreateBadge = () => {
   badgeModal.value = {
     visible: true,
     isEdit: false,
-    form: { id: null, name: '', description: '', key: '', rule_type: 'hours', threshold: 10, icon: 'award' }
+    form: { id: null, name: '', description: '', key: '', rule_type: 'total_hours', rule_value: '10', icon_name: 'award' }
   };
 };
 
@@ -995,7 +1206,15 @@ const openEditBadge = (b) => {
   badgeModal.value = {
     visible: true,
     isEdit: true,
-    form: { ...b }
+    form: {
+      id: b.id,
+      name: b.name || '',
+      description: b.description || '',
+      key: b.key || '',
+      rule_type: b.rule_type || 'manual',
+      rule_value: b.rule_value ?? (b.threshold != null ? String(b.threshold) : ''),
+      icon_name: b.icon_name || b.icon || 'award',
+    }
   };
 };
 
@@ -1087,13 +1306,80 @@ const fetchAuditLogs = async (page = 1) => {
   }
 };
 
-// ── General Helpers ──────────────────────────────────
-const resolveUploadUrl = (url) => {
-  if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const base = import.meta.env.PROD ? 'https://api.osace.ro' : 'http://localhost:3000';
-  return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+// ── 12. Organization Statistics ──────────────────────
+const statsData = ref(null);
+const loadingStats = ref(false);
+const statsAvailableYears = ref([]);
+const statsYear = ref(getDefaultAcademicYear());
+const statsMonth = ref('all');
+
+const STATS_CATEGORY_META = {
+  sedinta:     { label: 'Ședințe',              color: '#1C748C' },
+  social:      { label: 'Social',               color: '#27ae60' },
+  proiect:     { label: 'Proiecte',             color: '#f39c12' },
+  contributie: { label: 'Contribuții Speciale', color: '#8e44ad' },
 };
+
+const getStatsCategoryMeta = (cat) =>
+  STATS_CATEGORY_META[cat] || { label: cat || 'Altul', color: '#64748b' };
+
+const statsYearOptions = computed(() => {
+  const cur = getDefaultAcademicYear();
+  const list = [...statsAvailableYears.value];
+  if (!list.find((y) => y.startYear === cur)) {
+    list.unshift({ startYear: cur, label: `${cur}-${cur + 1}` });
+  }
+  return list;
+});
+
+const statsTotalCatHours = computed(() =>
+  (statsData.value?.hours_by_category || []).reduce((sum, d) => sum + (parseFloat(d.hours) || 0), 0)
+);
+
+const statsMaxTrendHours = computed(() =>
+  Math.max(...(statsData.value?.monthly_trend || []).map((d) => parseFloat(d.hours) || 0), 1)
+);
+
+const fetchStatsYears = async () => {
+  try {
+    const res = await api.get('/leaderboard/available-years');
+    statsAvailableYears.value = res.data || [];
+  } catch (err) {
+    console.error('Eroare preluare ani statistici:', err);
+  }
+};
+
+const fetchStatistics = async () => {
+  loadingStats.value = true;
+  try {
+    const query = buildPeriodQuery(statsYear.value, statsMonth.value);
+    const res = await api.get(`/admin/statistics${query}`);
+    statsData.value = res.data;
+  } catch (err) {
+    console.error('Eroare preluare statistici:', err);
+  } finally {
+    loadingStats.value = false;
+  }
+};
+
+const fetchStatisticsData = async () => {
+  await Promise.all([fetchStatsYears(), fetchStatistics()]);
+};
+
+const onStatsYearChange = () => {
+  if (statsYear.value === 'all') {
+    statsMonth.value = 'all';
+  }
+  fetchStatistics();
+};
+
+const openPublicProfile = (userId) => {
+  if (!userId) return;
+  router.push({ name: 'public-profile', params: { id: userId } });
+};
+
+// ── General Helpers ──────────────────────────────────
+const resolveUploadUrl = (url) => resolveMediaUrl(url);
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
@@ -1700,6 +1986,264 @@ onMounted(() => {
 .loading-state {
   text-align: center;
   padding: 3rem;
+  color: var(--color-text-secondary);
+}
+
+/* Statistics Tab */
+.stats-period-controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.stats-period-controls .year-select {
+  padding: 0.42rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-size: 0.84rem;
+}
+
+.stats-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  gap: 0.9rem;
+}
+
+.kpi-card {
+  padding: 1.15rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  border-left: 3px solid var(--color-primary);
+}
+
+.kpi-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.kpi-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  color: var(--color-text-primary);
+}
+
+.stats-two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.stats-card-box {
+  padding: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stats-box-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.stats-box-title h4 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.cat-bars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+}
+
+.cat-bar-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  margin-bottom: 0.35rem;
+}
+
+.cat-bar-track {
+  height: 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.cat-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+}
+
+.cat-bar-pct {
+  display: inline-block;
+  margin-top: 0.2rem;
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+}
+
+.trend-bars-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 0.65rem;
+  height: 150px;
+  padding-top: 0.5rem;
+}
+
+.trend-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+.trend-val {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.trend-bar-track {
+  flex: 1;
+  width: 65%;
+  max-width: 34px;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.trend-bar-fill {
+  width: 100%;
+  background: var(--color-primary);
+  border-radius: 6px 6px 0 0;
+}
+
+.trend-month {
+  margin-top: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.top-vols-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.top-vol-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: var(--color-bg-base);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.top-vol-row:hover {
+  border-color: var(--color-primary);
+}
+
+.top-vol-rank {
+  font-size: 1.15rem;
+  width: 26px;
+  text-align: center;
+}
+
+.top-vol-avatar,
+.top-vol-placeholder {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.top-vol-placeholder {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.top-vol-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.top-vol-info strong {
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-vol-info span {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+}
+
+.hours-tag {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  font-weight: 800;
+  font-size: 0.82rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 8px;
+}
+
+.popular-event-card {
+  padding: 1rem;
+  border-radius: 12px;
+  background: var(--color-bg-base);
+  border: 1px solid var(--border-color);
+}
+
+.popular-event-card h4 {
+  font-size: 1.05rem;
+  margin-bottom: 0.65rem;
+}
+
+.popular-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.popular-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
   color: var(--color-text-secondary);
 }
 </style>

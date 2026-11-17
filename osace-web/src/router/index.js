@@ -35,6 +35,11 @@ const router = createRouter({
           component: ProfileView
         },
         {
+          path: 'profile/:id',
+          name: 'public-profile',
+          component: () => import('../views/PublicProfileView.vue')
+        },
+        {
           path: 'admin',
           name: 'admin',
           component: AdminView,

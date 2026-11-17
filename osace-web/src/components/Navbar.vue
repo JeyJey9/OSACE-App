@@ -8,6 +8,7 @@
       <div class="brand-text">
         <span class="brand-name">OSACE</span>
         <span class="brand-tag">PORTAL</span>
+        <span class="version-badge">Compatibil {{ APP_WEB_VERSION }}</span>
       </div>
     </div>
 
@@ -126,6 +127,7 @@ import {
   CheckCheckIcon 
 } from 'lucide-vue-next';
 import api from '../services/api';
+import { APP_WEB_VERSION, resolveMediaUrl } from '../utils/periodFilters';
 
 const router = useRouter();
 
@@ -224,11 +226,7 @@ const formatTimeAgo = (dateStr) => {
   return date.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' });
 };
 
-const resolveAvatar = (url) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url;
-  return `https://api.osace.ro${url}`;
-};
+const resolveAvatar = (url) => resolveMediaUrl(url);
 
 const closeOnOutsideClick = (e) => {
   if (!e.target.closest('.notif-trigger') && !e.target.closest('.notif-dropdown')) {
@@ -503,6 +501,20 @@ onUnmounted(() => {
     font-weight: 700;
     color: var(--color-primary);
     letter-spacing: 2px;
+  }
+
+  .version-badge {
+    display: inline-block;
+    margin-top: 0.3rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.14);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    width: fit-content;
+    letter-spacing: 0.02em;
   }
 
   .nav-links {
