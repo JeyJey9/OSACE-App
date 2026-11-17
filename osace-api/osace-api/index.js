@@ -23,6 +23,7 @@ const verificationRoutes = require('./src/features/StudentVerification/verificat
 const configRoutes = require('./src/features/Config/config.routes');
 const archiveRoutes = require('./src/features/Archive/archive.routes');
 const { startCheckoutWorker } = require('./src/scripts/checkoutWorker');
+const { startBadgeWorker } = require('./src/scripts/badgeWorker');
 const { startInstagramTokenWorker } = require('./src/services/instagramTokenService');
 
 const app = express();
@@ -197,6 +198,26 @@ app.listen(port, async () => {
     console.warn('[DB] Could not ensure last_seen_at column:', e.message);
   }
 
+  // Safe migration: add period_label on user_badges, clean legacy WEEKLY_CHAMPION, ensure champion badges
+  try {
+    await pool.query(`ALTER TABLE user_badges ADD COLUMN IF NOT EXISTS period_label TEXT`);
+    await pool.query(`DELETE FROM user_badges WHERE badge_id IN (SELECT id FROM badges WHERE key IN ('WEEKLY_CHAMPION', 'LEADERBOARD_TOP_1'))`);
+    await pool.query(`DELETE FROM badges WHERE key IN ('WEEKLY_CHAMPION', 'LEADERBOARD_TOP_1')`);
+    await pool.query(`
+      INSERT INTO badges (name, description, icon_name, key)
+      VALUES
+        ('Voluntarul Lunii', 'Ai obținut locul 1 în clasamentul unei luni.', 'trophy', 'VOLUNTEER_OF_THE_MONTH'),
+        ('Voluntarul Anului', 'Ai obținut locul 1 în clasamentul unui an universitar.', 'ribbon', 'VOLUNTEER_OF_THE_YEAR')
+      ON CONFLICT (key) DO UPDATE SET
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        icon_name = EXCLUDED.icon_name;
+    `);
+    console.log('[DB] Champion badges & user_badges.period_label ensured.');
+  } catch (e) {
+    console.warn('[DB] Could not ensure champion badges migration:', e.message);
+  }
+
   // Safe migration: create app_announcements table
   try {
     await pool.query(`
@@ -219,5 +240,6 @@ app.listen(port, async () => {
     console.warn('[DB] Could not ensure app_announcements table:', e.message);
   }
 
+  startBadgeWorker(pool);
   console.log(`Serverul a pornit la http://localhost:${port}`);
 });

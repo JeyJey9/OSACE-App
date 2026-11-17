@@ -36,6 +36,9 @@ export default function BadgeList({ badges }) {
                   <Ionicons name={item.icon_name} size={32} color={colors.primary} />
                 </View>
                 <Text style={styles.badgeName} numberOfLines={2}>{item.name}</Text>
+                {!!item.period_label && (
+                  <Text style={styles.badgePeriodTag} numberOfLines={1}>{item.period_label}</Text>
+                )}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -58,7 +61,16 @@ export default function BadgeList({ badges }) {
                 </View>
                 <Text style={styles.modalTitle}>{selectedBadge.name}</Text>
                 <Text style={styles.modalDescription}>{selectedBadge.description}</Text>
-                
+
+                {!!selectedBadge.period_label && (
+                  <View style={styles.modalPeriodBox}>
+                    <Ionicons name="calendar-outline" size={15} color="#d97706" />
+                    <Text style={styles.modalPeriodText}>
+                      Perioada câștigată: {selectedBadge.period_label}
+                    </Text>
+                  </View>
+                )}
+
                 <TouchableOpacity 
                   style={styles.modalButton} 
                   onPress={() => setSelectedBadge(null)}
@@ -124,6 +136,31 @@ const createStyles = (colors, isDark, STANDARD_BLUE) => StyleSheet.create({
     textAlign: 'center',
     fontWeight: '700',
     lineHeight: 14,
+  },
+  badgePeriodTag: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: isDark ? '#fbbf24' : '#d97706',
+    marginTop: 3,
+    textAlign: 'center',
+    maxWidth: 82,
+  },
+  modalPeriodBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: isDark ? 'rgba(245, 158, 11, 0.14)' : '#fffbeb',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(245, 158, 11, 0.35)' : '#fde68a',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginBottom: 22,
+  },
+  modalPeriodText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: isDark ? '#fbbf24' : '#b45309',
   },
   emptyContainer: {
     width: '100%',

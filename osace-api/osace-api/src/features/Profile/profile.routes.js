@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const argon2 = require('argon2'); 
 const { uploadAvatar } = require('../../config/multer');
-const { getCurrentAcademicYear, parseYearParam } = require('../../utils/academicYear');
+const { getCurrentAcademicYear, parseYearParam, parsePeriodParams } = require('../../utils/academicYear');
 
 const { 
   checkBadgesOnProfileView, 
@@ -12,61 +12,112 @@ const {
   checkBadgesOnProfileEdit 
 } = require('../Badge/badge.service');
 
+async function getUserPeriodMetrics(pool, userId, periodFilter) {
+  const hasPeriod = Boolean(periodFilter && periodFilter.start && periodFilter.end);
+  const eventCond = hasPeriod ? 'AND e.start_time >= $2 AND e.start_time < $3' : '';
+  const contribCond = hasPeriod ? 'AND sc.created_at >= $2 AND sc.created_at < $3' : '';
+
+  const query = `
+    WITH att_by_user AS (
+      SELECT
+        ea.user_id,
+        SUM(COALESCE(ea.awarded_hours, e.duration_hours, 0)) AS hours
+      FROM event_attendance ea
+      JOIN events e ON ea.event_id = e.id
+      WHERE (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND e.end_time <= NOW()))
+        ${eventCond}
+      GROUP BY ea.user_id
+    ),
+    sc_by_user AS (
+      SELECT
+        sc.user_id,
+        SUM(sc.awarded_hours) AS hours
+      FROM special_contributions sc
+      WHERE sc.status = 'approved'
+        ${contribCond}
+      GROUP BY sc.user_id
+    ),
+    ranked AS (
+      SELECT
+        u.id,
+        RANK() OVER (ORDER BY (COALESCE(a.hours, 0) + COALESCE(s.hours, 0)) DESC)::int AS rnk
+      FROM users u
+      LEFT JOIN att_by_user a ON u.id = a.user_id
+      LEFT JOIN sc_by_user s ON u.id = s.user_id
+      WHERE u.role != 'admin'
+        AND (COALESCE(a.hours, 0) + COALESCE(s.hours, 0)) > 0
+    ),
+    target_events AS (
+      SELECT
+        COUNT(ea.event_id)::int AS events_count,
+        COALESCE(SUM(COALESCE(ea.awarded_hours, e.duration_hours, 0)), 0)::float AS event_hours,
+        COALESCE(SUM(CASE WHEN e.category = 'social' THEN COALESCE(ea.awarded_hours, e.duration_hours, 0) ELSE 0 END), 0)::float AS social,
+        COALESCE(SUM(CASE WHEN e.category = 'proiect' THEN COALESCE(ea.awarded_hours, e.duration_hours, 0) ELSE 0 END), 0)::float AS proiect,
+        COALESCE(SUM(CASE WHEN e.category = 'sedinta' THEN COALESCE(ea.awarded_hours, e.duration_hours, 0) ELSE 0 END), 0)::float AS sedinta
+      FROM event_attendance ea
+      JOIN events e ON ea.event_id = e.id
+      WHERE ea.user_id = $1
+        AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND e.end_time <= NOW()))
+        ${eventCond}
+    ),
+    target_contrib AS (
+      SELECT
+        COALESCE(SUM(sc.awarded_hours), 0)::float AS contributie,
+        COUNT(sc.id)::int AS contrib_count
+      FROM special_contributions sc
+      WHERE sc.user_id = $1 AND sc.status = 'approved'
+        ${contribCond}
+    )
+    SELECT
+      (SELECT rnk FROM ranked WHERE id = $1) AS rank,
+      te.events_count,
+      tc.contrib_count,
+      (te.event_hours + tc.contributie)::float AS total_hours,
+      te.social,
+      te.proiect,
+      te.sedinta,
+      tc.contributie
+    FROM target_events te, target_contrib tc;
+  `;
+
+  const params = hasPeriod ? [userId, periodFilter.start, periodFilter.end] : [userId];
+  const res = await pool.query(query, params);
+  const row = res.rows[0] || {};
+  return {
+    rank: row.rank || null,
+    events_count: parseInt(row.events_count, 10) || 0,
+    total_hours: parseFloat(row.total_hours) || 0,
+    hours_by_category: {
+      social: parseFloat(row.social) || 0,
+      proiect: parseFloat(row.proiect) || 0,
+      sedinta: parseFloat(row.sedinta) || 0,
+      contributie: parseFloat(row.contributie) || 0,
+    },
+  };
+}
+
 module.exports = (pool, verifyToken) => {
 
 
-  // Traseul: /me (Profilul TĂU)
+  // Traseul: /me (Profilul TĂU) — suportă ?year=...&month=...
   router.get('/me', verifyToken, async (req, res) => {
     try {
-      const yearFilter = parseYearParam(req.query.year);
-      const isAllTime = !req.query.year || req.query.year === 'all';
+      const periodFilter = parsePeriodParams(req.query.year ?? 'all', req.query.month);
+      const userResult = await pool.query(
+        `SELECT id, display_name, first_name, last_name, email, role, created_at, avatar_url, student_verification_status
+         FROM users WHERE id = $1`,
+        [req.user.userId]
+      );
 
-      let userQuery, params;
-      if (isAllTime) {
-        userQuery = `
-          SELECT 
-            u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.created_at, u.avatar_url, u.student_verification_status,
-            (
-              (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
-               FROM event_attendance ea 
-               JOIN events e ON ea.event_id = e.id 
-               WHERE ea.user_id = u.id 
-                 AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND e.end_time <= NOW()))) +
-              (SELECT COALESCE(SUM(sc.awarded_hours), 0) 
-               FROM special_contributions sc 
-               WHERE sc.user_id = u.id AND sc.status = 'approved')
-            ) AS total_hours
-          FROM users u 
-          WHERE u.id = $1
-        `;
-        params = [req.user.userId];
-      } else {
-        userQuery = `
-          SELECT 
-            u.id, u.display_name, u.first_name, u.last_name, u.email, u.role, u.created_at, u.avatar_url, u.student_verification_status,
-            (
-              (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
-               FROM event_attendance ea 
-               JOIN events e ON ea.event_id = e.id
-               WHERE ea.user_id = u.id 
-                 AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND e.end_time <= NOW()))
-                 AND e.start_time >= $2 AND e.start_time < $3) +
-              (SELECT COALESCE(SUM(sc.awarded_hours), 0) 
-               FROM special_contributions sc 
-               WHERE sc.user_id = u.id AND sc.status = 'approved'
-                 AND sc.created_at >= $2 AND sc.created_at < $3)
-            ) AS total_hours
-          FROM users u 
-          WHERE u.id = $1
-        `;
-        params = [req.user.userId, yearFilter.start, yearFilter.end];
-      }
-
-      const userResult = await pool.query(userQuery, params);
       if (userResult.rows.length === 0) {
         return res.status(404).json({ error: 'Utilizator negăsit.' });
       }
-      res.json(userResult.rows[0]);
+
+      const metrics = await getUserPeriodMetrics(pool, req.user.userId, periodFilter);
+      res.json({
+        ...userResult.rows[0],
+        ...metrics,
+      });
     } catch (error) {
       console.error('Eroare la preluarea profilului:', error);
       res.status(500).json({ error: 'Eroare server la preluarea profilului.' });
@@ -92,13 +143,13 @@ module.exports = (pool, verifyToken) => {
   	}
   });
   
-  // Traseul: /my-past-events — Optional ?year=2025 or ?year=all
+  // Traseul: /my-past-events — Optional ?year=2025|all &month=1..12|all
   router.get('/my-past-events', verifyToken, async (req, res) => {
     const userId = req.user.userId;
-    const yearFilter = parseYearParam(req.query.year);
+    const periodFilter = parsePeriodParams(req.query.year ?? 'all', req.query.month);
     try {
       let query, params;
-      if (yearFilter) {
+      if (periodFilter) {
         query = `SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 
                 ea.confirmation_status, ea.awarded_hours 
          FROM events e
@@ -108,7 +159,7 @@ module.exports = (pool, verifyToken) => {
            AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND ea.check_in_time IS NOT NULL))
            AND e.start_time >= $2 AND e.start_time < $3
          ORDER BY e.start_time DESC`;
-        params = [userId, yearFilter.start, yearFilter.end];
+        params = [userId, periodFilter.start, periodFilter.end];
       } else {
         query = `SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 
                 ea.confirmation_status, ea.awarded_hours 
@@ -173,7 +224,8 @@ module.exports = (pool, verifyToken) => {
           b.description,
           b.icon_name,
           b.key,
-          ub.earned_at
+          ub.earned_at,
+          ub.period_label
         FROM
           user_badges ub
         JOIN
@@ -380,7 +432,8 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
         b.description,
         b.icon_name,
         b.key,
-        ub.earned_at
+        ub.earned_at,
+        ub.period_label
       FROM
         user_badges ub
       JOIN
@@ -482,68 +535,34 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
   });
 
   // Ruta dinamică /:id (Profilul PUBLIC al altcuiva)
-  // Query params: ?year=2025 for specific year, ?year=all for all-time, default = current year
+  // Query params: ?year=2025|all &month=1..12|all, default = current academic year
   router.get('/:id', verifyToken, async (req, res) => {
     const { id } = req.params; 
 
     if (isNaN(id)) {
-        return res.status(400).json({ error: 'ID utilizator invalid.' });
+      return res.status(400).json({ error: 'ID utilizator invalid.' });
     }
 
-    const yearFilter = parseYearParam(req.query.year) || getCurrentAcademicYear();
-    const isAllTime = req.query.year === 'all';
+    const periodFilter = parsePeriodParams(req.query.year, req.query.month);
 
     try {
-      let profileQuery, params;
-      
-      if (isAllTime) {
-        profileQuery = `
-          SELECT
-            u.id, u.display_name, u.first_name, u.last_name, u.avatar_url, u.role, u.created_at,
-            (
-              (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
-               FROM event_attendance ea 
-               JOIN events e ON ea.event_id = e.id
-               WHERE ea.user_id = u.id 
-                 AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND e.end_time <= NOW()))) +
-              (SELECT COALESCE(SUM(sc.awarded_hours), 0) 
-               FROM special_contributions sc 
-               WHERE sc.user_id = u.id AND sc.status = 'approved')
-            ) AS total_hours
-          FROM users u
-          WHERE u.id = $1;
-        `;
-        params = [id];
-      } else {
-        profileQuery = `
-          SELECT
-            u.id, u.display_name, u.first_name, u.last_name, u.avatar_url, u.role, u.created_at,
-            (
-              (SELECT COALESCE(SUM(ea.awarded_hours), 0) 
-               FROM event_attendance ea 
-               JOIN events e ON ea.event_id = e.id
-               WHERE ea.user_id = u.id 
-                 AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND e.end_time <= NOW()))
-                 AND e.start_time >= $2 AND e.start_time < $3) +
-              (SELECT COALESCE(SUM(sc.awarded_hours), 0) 
-               FROM special_contributions sc 
-               WHERE sc.user_id = u.id AND sc.status = 'approved'
-                 AND sc.created_at >= $2 AND sc.created_at < $3)
-            ) AS total_hours
-          FROM users u
-          WHERE u.id = $1;
-        `;
-        params = [id, yearFilter.start, yearFilter.end];
-      }
-      
-      const result = await pool.query(profileQuery, params);
+      const result = await pool.query(
+        `SELECT id, display_name, first_name, last_name, avatar_url, role, created_at
+         FROM users WHERE id = $1`,
+        [id]
+      );
 
       if (result.rows.length === 0) return res.status(404).json({ error: 'Utilizator negăsit.' });
-      
+
+      const metrics = await getUserPeriodMetrics(pool, id, periodFilter);
+
       if (req.user.userId != req.params.id) { 
-         checkBadgesOnProfileView(req.user.userId, pool);
+        checkBadgesOnProfileView(req.user.userId, pool);
       }
-      res.json(result.rows[0]);
+      res.json({
+        ...result.rows[0],
+        ...metrics,
+      });
 
     } catch (error) {
       console.error(`Eroare preluare profil public:`, error);
@@ -555,11 +574,11 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
     const { id } = req.params;
     if (isNaN(id)) return res.status(400).json({ error: 'ID invalid' });
 
-    const yearFilter = parseYearParam(req.query.year);
+    const periodFilter = parsePeriodParams(req.query.year ?? 'all', req.query.month);
 
     try {
       let query, params;
-      if (yearFilter) {
+      if (periodFilter) {
         query = `
           SELECT c.*, 
                  coord.display_name as coord_name, coord.first_name as coord_first, coord.last_name as coord_last
@@ -569,7 +588,7 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
             AND c.created_at >= $2 AND c.created_at < $3
           ORDER BY c.created_at DESC
         `;
-        params = [id, yearFilter.start, yearFilter.end];
+        params = [id, periodFilter.start, periodFilter.end];
       } else {
         query = `
           SELECT c.*, 
@@ -594,11 +613,11 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
     const { id } = req.params;
     if (isNaN(id)) return res.status(400).json({ error: 'ID invalid' });
 
-    const yearFilter = parseYearParam(req.query.year);
+    const periodFilter = parsePeriodParams(req.query.year ?? 'all', req.query.month);
 
     try {
       let query, params;
-      if (yearFilter) {
+      if (periodFilter) {
         query = `
           SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 
                  ea.confirmation_status, ea.awarded_hours, ea.confirmed_at
@@ -610,7 +629,7 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
             AND e.start_time >= $2 AND e.start_time < $3
           ORDER BY e.start_time DESC
         `;
-        params = [id, yearFilter.start, yearFilter.end];
+        params = [id, periodFilter.start, periodFilter.end];
       } else {
         query = `
           SELECT e.id, e.title, e.start_time, e.end_time, e.location, e.duration_hours, e.category, 

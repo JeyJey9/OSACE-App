@@ -99,9 +99,13 @@ INSERT INTO badges (name, description, icon_name, key) VALUES
  'Ai participat la 10 activități seara (după 18:00). Nopțile sunt ale tale.',
  'wine-outline',                                                                                                            '10_EVENING_EVENTS'),
 
-('Campionul Lunii',
- 'Ai câștigat titlul de cel mai activ voluntar al săptămânii.',
- 'podium-outline',                                                                                                          'WEEKLY_CHAMPION'),
+('Voluntarul Lunii',
+ 'Ai obținut locul 1 în clasamentul unei luni.',
+ 'trophy',                                                                                                                  'VOLUNTEER_OF_THE_MONTH'),
+
+('Voluntarul Anului',
+ 'Ai obținut locul 1 în clasamentul unui an universitar.',
+ 'ribbon',                                                                                                                  'VOLUNTEER_OF_THE_YEAR'),
 
 ('Neoprit',
  'O serie de 20 de activități consecutive. Pur și simplu de neoprit.',

@@ -27,7 +27,7 @@ export default function DropdownPicker({
         style={[styles.pickerButton, style]} 
         onPress={() => setModalVisible(true)}
       >
-        <Text style={styles.pickerText}>
+        <Text style={styles.pickerText} numberOfLines={1}>
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
         <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
@@ -93,6 +93,8 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 14,
     fontWeight: '600',
+    flexShrink: 1,
+    marginRight: 6,
   },
   modalOverlay: {
     flex: 1,

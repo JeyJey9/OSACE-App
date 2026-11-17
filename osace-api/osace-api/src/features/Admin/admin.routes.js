@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { STATS_QUERY, USER_DETAILS_QUERY } = require('./admin.queries');
+const { STATS_QUERY, buildStatsQuery, USER_DETAILS_QUERY } = require('./admin.queries');
 const { logAction } = require('../../utils/auditLog');
-const { getCurrentAcademicYear } = require('../../utils/academicYear');
-const { invalidateUserBadgeCache } = require('../Badge/badge.service');
+const { getCurrentAcademicYear, parsePeriodParams, getPreviousMonthBounds } = require('../../utils/academicYear');
+const { invalidateUserBadgeCache, awardBadge } = require('../Badge/badge.service');
 
 // Primește 'pool', 'axios' și middleware-urile
 module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
@@ -586,8 +586,10 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
   // Traseul: /api/admin/statistics
   router.get('/statistics', [verifyToken, verifyManager], async (req, res) => {
     try {
-      const statsResult = await pool.query(STATS_QUERY); 
-      res.json(statsResult.rows[0]); 
+      const periodFilter = parsePeriodParams(req.query.year ?? 'all', req.query.month);
+      const { text, values } = buildStatsQuery(periodFilter);
+      const statsResult = await pool.query(text, values);
+      res.json(statsResult.rows[0]);
     } catch (error) {
       console.error('Eroare la preluarea statisticilor:', error);
       res.status(500).json({ error: 'Eroare server la preluarea statisticilor.' });
@@ -715,14 +717,39 @@ module.exports = (pool, axios, verifyToken, verifyAdmin, verifyManager) => {
 
   router.post('/users/:id/badges', [verifyToken, verifyAdmin], async (req, res) => {
     const { id } = req.params;
-    const { badge_id } = req.body;
+    const { badge_id, period_label, replace_period } = req.body;
     try {
-      await pool.query(
-        'INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [id, badge_id]
-      );
-      invalidateUserBadgeCache(id); // Invalidează cache-ul local pentru acest utilizator
-      await logAction(pool, req.user.userId, 'BADGE_AWARD_MANUAL', 'user', parseInt(id), { badge_id });
+      const badgeRow = await pool.query('SELECT key FROM badges WHERE id = $1', [badge_id]);
+      if (badgeRow.rowCount === 0) {
+        return res.status(404).json({ error: 'Badge-ul nu a fost găsit.' });
+      }
+      const badgeKey = badgeRow.rows[0].key;
+      let cleanPeriod = typeof period_label === 'string' ? period_label.trim() : '';
+      if (!cleanPeriod) {
+        if (badgeKey === 'VOLUNTEER_OF_THE_MONTH') cleanPeriod = getPreviousMonthBounds().label;
+        else if (badgeKey === 'VOLUNTEER_OF_THE_YEAR') {
+          const curY = getCurrentAcademicYear().startYear;
+          cleanPeriod = `${curY - 1}-${curY}`;
+        }
+      }
+      if (cleanPeriod && replace_period) {
+        const upd = await pool.query(
+          `UPDATE user_badges SET period_label = $1, earned_at = NOW() WHERE user_id = $2 AND badge_id = $3`,
+          [cleanPeriod, id, badge_id]
+        );
+        if (upd.rowCount === 0) {
+          await awardBadge(id, badgeKey, pool, cleanPeriod);
+        }
+      } else if (cleanPeriod) {
+        await awardBadge(id, badgeKey, pool, cleanPeriod);
+      } else {
+        await pool.query(
+          'INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [id, badge_id]
+        );
+      }
+      invalidateUserBadgeCache(id);
+      await logAction(pool, req.user.userId, 'BADGE_AWARD_MANUAL', 'user', parseInt(id), { badge_id, period_label: cleanPeriod || null });
       res.json({ message: 'Badge acordat cu succes.' });
     } catch (error) {
       console.error('Eroare acordare badge manual:', error);

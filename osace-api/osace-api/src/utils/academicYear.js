@@ -54,8 +54,76 @@ function parseYearParam(yearParam) {
   return getAcademicYear(startYear);
 }
 
+const ROMANIAN_MONTHS = [
+  'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+  'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie',
+];
+
+function formatYmd(year, month1Indexed, day = 1) {
+  const m = String(month1Indexed).padStart(2, '0');
+  const d = String(day).padStart(2, '0');
+  return `${year}-${m}-${d}`;
+}
+
+/**
+ * Parse year + optional month query parameters into date boundaries.
+ * - year='all' and (no month or month='all') => null (all-time)
+ * - month=1..12 => single month bounds inside the chosen (or current) academic year
+ *   Note: Months 9..12 belong to startYear; months 1..8 belong to startYear + 1.
+ */
+function parsePeriodParams(yearParam, monthParam) {
+  const hasMonth = monthParam !== undefined && monthParam !== null && monthParam !== '' && monthParam !== 'all';
+  if (yearParam === 'all' && !hasMonth) {
+    return null;
+  }
+
+  let startYear = yearParam && yearParam !== 'all' ? parseInt(yearParam, 10) : NaN;
+  if (isNaN(startYear)) {
+    startYear = getCurrentAcademicYear().startYear;
+  }
+
+  if (hasMonth) {
+    const monthNum = parseInt(monthParam, 10);
+    if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+      const calYear = monthNum >= 9 ? startYear : startYear + 1;
+      const nextMonth = monthNum === 12 ? 1 : monthNum + 1;
+      const nextYear = monthNum === 12 ? calYear + 1 : calYear;
+      return {
+        start: formatYmd(calYear, monthNum, 1),
+        end: formatYmd(nextYear, nextMonth, 1),
+        month: monthNum,
+        year: calYear,
+        label: `${ROMANIAN_MONTHS[monthNum - 1]} ${calYear}`,
+      };
+    }
+  }
+
+  return getAcademicYear(startYear);
+}
+
+/**
+ * Returns bounds and Romanian label for the immediately preceding calendar month.
+ */
+function getPreviousMonthBounds(now = new Date()) {
+  const curYear = now.getFullYear();
+  const curMonth = now.getMonth() + 1; // 1-indexed
+  const prevMonth = curMonth === 1 ? 12 : curMonth - 1;
+  const prevYear = curMonth === 1 ? curYear - 1 : curYear;
+
+  return {
+    start: formatYmd(prevYear, prevMonth, 1),
+    end: formatYmd(curYear, curMonth, 1),
+    month: prevMonth,
+    year: prevYear,
+    label: `${ROMANIAN_MONTHS[prevMonth - 1]} ${prevYear}`,
+  };
+}
+
 module.exports = {
+  ROMANIAN_MONTHS,
   getAcademicYear,
   getCurrentAcademicYear,
   parseYearParam,
+  parsePeriodParams,
+  getPreviousMonthBounds,
 };

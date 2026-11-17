@@ -19,6 +19,11 @@ import DropdownPicker from '../../../components/DropdownPicker';
 
 // Hook pentru temă
 import { useThemeColor } from '../../../constants/useThemeColor';
+import {
+  ACADEMIC_MONTH_OPTIONS,
+  getDefaultAcademicYear,
+  buildPeriodQuery,
+} from '../../../constants/periodFilters';
 
 export default function PublicProfileScreen() {
   const route = useRoute();
@@ -46,18 +51,19 @@ export default function PublicProfileScreen() {
   const [pastEvents, setPastEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [availableYears, setAvailableYears] = useState([]);
-  const [selectedYear, setSelectedYear] = useState(null);
+  const [selectedYear, setSelectedYear] = useState(getDefaultAcademicYear);
+  const [selectedMonth, setSelectedMonth] = useState('all');
 
-  const fetchProfileData = async (yearParam) => {
+  const fetchProfileData = async (yearParam, monthParam) => {
     try {
       setLoading(true);
-      const yearQuery = yearParam === 'all' ? '?year=all' : (yearParam ? `?year=${yearParam}` : '');
+      const query = buildPeriodQuery(yearParam, monthParam);
       
       const [profileResponse, badgesResponse, contributionsResponse, pastEventsResponse] = await Promise.all([
-        api.get(`/api/profile/${userId}${yearQuery}`),
+        api.get(`/api/profile/${userId}${query}`),
         api.get(`/api/profile/${userId}/badges`),
-        api.get(`/api/profile/${userId}/contributions${yearQuery}`),
-        api.get(`/api/profile/${userId}/past-events${yearQuery}`)
+        api.get(`/api/profile/${userId}/contributions${query}`),
+        api.get(`/api/profile/${userId}/past-events${query}`)
       ]);
       
       setProfile(profileResponse.data);
@@ -84,12 +90,15 @@ export default function PublicProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchAvailableYears();
-      fetchProfileData(selectedYear);
-    }, [userId, selectedYear])
+      fetchProfileData(selectedYear, selectedMonth);
+    }, [userId, selectedYear, selectedMonth])
   );
 
   const handleYearChange = (year) => {
     setSelectedYear(year);
+    if (year === 'all') {
+      setSelectedMonth('all');
+    }
   };
 
   if (loading || !profile) {
@@ -116,10 +125,11 @@ export default function PublicProfileScreen() {
         roleText={displayRole(profile.role)} 
       />
 
-      {/* Hours Toggle -> Dropdown (afisat doar daca exista activitati inregistrate) */}
+      {/* Period Filters: Academic Year + Month */}
       {availableYears.length > 0 && (
         <View style={styles.dropdownContainer}>
           <DropdownPicker
+            style={{ flex: 1 }}
             options={[
               ...availableYears.map(y => ({ label: `Anul ${y.label}`, value: y.startYear })),
               ...(availableYears.length > 1 ? [{ label: 'Toate Orele', value: 'all' }] : [])
@@ -128,6 +138,15 @@ export default function PublicProfileScreen() {
             onValueChange={handleYearChange}
             placeholder="Selectează perioada"
           />
+          {selectedYear !== 'all' && (
+            <DropdownPicker
+              style={{ flex: 1 }}
+              options={ACADEMIC_MONTH_OPTIONS}
+              selectedValue={selectedMonth}
+              onValueChange={setSelectedMonth}
+              placeholder="Luna"
+            />
+          )}
         </View>
       )}
       
@@ -135,6 +154,9 @@ export default function PublicProfileScreen() {
         totalHours={parseFloat(profile.total_hours) || 0}
         infoTitle="Voluntar din"
         infoValue={memberSince}
+        rank={profile.rank ?? null}
+        eventsCount={profile.events_count ?? pastEvents.length}
+        hoursByCategory={profile.hours_by_category ?? null}
       />
       
       <BadgeList 
@@ -150,6 +172,8 @@ export default function PublicProfileScreen() {
 
 const createStyles = (colors, isDark) => StyleSheet.create({
   dropdownContainer: { 
+    flexDirection: 'row',
+    gap: 10,
     marginHorizontal: 20, 
     marginTop: 15, 
   },

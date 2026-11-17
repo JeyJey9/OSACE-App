@@ -1,141 +1,168 @@
 // osace-api/src/features/Admin/admin.queries.js
 
-// Query-ul pentru GET /statistics
-const STATS_QUERY = `
-  WITH completed_attendances AS (
-    SELECT 
-      ea.user_id,
-      e.id AS event_id,
-      e.title AS event_title,
-      e.category, 
-      COALESCE(ea.awarded_hours, e.duration_hours, 0) AS hours,
-      e.start_time
-    FROM event_attendance ea
-    JOIN events e ON ea.event_id = e.id
-    WHERE ea.confirmation_status = 'attended' AND e.end_time <= NOW()
-    
-    UNION ALL
-    
-    SELECT
-      sc.user_id,
-      NULL AS event_id,
-      sc.title AS event_title,
-      'contributie' AS category,
-      sc.awarded_hours AS hours,
-      sc.created_at AS start_time
-    FROM special_contributions sc
-    WHERE sc.status = 'approved'
-  ),
+// Construiește query-ul parametrizat pentru GET /statistics (filtrat opțional pe interval [start, end))
+function buildStatsQuery(periodFilter = null) {
+  const hasPeriod = Boolean(periodFilter && periodFilter.start && periodFilter.end);
+  const eventDateCond = hasPeriod ? 'AND e.start_time >= $1 AND e.start_time < $2' : '';
+  const contribDateCond = hasPeriod ? 'AND sc.created_at >= $1 AND sc.created_at < $2' : '';
+  const completedEventsCond = hasPeriod ? 'AND start_time >= $1 AND start_time < $2' : '';
+  const popularDateCond = hasPeriod ? 'AND e.start_time >= $1 AND e.start_time < $2' : '';
+  const newUsersCond = hasPeriod ? 'AND created_at >= $1 AND created_at < $2' : '';
+  const trendWhere = hasPeriod
+    ? ''
+    : "WHERE ca.start_time >= DATE_TRUNC('month', NOW()) - INTERVAL '5 months'";
 
-  stats_aggregated AS (
-    SELECT 
-      COALESCE(SUM(hours), 0)                                    AS total_hours_volunteered,
-      COALESCE(COUNT(*), 0)                                      AS total_participants_attended,
-      COALESCE((SELECT COUNT(*) FROM events WHERE end_time <= NOW()), 0) AS total_events_completed,
-      COALESCE(COUNT(DISTINCT user_id), 0)                       AS total_unique_volunteers
-    FROM completed_attendances
-  ),
+  const text = `
+    WITH completed_attendances AS (
+      SELECT 
+        ea.user_id,
+        e.id AS event_id,
+        e.title AS event_title,
+        e.category, 
+        COALESCE(ea.awarded_hours, e.duration_hours, 0) AS hours,
+        e.start_time
+      FROM event_attendance ea
+      JOIN events e ON ea.event_id = e.id
+      WHERE ea.confirmation_status = 'attended' AND e.end_time <= NOW() ${eventDateCond}
+      
+      UNION ALL
+      
+      SELECT
+        sc.user_id,
+        NULL AS event_id,
+        sc.title AS event_title,
+        'contributie' AS category,
+        sc.awarded_hours AS hours,
+        sc.created_at AS start_time
+      FROM special_contributions sc
+      WHERE sc.status = 'approved' ${contribDateCond}
+    ),
 
-  category_hours AS (
-    SELECT 
-      COALESCE(category, 'social') AS category,
-      SUM(hours) AS hours
-    FROM completed_attendances
-    GROUP BY COALESCE(category, 'social')
-  ),
+    stats_aggregated AS (
+      SELECT 
+        COALESCE(SUM(hours), 0)::float AS total_hours_volunteered,
+        COALESCE(SUM(CASE WHEN category != 'contributie' THEN hours ELSE 0 END), 0)::float AS activity_hours,
+        COALESCE(SUM(CASE WHEN category = 'contributie' THEN hours ELSE 0 END), 0)::float AS contribution_hours,
+        COALESCE(COUNT(*), 0) AS total_participants_attended,
+        COALESCE((SELECT COUNT(*) FROM events WHERE end_time <= NOW() ${completedEventsCond}), 0) AS total_events_completed,
+        COALESCE(COUNT(DISTINCT user_id), 0) AS total_unique_volunteers,
+        COALESCE((SELECT COUNT(*) FROM users WHERE role != 'admin' ${newUsersCond}), 0)::int AS new_volunteers_count
+      FROM completed_attendances
+    ),
 
-  top_volunteers AS (
-    SELECT
-      u.id,
-      COALESCE(u.display_name, u.first_name || ' ' || u.last_name) AS name,
-      u.avatar_url,
-      SUM(ca.hours) AS total_hours,
-      COUNT(ca.event_id) AS events_attended
-    FROM completed_attendances ca
-    JOIN users u ON ca.user_id = u.id
-    GROUP BY u.id, u.display_name, u.first_name, u.last_name, u.avatar_url
-    ORDER BY total_hours DESC
-    LIMIT 5
-  ),
+    category_hours AS (
+      SELECT 
+        COALESCE(category, 'social') AS category,
+        SUM(hours) AS hours
+      FROM completed_attendances
+      GROUP BY COALESCE(category, 'social')
+    ),
 
-  event_popularity AS (
-    SELECT
-      e.id,
-      e.title,
-      e.category,
-      COUNT(ea.user_id) AS attendee_count
-    FROM events e
-    JOIN event_attendance ea ON e.id = ea.event_id AND ea.confirmation_status = 'attended'
-    WHERE e.end_time <= NOW()
-    GROUP BY e.id, e.title, e.category
-    ORDER BY attendee_count DESC
-    LIMIT 1
-  ),
+    top_volunteers AS (
+      SELECT
+        u.id,
+        COALESCE(u.display_name, u.first_name || ' ' || u.last_name) AS name,
+        u.avatar_url,
+        SUM(ca.hours) AS total_hours,
+        COUNT(*) AS events_attended
+      FROM completed_attendances ca
+      JOIN users u ON ca.user_id = u.id
+      WHERE u.role != 'admin'
+      GROUP BY u.id, u.display_name, u.first_name, u.last_name, u.avatar_url
+      ORDER BY total_hours DESC
+      LIMIT 5
+    ),
 
-  monthly_trend AS (
-    SELECT
-      TO_CHAR(ca.start_time, 'Mon') AS month_label,
-      DATE_TRUNC('month', ca.start_time) AS month_date,
-      COUNT(DISTINCT ca.event_id) AS events_count,
-      SUM(ca.hours) AS total_hours
-    FROM completed_attendances ca
-    WHERE ca.start_time >= DATE_TRUNC('month', NOW()) - INTERVAL '5 months'
-    GROUP BY DATE_TRUNC('month', ca.start_time), TO_CHAR(ca.start_time, 'Mon')
-    ORDER BY month_date ASC
-  ),
-
-  avg_attendance AS (
-    SELECT
-      ROUND(AVG(cnt)::numeric, 1) AS avg_attendees_per_event
-    FROM (
-      SELECT e.id, COUNT(ea.user_id) AS cnt
+    event_popularity AS (
+      SELECT
+        e.id,
+        e.title,
+        e.category,
+        COUNT(ea.user_id) AS attendee_count
       FROM events e
-      LEFT JOIN event_attendance ea ON e.id = ea.event_id AND ea.confirmation_status = 'attended'
-      WHERE e.end_time <= NOW()
-      GROUP BY e.id
-    ) sub
-  )
+      JOIN event_attendance ea ON e.id = ea.event_id AND ea.confirmation_status = 'attended'
+      WHERE e.end_time <= NOW() ${popularDateCond}
+      GROUP BY e.id, e.title, e.category
+      ORDER BY attendee_count DESC
+      LIMIT 1
+    ),
 
-  SELECT 
-    sa.total_hours_volunteered,
-    sa.total_participants_attended,
-    sa.total_events_completed,
-    sa.total_unique_volunteers,
-    (SELECT avg_attendees_per_event FROM avg_attendance)         AS avg_attendees_per_event,
-    COALESCE((
-      SELECT json_agg(json_build_object(
-        'category', ch.category, 
-        'hours', ch.hours::float, 
-        'color', CASE ch.category
-                    WHEN 'sedinta' THEN '#1C748C'
-                    WHEN 'social'  THEN '#27ae60'
-                    WHEN 'proiect' THEN '#f39c12'
-                    ELSE '#777'
-               END
-      ))
-      FROM category_hours ch
-    ), '[]') AS hours_by_category,
-    COALESCE((
-      SELECT json_agg(json_build_object(
-        'id',             tv.id,
-        'name',           tv.name,
-        'avatar_url',     tv.avatar_url,
-        'total_hours',    tv.total_hours::float,
-        'events_attended',tv.events_attended
-      ))
-      FROM top_volunteers tv
-    ), '[]') AS top_volunteers,
-    (SELECT row_to_json(ep) FROM event_popularity ep) AS most_popular_event,
-    COALESCE((
-      SELECT json_agg(json_build_object(
-        'month',       mt.month_label,
-        'events',      mt.events_count,
-        'hours',       mt.total_hours::float
-      ))
-      FROM monthly_trend mt
-    ), '[]') AS monthly_trend
-  FROM stats_aggregated sa;
-`;
+    monthly_trend AS (
+      SELECT
+        TO_CHAR(ca.start_time, 'Mon') AS month_label,
+        DATE_TRUNC('month', ca.start_time) AS month_date,
+        COUNT(DISTINCT ca.event_id) AS events_count,
+        SUM(ca.hours) AS total_hours
+      FROM completed_attendances ca
+      ${trendWhere}
+      GROUP BY DATE_TRUNC('month', ca.start_time), TO_CHAR(ca.start_time, 'Mon')
+      ORDER BY month_date ASC
+    ),
+
+    avg_attendance AS (
+      SELECT
+        ROUND(AVG(cnt)::numeric, 1) AS avg_attendees_per_event
+      FROM (
+        SELECT e.id, COUNT(ea.user_id) AS cnt
+        FROM events e
+        LEFT JOIN event_attendance ea ON e.id = ea.event_id AND ea.confirmation_status = 'attended'
+        WHERE e.end_time <= NOW() ${popularDateCond}
+        GROUP BY e.id
+      ) sub
+    )
+
+    SELECT 
+      sa.total_hours_volunteered,
+      sa.activity_hours,
+      sa.contribution_hours,
+      sa.total_participants_attended,
+      sa.total_events_completed,
+      sa.total_unique_volunteers,
+      sa.new_volunteers_count,
+      (SELECT avg_attendees_per_event FROM avg_attendance) AS avg_attendees_per_event,
+      COALESCE((
+        SELECT json_agg(json_build_object(
+          'category', ch.category, 
+          'hours', ch.hours::float, 
+          'color', CASE ch.category
+                      WHEN 'sedinta'     THEN '#1C748C'
+                      WHEN 'social'      THEN '#27ae60'
+                      WHEN 'proiect'     THEN '#f39c12'
+                      WHEN 'contributie' THEN '#8e44ad'
+                      ELSE '#777'
+                 END
+        ))
+        FROM category_hours ch
+      ), '[]') AS hours_by_category,
+      COALESCE((
+        SELECT json_agg(json_build_object(
+          'id',              tv.id,
+          'name',            tv.name,
+          'avatar_url',      tv.avatar_url,
+          'total_hours',     tv.total_hours::float,
+          'events_attended', tv.events_attended
+        ))
+        FROM top_volunteers tv
+      ), '[]') AS top_volunteers,
+      (SELECT row_to_json(ep) FROM event_popularity ep) AS most_popular_event,
+      COALESCE((
+        SELECT json_agg(json_build_object(
+          'month',       mt.month_label,
+          'events',      mt.events_count,
+          'hours',       mt.total_hours::float
+        ))
+        FROM monthly_trend mt
+      ), '[]') AS monthly_trend
+    FROM stats_aggregated sa;
+  `;
+
+  return {
+    text,
+    values: hasPeriod ? [periodFilter.start, periodFilter.end] : [],
+  };
+}
+
+const STATS_QUERY = buildStatsQuery(null).text;
 
 // Query-ul pentru GET /users/:id/details
 // Notă: Folosește $1 ca placeholder pentru 'id'
@@ -204,5 +231,6 @@ const USER_DETAILS_QUERY = `
 
 module.exports = {
   STATS_QUERY,
+  buildStatsQuery,
   USER_DETAILS_QUERY
 };

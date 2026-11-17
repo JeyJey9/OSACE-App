@@ -85,6 +85,7 @@ export default function AdminMenuScreen({ navigation }) {
             {renderMenuItem("Aprobări Ore", "time-outline", "HourRequests", counts.hourRequests)}
             {renderMenuItem("Cerere Contribuție", "star-outline", "AssignContribution")}
             {renderMenuItem("Rapoarte", "flag-outline", "ReportedComments", counts.reportedComments)}
+            {renderMenuItem("Statistici", "stats-chart-outline", "Statistics")}
           </>
         )}
         

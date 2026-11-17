@@ -1,9 +1,17 @@
 // src/constants/Version.js
 // Centrul de stocare al versiunii aplicației mobile OSACE și istoricul de Patch Notes.
 
-export const APP_VERSION = '3.0.8';
+export const APP_VERSION = '3.0.9';
 
 export const PATCH_NOTES = [
+  {
+    version: '3.0.9',
+    items: [
+      'Clasament extins: „Voluntarul Lunii” și „Voluntarul Anului”, filtre pe lună, categoria Contribuții și căutare rapidă.',
+      'Realizări (Badge-uri) cu bare de progres, procente, filtre și notificare instant la deblocare prin scanare QR.',
+      'Filtre pe an și lună pe Profil și în pagina de Statistici, plus distribuția orelor pe categorii.',
+    ],
+  },
   {
     version: '3.0.8',
     items: [
@@ -20,6 +28,10 @@ export const PATCH_NOTES = [
       'Afisare imbunatatita pentru salile G116–G119 de pe Etajul 1 si rutare precisa catre fiecare sala.',
     ],
   },
+];
+
+// Versiuni anterioare — afișate în subsolul dark al modalului de Patch Notes (Minecraft Basement).
+export const LEGACY_PATCH_NOTES = [
   {
     version: '3.0.6',
     items: [
@@ -29,10 +41,6 @@ export const PATCH_NOTES = [
       'Respectarea preferintelor de notificari push si rezolvarea delogarilor false la erori de permisiuni.',
     ],
   },
-];
-
-// Versiuni anterioare — afișate în subsolul dark al modalului de Patch Notes (Minecraft Basement).
-export const LEGACY_PATCH_NOTES = [
   {
     version: '3.0.5',
     items: [

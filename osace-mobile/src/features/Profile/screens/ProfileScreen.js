@@ -22,6 +22,11 @@ import { ro } from 'date-fns/locale';
 
 // Hook pentru temă
 import { useThemeColor } from '../../../constants/useThemeColor';
+import {
+  ACADEMIC_MONTH_OPTIONS,
+  getDefaultAcademicYear,
+  buildPeriodQuery,
+} from '../../../constants/periodFilters';
 
 export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuth();
@@ -34,17 +39,15 @@ export default function ProfileScreen() {
   const [badges, setBadges] = useState([]);
   const [contributions, setContributions] = useState([]);
   const [availableYears, setAvailableYears] = useState([]);
-  
-  const currentMonth = new Date().getMonth() + 1;
-  const currentYearDate = new Date().getFullYear();
-  const defaultYear = currentMonth >= 9 ? currentYearDate : currentYearDate - 1;
-  const [selectedYear, setSelectedYear] = useState(defaultYear);
+  const [profileSummary, setProfileSummary] = useState(null);
+  const [selectedYear, setSelectedYear] = useState(getDefaultAcademicYear);
+  const [selectedMonth, setSelectedMonth] = useState('all');
 
   // --- Logica de preluare a datelor ---
-  const fetchHistory = async (yearParam) => {
+  const fetchHistory = async (yearParam, monthParam) => {
     try {
-      const yearQuery = yearParam === 'all' ? '?year=all' : (yearParam ? `?year=${yearParam}` : '');
-      const response = await api.get(`/api/profile/my-past-events${yearQuery}`);
+      const query = buildPeriodQuery(yearParam, monthParam);
+      const response = await api.get(`/api/profile/my-past-events${query}`);
       setPastEvents(response.data);
     } catch (error) {
       console.error("Eroare la preluarea istoricului (Profil):", error);
@@ -62,14 +65,24 @@ export default function ProfileScreen() {
     }
   };
 
-  const fetchContributions = async (yearParam) => {
+  const fetchContributions = async (yearParam, monthParam) => {
     try {
-      const yearQuery = yearParam === 'all' ? '?year=all' : (yearParam ? `?year=${yearParam}` : '');
-      const response = await api.get(`/api/profile/${user.userId || user.id}/contributions${yearQuery}`);
+      const query = buildPeriodQuery(yearParam, monthParam);
+      const response = await api.get(`/api/profile/${user.userId || user.id}/contributions${query}`);
       setContributions(response.data);
     } catch (error) {
       console.error("Eroare la preluarea contribuțiilor:", error);
       throw error;
+    }
+  };
+
+  const fetchProfileSummary = async (yearParam, monthParam) => {
+    try {
+      const query = buildPeriodQuery(yearParam, monthParam);
+      const response = await api.get(`/api/profile/me${query}`);
+      setProfileSummary(response.data);
+    } catch (error) {
+      console.error("Eroare la preluarea rezumatului profilului:", error);
     }
   };
 
@@ -89,9 +102,10 @@ export default function ProfileScreen() {
         try {
           await Promise.all([
             fetchAvailableYears(),
-            fetchHistory(selectedYear),
+            fetchProfileSummary(selectedYear, selectedMonth),
+            fetchHistory(selectedYear, selectedMonth),
             fetchBadges(),
-            fetchContributions(selectedYear)
+            fetchContributions(selectedYear, selectedMonth)
           ]);
         } catch (error) {
           Alert.alert("Eroare", "Nu am putut încărca profilul complet.");
@@ -100,11 +114,14 @@ export default function ProfileScreen() {
         }
       };
       loadProfileData();
-    }, [selectedYear])
+    }, [selectedYear, selectedMonth])
   );
 
   const handleYearChange = (year) => {
     setSelectedYear(year);
+    if (year === 'all') {
+      setSelectedMonth('all');
+    }
   };
 
   // --- Calcule și Formatare ---
@@ -233,10 +250,11 @@ export default function ProfileScreen() {
         onAvatarPress={handlePickAvatar}
       />
 
-      {/* Hours Toggle -> Dropdown (afisat doar daca exista activitati inregistrate) */}
+      {/* Period Filters: Academic Year + Month */}
       {availableYears.length > 0 && (
         <View style={styles.dropdownContainer}>
           <DropdownPicker
+            style={{ flex: 1 }}
             options={[
               ...availableYears.map(y => ({ label: `Anul ${y.label}`, value: y.startYear })),
               ...(availableYears.length > 1 ? [{ label: 'Toate Orele', value: 'all' }] : [])
@@ -245,13 +263,25 @@ export default function ProfileScreen() {
             onValueChange={handleYearChange}
             placeholder="Selectează perioada"
           />
+          {selectedYear !== 'all' && (
+            <DropdownPicker
+              style={{ flex: 1 }}
+              options={ACADEMIC_MONTH_OPTIONS}
+              selectedValue={selectedMonth}
+              onValueChange={setSelectedMonth}
+              placeholder="Luna"
+            />
+          )}
         </View>
       )}
       
       <ProfileStats 
-        totalHours={totalHours}
+        totalHours={profileSummary?.total_hours ?? totalHours}
         infoTitle="Voluntar din"
         infoValue={memberSince}
+        rank={profileSummary?.rank ?? null}
+        eventsCount={profileSummary?.events_count ?? attendedEvents.length}
+        hoursByCategory={profileSummary?.hours_by_category ?? null}
       />
       
       <ThemeSelector />
@@ -278,6 +308,8 @@ export default function ProfileScreen() {
 
 const createStyles = (colors, isDark) => StyleSheet.create({
   dropdownContainer: { 
+    flexDirection: 'row',
+    gap: 10,
     marginHorizontal: 20, 
     marginTop: 15, 
   },

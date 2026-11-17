@@ -374,13 +374,24 @@ export default function ScanScreen() {
           : 'Participarea ta a fost înregistrată.';
       }
 
+      const unlockedBadges = Array.isArray(response.data.unlocked_badges) ? response.data.unlocked_badges : [];
+      if (unlockedBadges.length > 0) {
+        const badgeNames = unlockedBadges.map((b) => b.name).join(', ');
+        finalMessage = `${finalMessage}\n🎉 Realizare nouă: ${badgeNames}`;
+      }
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (unlockedBadges.length > 0) {
+        setTimeout(() => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        }, 250);
+      }
 
       Toast.show({
         type: 'success',
         text1: title,
         text2: finalMessage,
-        visibilityTime: 2500,
+        visibilityTime: unlockedBadges.length > 0 ? 4000 : 2500,
       });
 
       // O singură navigare automată înapoi (cu curățare la unmount)

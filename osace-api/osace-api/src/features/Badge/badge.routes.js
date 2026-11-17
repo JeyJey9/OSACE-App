@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const { getUserBadgeProgressMap } = require('./badge.service');
 
 // Această rută va primi 'pool' și 'verifyToken'
 module.exports = (pool, verifyToken) => {
 
-  // GET /api/badges - Returnează TOATE badge-urile definite
+  // GET /api/badges - Returnează TOATE badge-urile definite + progresul utilizatorului curent
   router.get('/', verifyToken, async (req, res) => {
     try {
       const query = `
@@ -12,7 +13,17 @@ module.exports = (pool, verifyToken) => {
         ORDER BY name ASC;
       `;
       const result = await pool.query(query);
-      res.json(result.rows);
+      const progressMap = await getUserBadgeProgressMap(req.user.userId, pool, result.rows);
+
+      const enriched = result.rows.map((badge) => {
+        const prog = progressMap[badge.id] || { progress_current: 0, progress_target: 0, progress_pct: 0 };
+        return {
+          ...badge,
+          ...prog,
+        };
+      });
+
+      res.json(enriched);
     } catch (error) {
       console.error('Eroare la preluarea catalogului de badge-uri:', error);
       res.status(500).json({ error: 'Eroare server la preluarea badge-urilor.' });

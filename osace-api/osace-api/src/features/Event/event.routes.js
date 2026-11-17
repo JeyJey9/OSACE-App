@@ -629,16 +629,25 @@ module.exports = (pool, mailTransporter, verifyToken, verifyManager) => {
         [userId, eventId, checkInTime, awardedHours]
       );
 
-      // 7. Verificare badge-uri automate
-      checkQuickRegisterBadge(userId, eventId, pool);
-      checkBadgesOnConfirmation(userId, eventId, pool);
+      // 7. Verificare badge-uri automate si colectare badge-uri proaspat deblocate
+      const [quickBadges, confirmBadges] = await Promise.all([
+        checkQuickRegisterBadge(userId, eventId, pool),
+        checkBadgesOnConfirmation(userId, eventId, pool),
+      ]);
+      const seenKeys = new Set();
+      const unlockedBadges = [...(quickBadges || []), ...(confirmBadges || [])].filter((b) => {
+        if (!b || seenKeys.has(b.key)) return false;
+        seenKeys.add(b.key);
+        return true;
+      });
 
       console.log(`[QR SCAN SUCCESS] Check-in efectuat pentru user ${userId}, event ${eventId}. Status: ${punctualityStatus}, Ore: ${awardedHours}`);
       return res.status(200).json({
         message: feedbackMessage,
         status: 'checked_in',
         hours: awardedHours,
-        punctualityStatus: punctualityStatus
+        punctualityStatus: punctualityStatus,
+        unlocked_badges: unlockedBadges,
       });
 
     } catch (error) {

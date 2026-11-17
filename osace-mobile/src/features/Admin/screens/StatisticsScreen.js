@@ -1,17 +1,22 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Dimensions, Alert, Image, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Image, TouchableOpacity, RefreshControl } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import api from '../../../services/api';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import ScreenContainer from '../../../components/layout/ScreenContainer';
+import DropdownPicker from '../../../components/DropdownPicker';
 import { useThemeColor } from '../../../constants/useThemeColor';
-
-const screenWidth = Dimensions.get('window').width;
+import {
+  ACADEMIC_MONTH_OPTIONS,
+  getDefaultAcademicYear,
+  buildPeriodQuery,
+} from '../../../constants/periodFilters';
 
 const CATEGORY_META = {
-  sedinta: { label: 'Ședințe', color: '#1C748C' },
-  social:  { label: 'Social',  color: '#27ae60' },
-  proiect: { label: 'Proiecte', color: '#f39c12' },
+  sedinta:     { label: 'Ședințe',              color: '#1C748C' },
+  social:      { label: 'Social',               color: '#27ae60' },
+  proiect:     { label: 'Proiecte',             color: '#f39c12' },
+  contributie: { label: 'Contribuții Speciale', color: '#8e44ad' },
 };
 
 // ── KPI Card ────────────────────────────────────────────────────────────────
@@ -94,10 +99,14 @@ const MonthlyTrend = ({ data, colors, isDark }) => {
 };
 
 // ── Top Volunteer Row ──────────────────────────────────────────────────────
-const VolunteerRow = ({ item, rank, colors, isDark }) => {
+const VolunteerRow = ({ item, rank, colors, isDark, onPress }) => {
   const medals = ['🥇', '🥈', '🥉'];
   return (
-    <View style={[volStyles.row, { borderColor: isDark ? 'rgba(255,255,255,0.05)' : colors.border }]}>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={onPress}
+      style={[volStyles.row, { borderColor: isDark ? 'rgba(255,255,255,0.05)' : colors.border }]}
+    >
       <Text style={volStyles.rank}>{medals[rank] || `#${rank + 1}`}</Text>
       {item.avatar_url ? (
         <Image source={{ uri: `${api.defaults.baseURL}${item.avatar_url}` }} style={volStyles.avatar} />
@@ -113,7 +122,8 @@ const VolunteerRow = ({ item, rank, colors, isDark }) => {
       <View style={[volStyles.hoursBadge, { backgroundColor: colors.primary + '15' }]}>
         <Text style={[volStyles.hoursText, { color: colors.primary }]}>{parseFloat(item.total_hours).toFixed(1)}h</Text>
       </View>
-    </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={{ marginLeft: 6 }} />
+    </TouchableOpacity>
   );
 };
 
@@ -152,13 +162,17 @@ export default function StatisticsScreen() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [availableYears, setAvailableYears] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(getDefaultAcademicYear);
+  const [selectedMonth, setSelectedMonth] = useState('all');
 
   const { colors, isDark } = useThemeColor();
   const navigation = useNavigation();
 
-  const fetchStats = async () => {
+  const fetchStats = async (yearParam = selectedYear, monthParam = selectedMonth) => {
     try {
-      const response = await api.get('/api/admin/statistics');
+      const query = buildPeriodQuery(yearParam, monthParam);
+      const response = await api.get(`/api/admin/statistics${query}`);
       if (response.data && typeof response.data === 'object') {
         setStats(response.data);
       } else {
@@ -173,25 +187,74 @@ export default function StatisticsScreen() {
     }
   };
 
+  const fetchAvailableYears = async () => {
+    try {
+      const response = await api.get('/api/leaderboard/available-years');
+      setAvailableYears(response.data || []);
+    } catch (error) {
+      console.error('Eroare la preluarea anilor disponibili (statistici):', error);
+    }
+  };
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchStats();
+    await Promise.all([fetchStats(selectedYear, selectedMonth), fetchAvailableYears()]);
     setRefreshing(false);
-  }, []);
+  }, [selectedYear, selectedMonth]);
 
-  useFocusEffect(useCallback(() => { setLoading(true); fetchStats(); }, []));
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchAvailableYears();
+      fetchStats(selectedYear, selectedMonth);
+    }, [selectedYear, selectedMonth])
+  );
+
+  const handleYearChange = (val) => {
+    setSelectedYear(val);
+    if (val === 'all') {
+      setSelectedMonth('all');
+    }
+  };
+
+  const navigateToVolunteer = useCallback((vol) => {
+    const routeNames = navigation.getState()?.routeNames || [];
+    if (routeNames.includes('UserDetails')) {
+      navigation.navigate('UserDetails', { userId: vol.id, userName: vol.name });
+    } else {
+      navigation.navigate('HomeTabs', {
+        screen: 'PublicProfile',
+        params: { userId: vol.id },
+      });
+    }
+  }, [navigation]);
+
+  const navigateToPopularEvent = useCallback((eventObj) => {
+    const routeNames = navigation.getState()?.routeNames || [];
+    if (routeNames.includes('EventParticipants')) {
+      navigation.navigate('EventParticipants', { eventId: eventObj.id, eventTitle: eventObj.title });
+    } else {
+      navigation.navigate('HomeTabs', {
+        screen: 'EventDetail',
+        params: { eventId: eventObj.id, eventTitle: eventObj.title },
+      });
+    }
+  }, [navigation]);
 
   if (loading || !stats) return <ScreenContainer loading={true} />;
 
-  const totalHours   = parseFloat(stats.total_hours_volunteered) || 0;
-  const totalPart    = parseInt(stats.total_participants_attended, 10) || 0;
-  const totalEvents  = parseInt(stats.total_events_completed, 10) || 0;
-  const uniqueVolunteers = parseInt(stats.total_unique_volunteers, 10) || 0;
-  const avgAttendees = parseFloat(stats.avg_attendees_per_event) || 0;
-  const categoryData = stats.hours_by_category || [];
-  const topVolunteers = stats.top_volunteers || [];
-  const monthlyTrend = stats.monthly_trend || [];
-  const popular = stats.most_popular_event;
+  const totalHours        = parseFloat(stats.total_hours_volunteered) || 0;
+  const activityHours     = parseFloat(stats.activity_hours) || 0;
+  const contributionHours = parseFloat(stats.contribution_hours) || 0;
+  const totalEvents       = parseInt(stats.total_events_completed, 10) || 0;
+  const uniqueVolunteers  = parseInt(stats.total_unique_volunteers, 10) || 0;
+  const newVolunteers     = parseInt(stats.new_volunteers_count, 10) || 0;
+  const avgAttendees      = parseFloat(stats.avg_attendees_per_event) || 0;
+  const categoryData      = stats.hours_by_category || [];
+  const topVolunteers     = stats.top_volunteers || [];
+  const monthlyTrend      = stats.monthly_trend || [];
+  const popular           = stats.most_popular_event;
+  const STANDARD_BLUE     = isDark ? '#4A90E2' : '#1566B9';
 
   return (
     <ScreenContainer scrollable={false}>
@@ -201,29 +264,58 @@ export default function StatisticsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
       >
+        {/* Period Filter Row */}
+        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6 }}>
+          <DropdownPicker
+            style={{ flex: 1 }}
+            options={[
+              ...availableYears.map((y) => ({ label: `Anul ${y.label}`, value: y.startYear })),
+              { label: 'Din Toate Timpurile', value: 'all' },
+            ]}
+            selectedValue={selectedYear}
+            onValueChange={handleYearChange}
+            placeholder="Perioadă"
+          />
+          {selectedYear !== 'all' && (
+            <DropdownPicker
+              style={{ flex: 1 }}
+              options={ACADEMIC_MONTH_OPTIONS}
+              selectedValue={selectedMonth}
+              onValueChange={setSelectedMonth}
+              placeholder="Luna"
+            />
+          )}
+        </View>
+
         {/* Info label */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10 }}>
-          <Text style={{ fontSize: 13, color: colors.textSecondary }}>Bazat pe activitățile finalizate din sistem</Text>
+        <View style={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10 }}>
+          <Text style={{ fontSize: 13, color: colors.textSecondary }}>Bazat pe activitățile finalizate în perioada selectată</Text>
         </View>
 
         {/* KPI Row 1 */}
-        {(() => {
-          const STANDARD_BLUE = isDark ? '#4A90E2' : '#1566B9';
-          return (
-            <>
-              <View style={{ flexDirection: 'row', paddingHorizontal: 11, marginBottom: 10 }}>
-                <KpiCard icon="time-outline"     label="Ore Totale"  value={totalHours.toFixed(1)}  color={STANDARD_BLUE} colors={colors} isDark={isDark} />
-                <KpiCard icon="calendar-outline" label="Evenimente" value={totalEvents}              color="#8e44ad" colors={colors} isDark={isDark} />
-              </View>
+        <View style={{ flexDirection: 'row', paddingHorizontal: 11, marginBottom: 10 }}>
+          <KpiCard icon="time-outline"     label="Ore Totale"  value={totalHours.toFixed(1)} color={STANDARD_BLUE} colors={colors} isDark={isDark} />
+          <KpiCard icon="calendar-outline" label="Evenimente" value={totalEvents}              color="#8e44ad"       colors={colors} isDark={isDark} />
+        </View>
 
-              {/* KPI Row 2 */}
-              <View style={{ flexDirection: 'row', paddingHorizontal: 11, marginBottom: 18 }}>
-                <KpiCard icon="people-outline"   label="Voluntari Unici"      value={uniqueVolunteers} color={STANDARD_BLUE} colors={colors} isDark={isDark} />
-                <KpiCard icon="stats-chart-outline" label="Medie/Activitate" value={avgAttendees + ' pers'} color="#f39c12" colors={colors} isDark={isDark} />
-              </View>
-            </>
-          );
-        })()}
+        {/* KPI Row 2 */}
+        <View style={{ flexDirection: 'row', paddingHorizontal: 11, marginBottom: 10 }}>
+          <KpiCard icon="people-outline"      label="Voluntari Activi"  value={uniqueVolunteers}        color={STANDARD_BLUE} colors={colors} isDark={isDark} />
+          <KpiCard icon="stats-chart-outline" label="Medie/Activitate"  value={avgAttendees + ' pers'} color="#f39c12"       colors={colors} isDark={isDark} />
+        </View>
+
+        {/* KPI Row 3: Voluntari Noi & Contribuții vs Activități */}
+        <View style={{ flexDirection: 'row', paddingHorizontal: 11, marginBottom: 18 }}>
+          <KpiCard icon="person-add-outline" label="Voluntari Noi" value={newVolunteers} color="#10b981" colors={colors} isDark={isDark} />
+          <KpiCard
+            icon="sparkles-outline"
+            label="Act. / Contrib."
+            value={`${activityHours.toFixed(0)}h / ${contributionHours.toFixed(0)}h`}
+            color="#8e44ad"
+            colors={colors}
+            isDark={isDark}
+          />
+        </View>
 
         {/* Category Breakdown */}
         <SectionCard title="Ore pe Categorie" icon="pie-chart-outline" colors={colors} isDark={isDark}>
@@ -236,14 +328,23 @@ export default function StatisticsScreen() {
         {/* Monthly Trend */}
         <SectionCard title="Activitate Lunară" icon="bar-chart-outline" colors={colors} isDark={isDark}>
           <MonthlyTrend data={monthlyTrend} colors={colors} isDark={isDark} />
-          <Text style={{ color: colors.textSecondary, fontSize: 10, marginTop: 8, textAlign: 'center' }}>Ultimele 6 luni · ore acumulate</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 10, marginTop: 8, textAlign: 'center' }}>
+            {selectedYear === 'all' ? 'Ultimele 6 luni · ore acumulate' : 'Ore acumulate pe luni în perioada selectată'}
+          </Text>
         </SectionCard>
 
         {/* Top Volunteers */}
         {topVolunteers.length > 0 && (
           <SectionCard title="Top Voluntari" icon="trophy-outline" colors={colors} isDark={isDark}>
             {topVolunteers.map((v, i) => (
-              <VolunteerRow key={v.id} item={v} rank={i} colors={colors} isDark={isDark} />
+              <VolunteerRow
+                key={v.id}
+                item={v}
+                rank={i}
+                colors={colors}
+                isDark={isDark}
+                onPress={() => navigateToVolunteer(v)}
+              />
             ))}
           </SectionCard>
         )}
@@ -251,7 +352,11 @@ export default function StatisticsScreen() {
         {/* Most Popular Event */}
         {popular && (
           <SectionCard title="Activitate Populară" icon="flame-outline" colors={colors} isDark={isDark}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigateToPopularEvent(popular)}
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+            >
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 }} numberOfLines={2}>
                   {popular.title}
@@ -269,7 +374,7 @@ export default function StatisticsScreen() {
               <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: colors.primary + '15', justifyContent: 'center', alignItems: 'center', marginLeft: 12 }}>
                 <Ionicons name="star" size={24} color={colors.primary} />
               </View>
-            </View>
+            </TouchableOpacity>
           </SectionCard>
         )}
       </ScrollView>

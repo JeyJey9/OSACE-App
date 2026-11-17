@@ -31,15 +31,14 @@ export default function BadgeCatalogScreen() {
   const [allBadges, setAllBadges] = useState([]);
   const [myBadges, setMyBadges] = useState([]);
   const [selectedBadge, setSelectedBadge] = useState(null);
+  const [filterMode, setFilterMode] = useState('all'); // 'all' | 'earned' | 'in_progress'
   
   const { colors, isDark } = useThemeColor();
 
   const fetchData = async () => {
     try {
-      const [allBadgesResponse, myBadgesResponse] = await Promise.all([
-        api.get('/api/badges'),
-        api.get('/api/profile/my-badges')
-      ]);
+      const allBadgesResponse = await api.get('/api/badges');
+      const myBadgesResponse = await api.get('/api/profile/my-badges');
       setAllBadges(allBadgesResponse.data);
       setMyBadges(myBadgesResponse.data);
     } catch (error) {
@@ -64,25 +63,40 @@ export default function BadgeCatalogScreen() {
   }, []);
 
   const processedBadges = useMemo(() => {
-    const earnedBadgeIds = new Set(myBadges.map(b => b.id));
-    return allBadges
-      .map(badge => ({
-        ...badge,
-        earned_at: earnedBadgeIds.has(badge.id),
-      }))
-      .filter(badge => {
-        // Dacă e realizare secretă / Easter Egg și NU este deblocată, o ascundem din catalog
-        if (isSecretBadge(badge) && !badge.earned_at) {
-          return false;
-        }
-        return true;
-      });
-  }, [allBadges, myBadges]);
+    const myBadgeMap = new Map(myBadges.map((b) => [b.id, b]));
+    const mapped = allBadges
+      .map((badge) => {
+        const earned = myBadgeMap.get(badge.id);
+        return {
+          ...badge,
+          earned_at: Boolean(earned),
+          period_label: earned?.period_label || null,
+        };
+      })
+      .filter((badge) => !(isSecretBadge(badge) && !badge.earned_at));
+
+    const filtered = mapped.filter((b) => {
+      if (filterMode === 'earned') return b.earned_at;
+      if (filterMode === 'in_progress') return !b.earned_at && (b.progress_target || 0) > 0;
+      return true;
+    });
+
+    return filtered.sort((a, b) => {
+      if (a.earned_at !== b.earned_at) return a.earned_at ? -1 : 1;
+      if (!a.earned_at && !b.earned_at) {
+        const pctDiff = (b.progress_pct || 0) - (a.progress_pct || 0);
+        if (pctDiff !== 0) return pctDiff;
+      }
+      return (a.name || '').localeCompare(b.name || '', 'ro');
+    });
+  }, [allBadges, myBadges, filterMode]);
 
   const styles = createStyles(colors, isDark);
 
   const BadgeGridItem = ({ item }) => {
-    const isEarned = item.earned_at; 
+    const isEarned = item.earned_at;
+    const hasProgress = !isEarned && (item.progress_target || 0) > 0;
+
     return (
       <TouchableOpacity 
         activeOpacity={0.7}
@@ -108,9 +122,25 @@ export default function BadgeCatalogScreen() {
         
         <View style={styles.badgeBottomContent}>
           {isEarned ? (
-            <View style={styles.earnedTag}>
-              <Ionicons name="checkmark-done" size={12} color="white" />
-              <Text style={styles.earnedTagText}>DEBLOCAT</Text>
+            <View style={{ alignItems: 'center', gap: 4 }}>
+              <View style={styles.earnedTag}>
+                <Ionicons name="checkmark-done" size={12} color="white" />
+                <Text style={styles.earnedTagText}>DEBLOCAT</Text>
+              </View>
+              {!!item.period_label && (
+                <Text style={styles.periodChipText} numberOfLines={1}>
+                  {item.period_label}
+                </Text>
+              )}
+            </View>
+          ) : hasProgress ? (
+            <View style={styles.progressWrap}>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${item.progress_pct || 0}%` }]} />
+              </View>
+              <Text style={styles.progressLabel} numberOfLines={1}>
+                {item.progress_current}/{item.progress_target} ({item.progress_pct}%)
+              </Text>
             </View>
           ) : (
             <View style={styles.lockedTag}>
@@ -137,15 +167,38 @@ export default function BadgeCatalogScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
         ListHeaderComponent={
-          <Text style={styles.headerText}>
-            Descoperă realizările pe care le-ai deblocat și ce te mai așteaptă. Atinge oricare realizare pentru detalii complete.
-          </Text>
+          <View>
+            <Text style={styles.headerText}>
+              Descoperă realizările pe care le-ai deblocat și ce te mai așteaptă. Atinge oricare realizare pentru detalii complete.
+            </Text>
+            <View style={styles.filterPillsRow}>
+              {[
+                { key: 'all', label: 'Toate' },
+                { key: 'earned', label: 'Deblocate' },
+                { key: 'in_progress', label: 'În progres' },
+              ].map((f) => {
+                const active = filterMode === f.key;
+                return (
+                  <TouchableOpacity
+                    key={f.key}
+                    style={[styles.filterPill, active && styles.filterPillActive]}
+                    onPress={() => setFilterMode(f.key)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.filterPillText, active && styles.filterPillTextActive]}>
+                      {f.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
         }
         ListEmptyComponent={
           <EmptyState
             illustration="no_badges"
-            title="Niciun badge încă"
-            subtitle="Participă la activităţi pentru a debloca primele tale realizări."
+            title="Niciun badge în această categorie"
+            subtitle="Participă la activități pentru a debloca primele tale realizări."
           />
         }
       />
@@ -179,9 +232,31 @@ export default function BadgeCatalogScreen() {
                 </Text>
 
                 {selectedBadge.earned_at ? (
-                  <View style={styles.modalEarnedTag}>
-                    <Ionicons name="checkmark-done" size={14} color="white" />
-                    <Text style={styles.modalEarnedTagText}>DEBLOCAT</Text>
+                  <>
+                    <View style={styles.modalEarnedTag}>
+                      <Ionicons name="checkmark-done" size={14} color="white" />
+                      <Text style={styles.modalEarnedTagText}>DEBLOCAT</Text>
+                    </View>
+                    {!!selectedBadge.period_label && (
+                      <View style={styles.modalPeriodBox}>
+                        <Ionicons name="calendar-outline" size={14} color="#d97706" />
+                        <Text style={styles.modalPeriodText}>
+                          Perioada câștigată: {selectedBadge.period_label}
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                ) : (selectedBadge.progress_target || 0) > 0 ? (
+                  <View style={styles.modalProgressBox}>
+                    <View style={styles.modalProgressHeader}>
+                      <Text style={styles.modalProgressTitle}>Progres realizare</Text>
+                      <Text style={styles.modalProgressValue}>
+                        {selectedBadge.progress_current} / {selectedBadge.progress_target} ({selectedBadge.progress_pct}%)
+                      </Text>
+                    </View>
+                    <View style={styles.modalProgressTrack}>
+                      <View style={[styles.progressFill, { width: `${selectedBadge.progress_pct || 0}%` }]} />
+                    </View>
                   </View>
                 ) : (
                   <View style={styles.modalLockedTag}>
@@ -415,5 +490,104 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     color: 'white',
     fontSize: 15,
     fontWeight: '700',
+  },
+  filterPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 8,
+    marginBottom: 12,
+  },
+  filterPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 18,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255,255,255,0.08)' : colors.border,
+  },
+  filterPillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterPillText: {
+    color: colors.textSecondary,
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  filterPillTextActive: {
+    color: '#ffffff',
+  },
+  progressWrap: {
+    width: '100%',
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  progressTrack: {
+    width: '100%',
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0',
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  progressLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  periodChipText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: isDark ? '#fbbf24' : '#d97706',
+    maxWidth: 130,
+  },
+  modalPeriodBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: isDark ? 'rgba(245, 158, 11, 0.14)' : '#fffbeb',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(245, 158, 11, 0.35)' : '#fde68a',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 12,
+    marginBottom: 18,
+  },
+  modalPeriodText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: isDark ? '#fbbf24' : '#b45309',
+  },
+  modalProgressBox: {
+    width: '100%',
+    marginBottom: 20,
+    paddingHorizontal: 4,
+  },
+  modalProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  modalProgressTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  modalProgressValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  modalProgressTrack: {
+    width: '100%',
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0',
+    overflow: 'hidden',
   },
 });
