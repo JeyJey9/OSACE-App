@@ -66,3 +66,21 @@ export function resolveMediaUrl(url) {
   const base = import.meta.env.PROD ? 'https://api.osace.ro' : 'http://localhost:3000';
   return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
 }
+
+export async function resolveRankFallback(api, targetUserId, year, month) {
+  try {
+    const query = buildPeriodQuery(year, month);
+    const res = await api.get(`/leaderboard${query}`);
+    const ranked = [...(res.data || [])]
+      .filter((u) => parseFloat(u.total_hours || 0) > 0)
+      .sort((a, b) => {
+        const diff = parseFloat(b.total_hours || 0) - parseFloat(a.total_hours || 0);
+        if (diff !== 0) return diff;
+        return (parseInt(b.total_activities || 0, 10) || 0) - (parseInt(a.total_activities || 0, 10) || 0);
+      });
+    const idx = ranked.findIndex((u) => Number(u.id) === Number(targetUserId));
+    return idx !== -1 ? idx + 1 : null;
+  } catch {
+    return null;
+  }
+}

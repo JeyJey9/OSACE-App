@@ -21,17 +21,19 @@ async function getUserPeriodMetrics(pool, userId, periodFilter) {
     WITH att_by_user AS (
       SELECT
         ea.user_id,
-        SUM(COALESCE(ea.awarded_hours, e.duration_hours, 0)) AS hours
+        SUM(COALESCE(ea.awarded_hours, e.duration_hours, 0)) AS hours,
+        COUNT(ea.event_id) AS cnt
       FROM event_attendance ea
       JOIN events e ON ea.event_id = e.id
-      WHERE (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND e.end_time <= NOW()))
+      WHERE ea.confirmation_status = 'attended'
         ${eventCond}
       GROUP BY ea.user_id
     ),
     sc_by_user AS (
       SELECT
         sc.user_id,
-        SUM(sc.awarded_hours) AS hours
+        SUM(sc.awarded_hours) AS hours,
+        COUNT(sc.id) AS cnt
       FROM special_contributions sc
       WHERE sc.status = 'approved'
         ${contribCond}
@@ -40,7 +42,11 @@ async function getUserPeriodMetrics(pool, userId, periodFilter) {
     ranked AS (
       SELECT
         u.id,
-        RANK() OVER (ORDER BY (COALESCE(a.hours, 0) + COALESCE(s.hours, 0)) DESC)::int AS rnk
+        ROW_NUMBER() OVER (
+          ORDER BY
+            (COALESCE(a.hours, 0) + COALESCE(s.hours, 0)) DESC,
+            (COALESCE(a.cnt, 0) + COALESCE(s.cnt, 0)) DESC
+        )::int AS rnk
       FROM users u
       LEFT JOIN att_by_user a ON u.id = a.user_id
       LEFT JOIN sc_by_user s ON u.id = s.user_id
@@ -57,7 +63,7 @@ async function getUserPeriodMetrics(pool, userId, periodFilter) {
       FROM event_attendance ea
       JOIN events e ON ea.event_id = e.id
       WHERE ea.user_id = $1
-        AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND e.end_time <= NOW()))
+        AND ea.confirmation_status = 'attended'
         ${eventCond}
     ),
     target_contrib AS (
@@ -534,6 +540,46 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
     }
   });
 
+  // Traseu: GET /api/profile/my-available-years (trebuie declarat înainte de /:id)
+  router.get('/my-available-years', verifyToken, async (req, res) => {
+    const userId = req.user.userId;
+    try {
+      const result = await pool.query(`
+        SELECT DISTINCT
+          CASE 
+            WHEN EXTRACT(MONTH FROM date_val) >= 9 THEN EXTRACT(YEAR FROM date_val)
+            ELSE EXTRACT(YEAR FROM date_val) - 1
+          END AS start_year
+        FROM (
+          SELECT e.start_time AS date_val 
+          FROM event_attendance ea 
+          JOIN events e ON ea.event_id = e.id 
+          WHERE ea.user_id = $1 
+            AND e.end_time <= NOW()
+            AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND ea.check_in_time IS NOT NULL))
+          UNION ALL
+          SELECT sc.created_at AS date_val 
+          FROM special_contributions sc
+          WHERE sc.user_id = $1 AND sc.status = 'approved'
+        ) combined_dates
+        WHERE date_val IS NOT NULL
+        ORDER BY start_year DESC
+      `, [userId]);
+
+      const years = result.rows
+        .filter(r => r.start_year !== null && !isNaN(parseInt(r.start_year, 10)))
+        .map(r => {
+          const sy = parseInt(r.start_year, 10);
+          return { startYear: sy, label: `${sy}-${sy + 1}` };
+        });
+
+      res.json(years);
+    } catch (error) {
+      console.error('Eroare la preluarea anilor disponibili pentru profilul personal:', error);
+      res.status(500).json({ error: 'Eroare server.' });
+    }
+  });
+
   // Ruta dinamică /:id (Profilul PUBLIC al altcuiva)
   // Query params: ?year=2025|all &month=1..12|all, default = current academic year
   router.get('/:id', verifyToken, async (req, res) => {
@@ -648,46 +694,6 @@ router.get('/:id/badges', verifyToken, async (req, res) => {
     } catch (error) {
       console.error(`Eroare la preluarea activităților pentru user ${id}:`, error);
       res.status(500).json({ error: 'Eroare server la preluarea activităților.' });
-    }
-  });
-
-  // Traseu: GET /api/profile/my-available-years (Ani universitari cu activitate pentru profilul personal)
-  router.get('/my-available-years', verifyToken, async (req, res) => {
-    const userId = req.user.userId;
-    try {
-      const result = await pool.query(`
-        SELECT DISTINCT
-          CASE 
-            WHEN EXTRACT(MONTH FROM date_val) >= 9 THEN EXTRACT(YEAR FROM date_val)
-            ELSE EXTRACT(YEAR FROM date_val) - 1
-          END AS start_year
-        FROM (
-          SELECT e.start_time AS date_val 
-          FROM event_attendance ea 
-          JOIN events e ON ea.event_id = e.id 
-          WHERE ea.user_id = $1 
-            AND e.end_time <= NOW()
-            AND (ea.confirmation_status = 'attended' OR (ea.confirmation_status = 'checked_in' AND ea.check_in_time IS NOT NULL))
-          UNION ALL
-          SELECT sc.created_at AS date_val 
-          FROM special_contributions sc
-          WHERE sc.user_id = $1 AND sc.status = 'approved'
-        ) combined_dates
-        WHERE date_val IS NOT NULL
-        ORDER BY start_year DESC
-      `, [userId]);
-
-      const years = result.rows
-        .filter(r => r.start_year !== null && !isNaN(parseInt(r.start_year, 10)))
-        .map(r => {
-          const sy = parseInt(r.start_year, 10);
-          return { startYear: sy, label: `${sy}-${sy + 1}` };
-        });
-
-      res.json(years);
-    } catch (error) {
-      console.error('Eroare la preluarea anilor disponibili pentru profilul personal:', error);
-      res.status(500).json({ error: 'Eroare server.' });
     }
   });
 

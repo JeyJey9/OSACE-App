@@ -421,6 +421,7 @@ import {
   getDefaultAcademicYear,
   buildPeriodQuery,
   resolveMediaUrl as resolveMediaUrlShared,
+  resolveRankFallback,
 } from '../utils/periodFilters';
 
 const loading = ref(true);
@@ -496,7 +497,11 @@ const fetchPeriodData = async () => {
       api.get(`/profile/my-past-events${query}`),
       api.get(`/profile/${userProfile.value.id}/contributions${query}`)
     ]);
-    profileSummary.value = summaryRes.data;
+    const summary = { ...(summaryRes.data || {}) };
+    if (summary.rank === undefined) {
+      summary.rank = await resolveRankFallback(api, userProfile.value.id, selectedYear.value, selectedMonth.value);
+    }
+    profileSummary.value = summary;
     pastEvents.value = eventsRes.data || [];
     contributions.value = contribRes.data || [];
   } catch (err) {

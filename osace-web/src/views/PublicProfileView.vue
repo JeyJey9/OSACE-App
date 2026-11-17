@@ -256,6 +256,7 @@ import {
   resolveMediaUrl,
   displayRole,
   formatDateRo,
+  resolveRankFallback,
 } from '../utils/periodFilters';
 
 const route = useRoute();
@@ -317,7 +318,11 @@ const loadPeriodData = async () => {
     api.get(`/profile/${userId.value}/contributions${query}`),
     api.get(`/profile/${userId.value}/past-events${query}`),
   ]);
-  profile.value = profRes.data;
+  const prof = { ...(profRes.data || {}) };
+  if (prof.rank === undefined) {
+    prof.rank = await resolveRankFallback(api, userId.value, selectedYear.value, selectedMonth.value);
+  }
+  profile.value = prof;
   contributions.value = contribRes.data || [];
   pastEvents.value = eventsRes.data || [];
 };
